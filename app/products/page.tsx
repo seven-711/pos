@@ -12,7 +12,8 @@ import {
   Loader2,
   Image as ImageIcon,
   Upload,
-  XCircle
+  XCircle,
+  Store
 } from "lucide-react";
 
 interface Category {
@@ -360,56 +361,51 @@ export default function ProductsPage() {
 
       {/* Add Product Modal Overlay */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-2 overflow-y-auto py-10">
           {/* Backdrop */}
           <div 
             className="absolute inset-0 bg-surface/60 backdrop-blur-md"
             onClick={() => setShowAddModal(false)}
           />
           {/* Modal Content */}
-          <div className="relative w-full max-w-lg bg-surface-container-lowest rounded-2xl shadow-[0_12px_32px_rgba(0,40,162,0.1)] overflow-hidden border border-outline-variant/10">
-            <div className="px-6 py-4 bg-surface-container flex justify-between items-center border-b border-outline-variant/10">
-              <h3 className="font-heading font-bold text-primary">{editingProduct ? "Edit Product" : "Add New Product"}</h3>
+          <div className="relative w-full max-w-sm bg-white rounded-[2rem] shadow-[0_24px_48px_rgba(0,0,0,0.15)] border border-outline-variant/5">
+            <div className="px-3 pt-2 pb-1 bg-white flex flex-col items-center gap-1 sticky top-0 z-10">
               <button 
                 onClick={closeModal} 
-                className="p-2 rounded-full hover:bg-surface-container-highest cursor-pointer text-on-surface-variant transition-colors"
+                className="absolute top-1 right-3 p-2 text-on-surface-variant hover:text-primary transition-colors rounded-full hover:bg-surface-container-high"
               >
-                <X size={20} />
+                <X size={16} strokeWidth={3} />
               </button>
+              <h3 className="text-sm font-black text-on-surface tracking-tight uppercase">
+                {editingProduct ? "Edit" : "Add New"}
+              </h3>
             </div>
             
-            <form className="px-6 py-4 space-y-4" onSubmit={handleSaveProduct}>
-              {/* Image Upload Dropzone */}
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant font-label text-center block">Product Image</label>
+            <form className="px-3 pb-4 space-y-1.5" onSubmit={handleSaveProduct}>
+              {/* Image Card */}
+              <div className="p-1 rounded-2xl bg-secondary/5 border border-secondary/10">
                 <div className="relative group">
-                  <div className={`w-full aspect-video rounded-2xl border-2 border-dashed transition-all flex flex-col items-center justify-center gap-2 overflow-hidden bg-surface-container-low ${formData.image_url ? 'border-primary/20' : 'border-outline-variant/30 hover:border-primary/50'}`}>
+                  <div className={`w-full h-20 rounded-xl border-1 border-dashed transition-all flex flex-col items-center justify-center gap-1 overflow-hidden bg-white/50 ${formData.image_url ? 'border-primary/20' : 'border-outline-variant/30'}`}>
                     {formData.image_url ? (
                       <>
                         <img src={formData.image_url} alt="Preview" className="w-full h-full object-cover" />
                         <button 
                           type="button"
                           onClick={() => setFormData({...formData, image_url: ''})}
-                          className="absolute top-3 right-3 p-1.5 bg-black/50 text-white rounded-full hover:bg-black/70 transition-colors backdrop-blur-md"
+                          className="absolute top-1 right-1 p-1 bg-black/50 text-white rounded-full hover:bg-black/70 backdrop-blur-md"
                         >
-                          <XCircle size={18} />
+                          <XCircle size={14} />
                         </button>
                       </>
                     ) : (
                       <>
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center ${isUploading ? 'bg-primary/5' : 'bg-surface-container-highest'}`}>
-                          {isUploading ? <Loader2 size={24} className="animate-spin text-primary" /> : <Upload size={24} className="text-on-surface-variant" />}
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-primary/5">
+                          {isUploading ? <Loader2 size={16} className="animate-spin text-primary" /> : <Upload size={16} className="text-primary" />}
                         </div>
-                        <div className="text-center px-4">
-                          <p className="text-xs font-bold text-on-surface">{isUploading ? 'Uploading Matrix...' : 'Drop image or click to browse'}</p>
-                          <p className="text-[10px] text-on-surface-variant mt-1 italic">PNG, JPG or WebP (Max 5MB)</p>
-                        </div>
+                        <p className="text-[10px] font-bold text-on-surface-variant leading-none">Add Photo</p>
                         <input 
-                          type="file" 
-                          accept="image/*"
-                          onChange={handleImageUpload}
-                          className="absolute inset-0 opacity-0 cursor-pointer"
-                          disabled={isUploading}
+                          type="file" accept="image/*" onChange={handleImageUpload}
+                          className="absolute inset-0 opacity-0 cursor-pointer" disabled={isUploading}
                         />
                       </>
                     )}
@@ -417,86 +413,92 @@ export default function ProductsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2 space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant font-label">Product Name</label>
-                  <input 
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    className="w-full bg-surface-container border border-outline-variant/20 rounded-lg text-sm px-4 py-2.5 focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none text-on-surface" 
-                    type="text" 
-                    placeholder="e.g. Mocha Frappe" 
-                  />
+              {/* Input Cards */}
+              <div className="space-y-1">
+                <div className="p-2 rounded-2xl bg-surface-container-low border border-outline-variant/10 flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                    <Package size={16} className="text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-[8px] font-bold uppercase tracking-widest text-on-surface-variant leading-none">Name</label>
+                    <input 
+                      required value={formData.name}
+                      onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      className="w-full bg-transparent text-xs font-bold leading-tight outline-none mt-0.5" 
+                      placeholder="e.g. Mocha Frappe" 
+                    />
+                  </div>
                 </div>
-                <div className="col-span-2 md:col-span-1 space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant font-label">Category</label>
-                  <select 
-                    value={formData.category_id}
-                    onChange={(e) => setFormData({...formData, category_id: e.target.value})}
-                    className="w-full bg-surface-container border border-outline-variant/20 rounded-lg text-sm px-4 py-2.5 focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none text-on-surface"
-                  >
-                    <option value="">-- No Category --</option>
-                    {categories.map((c: any) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
+
+                <div className="p-2 rounded-2xl bg-surface-container-low border border-outline-variant/10 flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-secondary/10 flex items-center justify-center shrink-0">
+                    <Store size={16} className="text-secondary" />
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-[8px] font-bold uppercase tracking-widest text-on-surface-variant leading-none">Category</label>
+                    <select 
+                      value={formData.category_id}
+                      onChange={(e) => setFormData({...formData, category_id: e.target.value})}
+                      className="w-full bg-transparent text-xs font-bold outline-none mt-0.5 cursor-pointer"
+                    >
+                      <option value="">-- No Category --</option>
+                      {categories.map((c: any) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-                <div className="col-span-2 md:col-span-1 space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant font-label">Initial Stock</label>
-                  <input 
-                    required
-                    value={formData.stock}
-                    onChange={(e) => setFormData({...formData, stock: e.target.value})}
-                    className="w-full bg-surface-container border border-outline-variant/20 rounded-lg text-sm px-4 py-2.5 focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none text-on-surface" 
-                    type="number" 
-                    placeholder="0" 
-                  />
+
+                <div className="grid grid-cols-2 gap-1.5">
+                  <div className="p-2 rounded-2xl bg-surface-container-low border border-outline-variant/10">
+                    <label className="text-[8px] font-bold uppercase tracking-widest text-on-surface-variant leading-none">Stock</label>
+                    <input 
+                      required type="number" value={formData.stock}
+                      onChange={(e) => setFormData({...formData, stock: e.target.value})}
+                      className="w-full bg-transparent text-xs font-black outline-none mt-0.5" 
+                    />
+                  </div>
+                  <div className="p-2 rounded-2xl bg-surface-container-low border border-outline-variant/10">
+                    <label className="text-[8px] font-bold uppercase tracking-widest text-on-surface-variant leading-none">Min. Alert</label>
+                    <input 
+                      required type="number" value={formData.min_stock}
+                      onChange={(e) => setFormData({...formData, min_stock: e.target.value})}
+                      className="w-full bg-transparent text-xs font-black outline-none mt-0.5" 
+                    />
+                  </div>
                 </div>
-                <div className="col-span-2 md:col-span-1 space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant font-label">Min. Stock Alert</label>
-                  <input 
-                    required
-                    value={formData.min_stock}
-                    onChange={(e) => setFormData({...formData, min_stock: e.target.value})}
-                    className="w-full bg-surface-container border border-outline-variant/20 rounded-lg text-sm px-4 py-2.5 focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none text-on-surface" 
-                    type="number" 
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant font-label">Cost Price (₱)</label>
-                  <input 
-                    required
-                    value={formData.cost_price}
-                    onChange={(e) => setFormData({...formData, cost_price: e.target.value})}
-                    className="w-full bg-surface-container border border-outline-variant/20 rounded-lg text-sm px-4 py-2.5 focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none text-on-surface" 
-                    step="0.01" type="number" placeholder="0.00" 
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant font-label">Selling Price (₱)</label>
-                  <input 
-                    required
-                    value={formData.selling_price}
-                    onChange={(e) => setFormData({...formData, selling_price: e.target.value})}
-                    className="w-full bg-surface-container border border-outline-variant/20 rounded-lg text-sm px-4 py-2.5 focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none text-on-surface" 
-                    step="0.01" type="number" placeholder="0.00" 
-                  />
+
+                <div className="p-2 rounded-2xl bg-primary/5 border border-primary/10 flex items-center gap-2">
+                  <div className="flex-1">
+                    <div className="flex gap-4">
+                      <div className="flex-1">
+                        <label className="text-[8px] font-bold uppercase tracking-widest text-primary leading-none block mb-0.5">Cost</label>
+                        <input 
+                          required type="number" step="0.01" value={formData.cost_price}
+                          onChange={(e) => setFormData({...formData, cost_price: e.target.value})}
+                          className="w-full bg-transparent border-b border-primary/20 text-xs font-black outline-none" 
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="text-[8px] font-bold uppercase tracking-widest text-primary leading-none block mb-0.5">Selling</label>
+                        <input 
+                          required type="number" step="0.01" value={formData.selling_price}
+                          onChange={(e) => setFormData({...formData, selling_price: e.target.value})}
+                          className="w-full bg-transparent border-b border-primary/20 text-xs font-black outline-none text-primary" 
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="pt-6 flex gap-3">
+
+              {/* Action Button */}
+              <div className="pt-2">
                 <button 
-                  onClick={closeModal}
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-surface-container-high hover:bg-surface-variant text-on-surface-variant font-bold text-sm cursor-pointer transition-colors" 
-                  type="button"
-                >
-                  Cancel
-                </button>
-                <button 
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-br from-primary to-primary-container hover:to-primary text-white font-bold text-sm shadow-md active:scale-95 transition-all cursor-pointer" 
+                  className="w-full py-2.5 rounded-2xl bg-primary text-white font-black text-xs shadow-md active:scale-95 transition-all cursor-pointer uppercase tracking-widest" 
                   type="submit"
                 >
-                  {editingProduct ? "Update Product" : "Save Product"}
+                  {editingProduct ? "Done Writing" : "Save Product"}
                 </button>
               </div>
             </form>
