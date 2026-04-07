@@ -21,7 +21,7 @@ export function BottomNav({ onMenuClick }: BottomNavProps) {
   ];
 
   return (
-    <nav className="md:hidden fixed bottom-1 left-0 w-full h-20 bg-[var(--color-surface-container-highest)] border-t border-[var(--color-outline-variant)]/20 shadow-[0_-8px_24px_rgba(0,0,0,0.12)] flex justify-around items-center z-[200] px-2 pb-safe rounded-t-2xl">
+    <nav className="md:hidden fixed bottom-0 left-0 w-full h-20 bg-[var(--color-surface-container-highest)] border-t border-[var(--color-outline-variant)]/20 shadow-[0_-8px_24px_rgba(0,0,0,0.12)] flex justify-around items-center z-[200] px-2 pb-safe rounded-t-2xl">
       {coreLinks.map((item, idx) => {
         const Icon = item.icon;
         const isActive = !item.isButton && pathname === item.href;

@@ -32,6 +32,7 @@ interface TransactionItem {
     name: string;
     category_id: string;
     selling_price?: number;
+    image_url?: string;
     categories: { name: string } | null;
   } | null;
 }

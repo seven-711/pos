@@ -32,6 +32,7 @@ interface Product {
   cost_price: number;
   selling_price: number;
   category_id: string;
+  image_url?: string;
   categories?: { name: string };
 }
 
@@ -261,8 +262,14 @@ export default function POSPage() {
                   className="bg-surface-container-low p-4 rounded-xl hover:bg-surface-container transition-all group cursor-pointer active:scale-95 duration-100 border border-outline-variant/10"
                 >
                   <div className="flex justify-between items-start mb-4">
-                    <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                      {product.categories?.name?.toLowerCase().includes('coffee') ? <Coffee className="text-primary" size={24} /> : <Package className="text-primary" size={24} />}
+                    <div className="w-12 h-12 rounded-lg overflow-hidden flex items-center justify-center bg-surface-container-highest">
+                      {product.image_url ? (
+                        <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-primary/10">
+                          {product.categories?.name?.toLowerCase().includes('coffee') ? <Coffee className="text-primary" size={24} /> : <Package className="text-primary" size={24} />}
+                        </div>
+                      )}
                     </div>
                     <div className="text-right">
                       <span className="text-[10px] font-label font-bold uppercase tracking-tighter text-on-surface-variant">Stock</span>
@@ -362,8 +369,8 @@ export default function POSPage() {
 
       {/* Quantity Selector Modal */}
       {showQtyModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[1000] flex items-end justify-center sm:items-center p-0 sm:p-4">
-          <div className="bg-surface-container-lowest w-full max-w-md rounded-t-3xl sm:rounded-2xl p-8 shadow-2xl animate-in slide-in-from-bottom-5">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[1000] flex items-center justify-center p-4">
+          <div className="bg-surface-container-lowest w-full max-w-md rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center mb-8">
               <div>
                 <h3 className="font-heading font-bold text-xl">{qtyTarget?.name}</h3>

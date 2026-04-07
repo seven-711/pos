@@ -133,17 +133,17 @@ export default function ReportsPage() {
       </div>
 
       {/* Generate Report Bento Section */}
-      <section className="grid grid-cols-12 gap-8 mb-12">
+      <section className="space-y-8 mb-12">
         {/* Selection Panel */}
-        <div className="col-span-12 lg:col-span-8 bg-surface-container-low rounded-3xl p-10 border border-outline-variant/10 shadow-lg relative overflow-hidden group">
-          <div className="flex items-center gap-4 mb-10">
+        <div className="bg-surface-container-low rounded-3xl p-6 border border-outline-variant/10 shadow-lg relative overflow-hidden group">
+          <div className="flex items-center gap-4 mb-6">
             <div className="w-12 h-12 bg-primary flex items-center justify-center rounded-2xl shadow-xl shadow-primary/20">
               <BarChart2 className="text-white" size={24} />
             </div>
             <h3 className="font-heading text-2xl font-black uppercase tracking-tight text-primary">Generate New Report</h3>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+          <div className="flex flex-col gap-6">
             {/* Report Type Selection */}
             <div className="space-y-6">
               <label className="block text-[10px] font-black uppercase tracking-[0.25em] text-on-surface-variant mb-4">Report Parameters</label>
@@ -179,19 +179,18 @@ export default function ReportsPage() {
               <div className="space-y-6">
                 <label className="block text-[10px] font-black uppercase tracking-[0.25em] text-on-surface-variant mb-4">Timeframe Range</label>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-white p-4 rounded-2xl border border-outline-variant/10 focus-within:border-primary transition-all shadow-sm">
-                    <span className="block text-[9px] text-on-surface-variant font-black mb-2 uppercase tracking-widest">START DATE</span>
+                  <div className="bg-white px-4 py-2.5 rounded-2xl border border-outline-variant/10 focus-within:border-primary transition-all shadow-sm">
+                    <span className="block text-[9px] text-on-surface-variant font-black mb-1 uppercase tracking-widest">START DATE</span>
                     <input 
-                      className="w-full bg-transparent border-none p-0 text-sm font-extrabold focus:ring-0 outline-none text-primary" 
-                      type="date" 
+                      className="w-full bg-transparent border-none p-0 text-xs font-extrabold focus:ring-0 outline-none text-primary"                       type="date" 
                       value={startDate}
                       onChange={e => setStartDate(e.target.value)}
                     />
                   </div>
-                  <div className="bg-white p-4 rounded-2xl border border-outline-variant/10 focus-within:border-primary transition-all shadow-sm">
-                    <span className="block text-[9px] text-on-surface-variant font-black mb-2 uppercase tracking-widest">END DATE</span>
+                  <div className="bg-white px-4 py-2.5 rounded-2xl border border-outline-variant/10 focus-within:border-primary transition-all shadow-sm">
+                    <span className="block text-[9px] text-on-surface-variant font-black mb-1 uppercase tracking-widest">END DATE</span>
                     <input 
-                      className="w-full bg-transparent border-none p-0 text-sm font-extrabold focus:ring-0 outline-none text-primary" 
+                      className="w-full bg-transparent border-none p-0 text-xs font-extrabold focus:ring-0 outline-none text-primary" 
                       type="date" 
                       value={endDate}
                       onChange={e => setEndDate(e.target.value)}
@@ -216,8 +215,8 @@ export default function ReportsPage() {
         </div>
 
         {/* Quick Insights Cards */}
-        <div className="col-span-12 lg:col-span-4 flex flex-col gap-6">
-          <div className="bg-secondary p-8 rounded-3xl relative overflow-hidden flex-1 group shadow-xl shadow-secondary/10 hover:translate-y-[-4px] transition-all">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="bg-secondary px-10 py-8 rounded-3xl relative overflow-hidden group shadow-xl shadow-secondary/10 hover:translate-y-[-4px] transition-all">
             <div className="relative z-10">
               <div className="flex items-center gap-2 text-on-secondary mb-6">
                 <TrendingUp size={16} className="text-on-secondary opacity-60" />
@@ -229,7 +228,7 @@ export default function ReportsPage() {
             <TrendingUp className="absolute bottom-[-20px] right-[-20px] text-white opacity-5 w-48 h-48" />
           </div>
           
-          <div className={`p-8 rounded-3xl flex-1 flex flex-col justify-between shadow-xl transition-all border ${stats.liquidityRisk > 0 ? 'bg-error text-white shadow-error/10 border-error/5' : 'bg-surface-container-low border-outline-variant/10'}`}>
+          <div className={`px-10 py-8 rounded-3xl flex flex-col justify-between shadow-xl transition-all border ${stats.liquidityRisk > 0 ? 'bg-error text-white shadow-error/10 border-error/5' : 'bg-surface-container-low border-outline-variant/10'}`}>
             <div>
               <div className={`flex items-center gap-2 mb-6 ${stats.liquidityRisk > 0 ? 'text-white' : 'text-on-surface-variant'}`}>
                 <AlertTriangle size={18} />

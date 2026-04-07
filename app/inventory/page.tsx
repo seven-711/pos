@@ -25,6 +25,7 @@ interface Product {
   cost_price: number;
   selling_price: number;
   category_id: string;
+  image_url?: string;
   categories?: { name: string };
 }
 
@@ -198,8 +199,12 @@ export default function InventoryPage() {
                 className={`p-4 rounded-xl flex items-center justify-between group bg-surface-container-low hover:bg-surface-container transition-all border border-outline-variant/10 ${p.stock <= 10 ? 'border-l-4 border-l-error' : ''}`}
               >
                 <div className="flex gap-4 items-center">
-                  <div className="w-12 h-12 rounded-lg bg-surface-container-highest flex items-center justify-center font-bold text-primary">
-                    <Package size={24} />
+                  <div className="w-12 h-12 rounded-lg overflow-hidden flex items-center justify-center bg-surface-container-highest">
+                    {p.image_url ? (
+                      <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <Package size={24} className="text-primary/40" />
+                    )}
                   </div>
                   <div>
                     <p className="text-[10px] font-mono text-on-surface-variant leading-none mb-1 font-bold">SKU: {p.sku || p.id.split('-')[0].toUpperCase()}</p>

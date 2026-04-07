@@ -9,7 +9,10 @@ import {
   Pencil, 
   Trash2, 
   X,
-  Loader2
+  Loader2,
+  Image as ImageIcon,
+  Upload,
+  XCircle
 } from "lucide-react";
 
 interface Category {
@@ -26,6 +29,7 @@ interface Product {
   cost_price: number;
   selling_price: number;
   category_id: string;
+  image_url?: string;
   created_at: string;
   categories?: { name: string };
 }
@@ -45,8 +49,10 @@ export default function ProductsPage() {
     stock: '',
     min_stock: '10',
     cost_price: '',
-    selling_price: ''
+    selling_price: '',
+    image_url: ''
   });
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -93,7 +99,8 @@ export default function ProductsPage() {
       stock: String(product.stock || 0),
       min_stock: String(product.min_stock || 10),
       cost_price: String(product.cost_price || 0),
-      selling_price: String(product.selling_price || 0)
+      selling_price: String(product.selling_price || 0),
+      image_url: product.image_url || ''
     });
     setShowAddModal(true);
   };
@@ -101,9 +108,37 @@ export default function ProductsPage() {
   const closeModal = () => {
     setShowAddModal(false);
     setEditingProduct(null);
-    setFormData({ name: '', category_id: '', stock: '', min_stock: '10', cost_price: '', selling_price: '' });
+    setFormData({ name: '', category_id: '', stock: '', min_stock: '10', cost_price: '', selling_price: '', image_url: '' });
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `product-images/${fileName}`;
+
+      const { data, error: uploadError } = await supabase.storage
+        .from('products')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('products')
+        .getPublicUrl(filePath);
+
+      setFormData(prev => ({ ...prev, image_url: publicUrl }));
+    } catch (err: any) {
+      console.error("Upload Error:", err);
+      alert("Failed to upload image. Ensure the 'products' bucket exists and is public.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
   const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.selling_price || !formData.cost_price) return;
@@ -116,6 +151,7 @@ export default function ProductsPage() {
         min_stock: parseInt(formData.min_stock) || 10,
         cost_price: parseFloat(formData.cost_price),
         selling_price: parseFloat(formData.selling_price),
+        image_url: formData.image_url || null
       };
 
       if (editingProduct) {
@@ -265,8 +301,12 @@ export default function ProductsPage() {
                   <tr key={product.id} className={`hover:bg-surface-container transition-colors group ${idx % 2 === 0 ? '' : 'bg-surface'}`}>
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-lg bg-primary/5 flex items-center justify-center shrink-0">
-                          <Package size={20} className="text-primary" />
+                        <div className="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center bg-surface-container-highest shrink-0">
+                          {product.image_url ? (
+                            <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <Package size={20} className="text-primary/40" />
+                          )}
                         </div>
                         <div>
                           <div className="font-bold text-on-surface group-hover:text-primary transition-colors">{product.name}</div>
@@ -291,7 +331,7 @@ export default function ProductsPage() {
                       <span className="bg-secondary/10 text-secondary text-xs font-bold px-2.5 py-1 rounded-full">{roi.toFixed(0)}%</span>
                     </td>
                     <td className="px-6 py-5">
-                      <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center justify-center gap-2 transition-opacity">
                         <button onClick={() => handleEdit(product)} className="p-2 hover:bg-surface-container-high rounded-lg text-primary cursor-pointer"><Pencil size={18} /></button>
                         <button onClick={() => handleDelete(product.id)} className="p-2 hover:bg-error-container/20 rounded-lg text-error cursor-pointer"><Trash2 size={18} /></button>
                       </div>
@@ -338,7 +378,45 @@ export default function ProductsPage() {
               </button>
             </div>
             
-            <form className="p-6 space-y-4" onSubmit={handleSaveProduct}>
+            <form className="px-6 py-4 space-y-4" onSubmit={handleSaveProduct}>
+              {/* Image Upload Dropzone */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant font-label text-center block">Product Image</label>
+                <div className="relative group">
+                  <div className={`w-full aspect-video rounded-2xl border-2 border-dashed transition-all flex flex-col items-center justify-center gap-2 overflow-hidden bg-surface-container-low ${formData.image_url ? 'border-primary/20' : 'border-outline-variant/30 hover:border-primary/50'}`}>
+                    {formData.image_url ? (
+                      <>
+                        <img src={formData.image_url} alt="Preview" className="w-full h-full object-cover" />
+                        <button 
+                          type="button"
+                          onClick={() => setFormData({...formData, image_url: ''})}
+                          className="absolute top-3 right-3 p-1.5 bg-black/50 text-white rounded-full hover:bg-black/70 transition-colors backdrop-blur-md"
+                        >
+                          <XCircle size={18} />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center ${isUploading ? 'bg-primary/5' : 'bg-surface-container-highest'}`}>
+                          {isUploading ? <Loader2 size={24} className="animate-spin text-primary" /> : <Upload size={24} className="text-on-surface-variant" />}
+                        </div>
+                        <div className="text-center px-4">
+                          <p className="text-xs font-bold text-on-surface">{isUploading ? 'Uploading Matrix...' : 'Drop image or click to browse'}</p>
+                          <p className="text-[10px] text-on-surface-variant mt-1 italic">PNG, JPG or WebP (Max 5MB)</p>
+                        </div>
+                        <input 
+                          type="file" 
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                          disabled={isUploading}
+                        />
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2 space-y-1">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant font-label">Product Name</label>
