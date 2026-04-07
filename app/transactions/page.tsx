@@ -21,10 +21,24 @@ import {
   Wallet
 } from "lucide-react";
 
+interface TransactionItem {
+  quantity: number;
+  products: { name: string } | null;
+}
+
+interface Transaction {
+  id: string;
+  created_at: string;
+  total_amount: number;
+  total_profit: number;
+  payment_method: string;
+  transaction_items: TransactionItem[];
+}
+
 const PAGE_SIZE = 10;
 
 export default function TransactionsPage() {
-  const [transactions, setTransactions] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
@@ -55,9 +69,9 @@ export default function TransactionsPage() {
 
     if (allTx) {
       const today = new Date().toDateString();
-      const revenue = allTx.reduce((acc, t) => acc + Number(t.total_amount || 0), 0);
-      const profit = allTx.reduce((acc, t) => acc + Number(t.total_profit || 0), 0);
-      const todaySales = allTx
+      const revenue = (allTx as any[]).reduce((acc, t) => acc + Number(t.total_amount || 0), 0);
+      const profit = (allTx as any[]).reduce((acc, t) => acc + Number(t.total_profit || 0), 0);
+      const todaySales = (allTx as any[])
         .filter(t => new Date(t.created_at).toDateString() === today)
         .reduce((acc, t) => acc + Number(t.total_amount || 0), 0);
 

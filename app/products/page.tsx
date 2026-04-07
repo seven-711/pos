@@ -12,15 +12,33 @@ import {
   Loader2
 } from "lucide-react";
 
+interface Category {
+  id: string;
+  name: string;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  sku?: string;
+  stock: number;
+  min_stock: number;
+  cost_price: number;
+  selling_price: number;
+  category_id: string;
+  created_at: string;
+  categories?: { name: string };
+}
+
 export default function ProductsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
-  const [products, setProducts] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   
   // Form State
-  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     category_id: '',
@@ -60,14 +78,14 @@ export default function ProductsPage() {
     }
   };
 
-  const filteredProducts = products.filter((p: any) => {
+  const filteredProducts = products.filter((p: Product) => {
     const s = searchQuery.toLowerCase();
     return p.name.toLowerCase().includes(s) || 
            (p.sku && p.sku.toLowerCase().includes(s)) || 
            (p.categories?.name && p.categories.name.toLowerCase().includes(s));
   });
 
-  const handleEdit = (product: any) => {
+  const handleEdit = (product: Product) => {
     setEditingProduct(product);
     setFormData({
       name: product.name || '',

@@ -18,11 +18,36 @@ import {
   UserCheck
 } from "lucide-react";
 
+interface Transaction {
+  id: string;
+  total_amount: number;
+  total_profit: number;
+  created_at: string;
+}
+
+interface TransactionItem {
+  quantity: number;
+  price: number;
+  products: {
+    name: string;
+    category_id: string;
+    selling_price?: number;
+    categories: { name: string } | null;
+  } | null;
+}
+
+interface Expense {
+  amount: number;
+  created_at: string;
+}
+
 export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [txItems, setTxItems] = useState<any[]>([]);
-  const [expenses, setExpenses] = useState<any[]>([]);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Analytics State
   const [metrics, setMetrics] = useState({
@@ -33,10 +58,10 @@ export default function AnalyticsPage() {
     growthRate: 12.5 // Placeholder for growth calculation
   });
 
-  const [topProducts, setTopProducts] = useState<any[]>([]);
-  const [categoryData, setCategoryData] = useState<any[]>([]);
+  const [topProducts, setTopProducts] = useState<{name: string, qty: number}[]>([]);
+  const [categoryData, setCategoryData] = useState<{name: string, value: number, percent: number}[]>([]);
   const [peakHours, setPeakHours] = useState<number[]>(new Array(24).fill(0));
-  const [dailyTrend, setDailyTrend] = useState<any[]>([]);
+  const [dailyTrend, setDailyTrend] = useState<[string, number][]>([]);
 
   useEffect(() => {
     fetchData();
@@ -78,7 +103,7 @@ export default function AnalyticsPage() {
     }
   };
 
-  const processAnalytics = (tx: any[], items: any[], exp: any[]) => {
+  const processAnalytics = (tx: Transaction[], items: TransactionItem[], exp: Expense[]) => {
     // 1. Basic Metrics
     const gross = tx.reduce((acc, curr) => acc + Number(curr.total_amount), 0);
     const grossProfit = tx.reduce((acc, curr) => acc + Number(curr.total_profit), 0);
@@ -94,29 +119,29 @@ export default function AnalyticsPage() {
     });
 
     // 2. Top Products (By Quantity Sold)
-    const prodMap: any = {};
+    const prodMap: Record<string, number> = {};
     items.forEach(item => {
       const name = item.products?.name || 'Unknown';
       prodMap[name] = (prodMap[name] || 0) + item.quantity;
     });
     const sortedProds = Object.entries(prodMap)
       .map(([name, qty]) => ({ name, qty }))
-      .sort((a: any, b: any) => b.qty - a.qty)
+      .sort((a, b) => b.qty - a.qty)
       .slice(0, 5);
     setTopProducts(sortedProds);
 
     // 3. Category Split
-    const catMap: any = {};
+    const catMap: Record<string, number> = {};
     items.forEach(item => {
       const catName = item.products?.categories?.name || 'Uncategorized';
       const price = item.price || item.products?.selling_price || 0;
       const sub = Number(price) * Number(item.quantity || 0);
       catMap[catName] = (catMap[catName] || 0) + sub;
     });
-    const catArray = Object.entries(catMap).map(([name, val]: [string, any]) => ({
+    const catArray = Object.entries(catMap).map(([name, val]: [string, number]) => ({
       name,
       value: val,
-      percent: (val / gross) * 100
+      percent: gross > 0 ? (val / gross) * 100 : 0
     }));
     setCategoryData(catArray);
 
@@ -128,10 +153,10 @@ export default function AnalyticsPage() {
     });
     setPeakHours(hours);
 
-    // 5. Daily Trend (Last 7 days simplified)
-    const dailyMap: any = {};
+    // 5. Daily Trend (Last 10 days)
+    const dailyMap: Record<string, number> = {};
     tx.forEach(t => {
-      const d = new Date(t.created_at).toLocaleDateString();
+      const d = isMounted ? new Date(t.created_at).toLocaleDateString() : '...';
       dailyMap[d] = (dailyMap[d] || 0) + Number(t.total_amount);
     });
     setDailyTrend(Object.entries(dailyMap).slice(0, 10).reverse());

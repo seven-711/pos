@@ -19,17 +19,37 @@ import {
   AlertCircle
 } from "lucide-react";
 
+interface Category {
+  id: string;
+  name: string;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  sku: string;
+  stock: number;
+  cost_price: number;
+  selling_price: number;
+  category_id: string;
+  categories?: { name: string };
+}
+
+interface CartItem extends Product {
+  quantity: number;
+}
+
 export default function POSPage() {
-  const [products, setProducts] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   // Cart State
-  const [cart, setCart] = useState<any[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [showQtyModal, setShowQtyModal] = useState(false);
-  const [qtyTarget, setQtyTarget] = useState<any>(null);
+  const [qtyTarget, setQtyTarget] = useState<Product | null>(null);
   const [qtyValue, setQtyValue] = useState(1);
 
   // Checkout State
@@ -68,13 +88,13 @@ export default function POSPage() {
     }
   };
 
-  const filteredProducts = products.filter(p => {
+  const filteredProducts = products.filter((p: Product) => {
     const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.sku && p.sku.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesCategory = !selectedCategory || p.category_id === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
-  const addToCart = (product: any) => {
+  const addToCart = (product: Product) => {
     setQtyTarget(product);
     setQtyValue(1);
     setShowQtyModal(true);
@@ -83,9 +103,9 @@ export default function POSPage() {
   const confirmAddToCart = () => {
     if (!qtyTarget) return;
 
-    const existing = cart.find(item => item.id === qtyTarget.id);
+    const existing = cart.find((item: CartItem) => item.id === qtyTarget.id);
     if (existing) {
-      setCart(cart.map(item =>
+      setCart(cart.map((item: CartItem) =>
         item.id === qtyTarget.id ? { ...item, quantity: item.quantity + qtyValue } : item
       ));
     } else {
@@ -100,11 +120,11 @@ export default function POSPage() {
   };
 
   const removeFromCart = (id: string) => {
-    setCart(cart.filter(item => item.id !== id));
+    setCart(cart.filter((item: CartItem) => item.id !== id));
   };
 
-  const calculateSubtotal = () => cart.reduce((acc, item) => acc + (item.selling_price * item.quantity), 0);
-  const calculateProfit = () => cart.reduce((acc, item) => acc + ((item.selling_price - item.cost_price) * item.quantity), 0);
+  const calculateSubtotal = () => cart.reduce((acc: number, item: CartItem) => acc + (item.selling_price * item.quantity), 0);
+  const calculateProfit = () => cart.reduce((acc: number, item: CartItem) => acc + ((item.selling_price - item.cost_price) * item.quantity), 0);
 
   const handleCheckout = async () => {
     if (cart.length === 0) return;

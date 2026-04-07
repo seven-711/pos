@@ -17,15 +17,36 @@ import {
   ArrowUpRight
 } from "lucide-react";
 
+interface Product {
+  id: string;
+  name: string;
+  sku: string;
+  stock: number;
+  cost_price: number;
+  selling_price: number;
+  category_id: string;
+  categories?: { name: string };
+}
+
+interface InventoryLog {
+  id: string;
+  product_id: string;
+  quantity_change: number;
+  type: string;
+  notes: string;
+  created_at: string;
+  products: { name: string } | null;
+}
+
 export default function InventoryPage() {
-  const [products, setProducts] = useState<any[]>([]);
-  const [logs, setLogs] = useState<any[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [logs, setLogs] = useState<InventoryLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   
   // Modals
   const [showAdjustModal, setShowAdjustModal] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [adjustQty, setAdjustQty] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -36,22 +57,31 @@ export default function InventoryPage() {
   const fetchData = async () => {
     setLoading(true);
     
-    // Fetch Products
-    const { data: prodData } = await supabase
-      .from('products')
-      .select('*, categories(name)')
-      .order('name');
-    
-    // Fetch recent logs
-    const { data: logData } = await supabase
-      .from('inventory_logs')
-      .select('*, products(name)')
-      .order('created_at', { ascending: false })
-      .limit(20);
+    try {
+      // Fetch Products
+      const { data: prodData, error: prodErr } = await supabase
+        .from('products')
+        .select('*, categories(name)')
+        .order('name');
+      
+      if (prodErr) throw prodErr;
 
-    if (prodData) setProducts(prodData);
-    if (logData) setLogs(logData);
-    setLoading(false);
+      // Fetch recent logs
+      const { data: logData, error: logErr } = await supabase
+        .from('inventory_logs')
+        .select('*, products(name)')
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (logErr) throw logErr;
+
+      if (prodData) setProducts(prodData);
+      if (logData) setLogs(logData);
+    } catch (err: any) {
+      console.error("Inventory Sync Error:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const filteredProducts = products.filter(p => 
@@ -185,8 +215,9 @@ export default function InventoryPage() {
                   <button 
                     onClick={() => { setSelectedProduct(p); setAdjustQty(0); setShowAdjustModal(true); }}
                     className="p-3 bg-primary/10 text-primary rounded-lg hover:bg-primary hover:text-white transition-all active:scale-90 cursor-pointer"
+                    title="Adjust stock"
                   >
-                    <Plus size={20} alt="Adjust stock" />
+                    <Plus size={20} />
                   </button>
                 </div>
               </div>

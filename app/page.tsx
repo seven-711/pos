@@ -43,6 +43,34 @@ ChartJS.register(
   Legend
 );
 
+type ProductCategory = {
+  name: string;
+};
+
+type Product = {
+  name: string;
+  categories: ProductCategory | null;
+  selling_price: number;
+  stock: number;
+  sku?: string;
+};
+
+type TransactionItem = {
+  quantity: number;
+  price: number;
+  profit: number;
+  products: Product | null;
+};
+
+type Transaction = {
+  id: string;
+  created_at: string;
+  total_amount: number;
+  total_profit: number;
+  payment_method: string;
+  transaction_items: TransactionItem[];
+};
+
 type Session = {
   id: string;
   started_at: string;
@@ -65,8 +93,13 @@ export default function Dashboard() {
   const [sessionDuration, setSessionDuration] = useState("");
 
   // Feed & Alerts
-  const [recentTX, setRecentTX] = useState<any[]>([]);
+  const [recentTX, setRecentTX] = useState<Transaction[]>([]);
   const [lowStock, setLowStock] = useState<any[]>([]);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Chart data
   const [hourlyProfitLabels, setHourlyProfitLabels] = useState<string[]>([]);
@@ -120,12 +153,14 @@ export default function Dashboard() {
       todayEnd.setHours(23, 59, 59, 999);
 
       // 1. Transactions Today & Activity Feed
-      const { data: txData, error: txErr } = await supabase
+      const { data, error: txErr } = await supabase
         .from("transactions")
         .select("*, transaction_items(quantity, price, profit, products(name, categories(name)))")
         .gte("created_at", todayStart.toISOString())
         .lte("created_at", todayEnd.toISOString())
         .order("created_at", { ascending: true });
+
+      const txData = data as Transaction[] | null;
 
       if (txErr) throw txErr;
 
@@ -157,8 +192,8 @@ export default function Dashboard() {
 
         // Category Intelligence
         const categoryMap: Record<string, number> = {};
-        txData.forEach(tx => {
-          tx.transaction_items?.forEach((item: any) => {
+        txData.forEach((tx: Transaction) => {
+          tx.transaction_items?.forEach((item: TransactionItem) => {
             const catName = item.products?.categories?.name || 'Uncategorized';
             const price = item.price || item.products?.selling_price || 0;
             const qty = item.quantity || 0;
@@ -560,7 +595,7 @@ export default function Dashboard() {
             </h3>
             <p className="text-on-surface-variant font-bold text-[10px] uppercase tracking-widest mt-1 italic">
               {activeSession
-                ? `Operational since ${new Date(activeSession.started_at).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })} • ${sessionDuration}`
+                ? `Operational since ${isMounted ? new Date(activeSession.started_at).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" }) : '...'} • ${sessionDuration}`
                 : "Initiate system handshake to begin session archives."}
             </p>
           </div>

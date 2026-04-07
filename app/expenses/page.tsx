@@ -28,8 +28,16 @@ const CATEGORY_COLORS: Record<string, string> = {
   Other: "bg-outline-variant",
 };
 
+interface Expense {
+  id: string;
+  title: string;
+  category: string;
+  amount: number;
+  created_at: string;
+}
+
 export default function ExpensesPage() {
-  const [expenses, setExpenses] = useState<any[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -44,7 +52,7 @@ export default function ExpensesPage() {
   const totalExpenses = expenses.reduce((acc, e) => acc + Number(e.amount || 0), 0);
 
   // Allocation by category
-  const categoryTotals = expenses.reduce((acc: Record<string, number>, e) => {
+  const categoryTotals = expenses.reduce((acc: Record<string, number>, e: Expense) => {
     const cat = e.category || "Other";
     acc[cat] = (acc[cat] || 0) + Number(e.amount || 0);
     return acc;
@@ -62,12 +70,19 @@ export default function ExpensesPage() {
 
   const fetchExpenses = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("expenses")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (data) setExpenses(data);
-    setLoading(false);
+    try {
+      const { data, error } = await supabase
+        .from("expenses")
+        .select("*")
+        .order("created_at", { ascending: false });
+      
+      if (error) throw error;
+      if (data) setExpenses(data);
+    } catch (err: any) {
+      console.error("Expenses Sync Error:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
