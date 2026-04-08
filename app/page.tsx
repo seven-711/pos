@@ -173,8 +173,8 @@ export default function Dashboard() {
       if (txData) {
         if (isLive) {
           setTxCount(txData.length);
-          const sales = txData.reduce((acc, t) => acc + Number(t.total_amount || 0), 0);
-          const profit = txData.reduce((acc, t) => acc + Number(t.total_profit || 0), 0);
+          const sales = txData.reduce((acc: number, t: Transaction) => acc + Number(t.total_amount || 0), 0);
+          const profit = txData.reduce((acc: number, t: Transaction) => acc + Number(t.total_profit || 0), 0);
           setTotalSales(sales);
           setTotalProfit(profit);
         }
@@ -220,7 +220,7 @@ export default function Dashboard() {
         .gte("created_at", queryStart)
         .lte("created_at", queryEnd);
       if (expErr) throw expErr;
-      setTotalExpenses(expData?.reduce((acc, e) => acc + Number(e.amount || 0), 0) || 0);
+      setTotalExpenses(expData?.reduce((acc: number, e: any) => acc + Number(e.amount || 0), 0) || 0);
 
       // 4. Weekly Volume (Keep 7-day view)
       const sevenDaysAgo = new Date();
@@ -234,7 +234,7 @@ export default function Dashboard() {
       if (weekTx) {
         const dayMap: Record<string, number> = {};
         const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-        weekTx.forEach((t) => {
+        weekTx.forEach((t: any) => {
           const day = dayLabels[new Date(t.created_at).getDay()];
           dayMap[day] = (dayMap[day] || 0) + Number(t.total_amount || 0);
         });
@@ -248,7 +248,7 @@ export default function Dashboard() {
         .select("id, name, stock")
         .lte("stock", 10).limit(3);
       if (stockErr) throw stockErr;
-      if (stockData) setLowStock(stockData.map(s => ({ ...s, quantity: s.stock })));
+      if (stockData) setLowStock(stockData.map((s: any) => ({ ...s, quantity: s.stock })));
 
     } catch (err: any) {
       console.error("Dashboard Sync Error:", err);
