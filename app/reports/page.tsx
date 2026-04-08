@@ -92,7 +92,7 @@ export default function ReportsPage() {
       .gte('created_at', new Date(startDate).toISOString())
       .lte('created_at', new Date(endDate).toISOString());
 
-    const totalSales = filteredTX?.reduce((acc, t) => acc + Number(t.total_amount), 0) || 0;
+    const totalSales = filteredTX?.reduce((acc: number, t: any) => acc + Number(t.total_amount), 0) || 0;
     
     const newReport = {
       id: Math.random().toString(36).substr(2, 9),
