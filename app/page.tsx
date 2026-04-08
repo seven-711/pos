@@ -207,8 +207,20 @@ export default function Dashboard() {
           labels: Object.keys(categoryMap),
           datasets: [{
             data: Object.values(categoryMap),
-            backgroundColor: ["#00286d", "#046b5e", "#693527", "#8c6e5e", "#003d9b", "#5c4033", "#2f4f4f"],
-            borderWidth: 0, cutout: "75%",
+            backgroundColor: [
+              "#00286d", // Primary Navy
+              "#046b5e", // Teal
+              "#8b5cf6", // Violet
+              "#ec4899", // Pink
+              "#f59e0b", // Amber
+              "#ef4444", // Red
+              "#10b981"  // Emerald
+            ],
+            hoverOffset: 12,
+            spacing: 4,
+            borderRadius: 8,
+            borderWidth: 0, 
+            cutout: "82%",
           }]
         });
       }
@@ -272,12 +284,21 @@ export default function Dashboard() {
       label: "Profit",
       data: hourlyProfitData.length > 0 ? hourlyProfitData : [0],
       borderColor: "#00286d",
-      borderWidth: 3,
+      borderWidth: 4,
       fill: true,
-      backgroundColor: "rgba(0, 40, 109, 0.1)",
-      tension: 0.4,
+      backgroundColor: (context: any) => {
+        const ctx = context.chart.ctx;
+        const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, 'rgba(0, 40, 109, 0.15)');
+        gradient.addColorStop(1, 'rgba(0, 40, 109, 0)');
+        return gradient;
+      },
+      tension: 0.5,
       pointRadius: 0,
-      pointHoverRadius: 6,
+      pointHoverRadius: 8,
+      pointHoverBackgroundColor: "#00286d",
+      pointHoverBorderColor: "#fff",
+      pointHoverBorderWidth: 3,
     }],
   };
 
@@ -286,8 +307,9 @@ export default function Dashboard() {
     datasets: [{
       data: dailyVolumeData.length > 0 ? dailyVolumeData : [0, 0, 0, 0, 0, 0, 0],
       backgroundColor: "#046b5e",
-      borderRadius: 4,
-      barThickness: 12,
+      borderRadius: 12,
+      borderSkipped: false,
+      barThickness: 14,
     }],
   };
 
@@ -300,14 +322,46 @@ export default function Dashboard() {
     }],
   };
 
-  const cleanOptions = {
+  const commonPlugins = {
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: 'rgba(0, 12, 32, 0.85)',
+      titleFont: { size: 12, family: 'Inter', weight: 'bold' as const },
+      bodyFont: { size: 11, family: 'Inter' },
+      padding: 12,
+      cornerRadius: 12,
+      displayColors: false,
+    }
+  };
+
+  const cartesianOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
+    animation: {
+      duration: 1500,
+      easing: 'easeOutQuart' as const
+    },
+    plugins: commonPlugins,
     scales: {
       y: { display: false },
-      x: { grid: { display: false }, ticks: { font: { size: 10, family: "Inter" } } },
+      x: { 
+        grid: { display: false }, 
+        ticks: { 
+          font: { size: 9, family: "Inter", weight: 'bold' as const },
+          color: 'rgba(0,0,0,0.3)'
+        } 
+      },
     },
+  };
+
+  const doughnutOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: {
+      duration: 1500,
+      easing: 'easeOutQuart' as const
+    },
+    plugins: commonPlugins,
   };
 
   const fmt = (n: number) =>
@@ -420,7 +474,7 @@ export default function Dashboard() {
             <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/40">Hourly Yield Flow</span>
           </div>
           <div className="h-[320px] w-full relative">
-            <Line data={profitData} options={{ ...cleanOptions, scales: { x: { display: true, ticks: { font: { weight: 'bold' } } } } }} />
+            <Line data={profitData} options={{ ...cartesianOptions, scales: { ...cartesianOptions.scales, x: { ...cartesianOptions.scales.x, display: true, ticks: { ...cartesianOptions.scales.x.ticks, font: { ...cartesianOptions.scales.x.ticks.font, weight: 'bold' as const } } } } }} />
           </div>
         </div>
 
@@ -433,7 +487,7 @@ export default function Dashboard() {
               <Activity size={14} className="text-on-surface-variant" />
             </h3>
             <div className="h-[140px] relative mb-2">
-              <Doughnut data={categoryChartData} options={{ ...cleanOptions, cutout: '78%' }} />
+              <Doughnut data={categoryChartData} options={{ ...doughnutOptions, cutout: '85%' }} />
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                 <span className="text-2xl font-black text-primary">{categoryChartData.labels?.length || 0}</span>
                 <span className="text-[8px] font-black text-on-surface-variant uppercase tracking-widest">Active Sectors</span>
@@ -516,7 +570,7 @@ export default function Dashboard() {
           <div className="bg-surface-container p-4 rounded-xl border border-outline-variant/10 shadow-sm">
             <h3 className="font-extrabold text-[8px] text-on-surface-variant mb-2 uppercase tracking-widest">Growth</h3>
             <div className="h-[120px] relative">
-              <Bar data={salesData} options={cleanOptions} />
+              <Bar data={salesData} options={cartesianOptions} />
             </div>
           </div>
 

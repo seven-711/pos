@@ -13,7 +13,8 @@ import {
   Image as ImageIcon,
   Upload,
   XCircle,
-  Store
+  Store,
+  Calculator
 } from "lucide-react";
 
 interface Category {
@@ -53,6 +54,8 @@ export default function ProductsPage() {
     image_url: ''
   });
   const [isUploading, setIsUploading] = useState(false);
+  const [showPackCalc, setShowPackCalc] = useState(false);
+  const [packData, setPackData] = useState({ cost: '', qty: '' });
 
   useEffect(() => {
     fetchData();
@@ -107,6 +110,8 @@ export default function ProductsPage() {
   const closeModal = () => {
     setShowAddModal(false);
     setEditingProduct(null);
+    setShowPackCalc(false);
+    setPackData({ cost: '', qty: '' });
     setFormData({ name: '', category_id: '', stock: '', min_stock: '10', cost_price: '', selling_price: '', image_url: '' });
   };
 
@@ -462,11 +467,20 @@ export default function ProductsPage() {
 
                 <div className="grid grid-cols-2 gap-1.5">
                   <div className="p-2 rounded-2xl bg-surface-container-low border border-outline-variant/10">
-                    <label className="text-[8px] font-bold uppercase tracking-widest text-on-surface-variant leading-none">Stock</label>
+                    <div className="flex justify-between items-center mb-0.5">
+                      <label className="text-[8px] font-bold uppercase tracking-widest text-on-surface-variant leading-none">Stock</label>
+                      <button 
+                        type="button"
+                        onClick={() => setShowPackCalc(!showPackCalc)}
+                        className={`text-[8px] font-black uppercase transition-colors ${showPackCalc ? 'text-primary' : 'text-on-surface-variant opacity-40 hover:opacity-100'}`}
+                      >
+                        {showPackCalc ? 'Close Calc' : 'Pack Calc'}
+                      </button>
+                    </div>
                     <input 
                       required type="number" value={formData.stock}
                       onChange={(e) => setFormData({...formData, stock: e.target.value})}
-                      className="w-full bg-transparent text-xs font-black outline-none mt-0.5" 
+                      className="w-full bg-transparent text-xs font-black outline-none" 
                     />
                   </div>
                   <div className="p-2 rounded-2xl bg-surface-container-low border border-outline-variant/10">
@@ -478,6 +492,55 @@ export default function ProductsPage() {
                     />
                   </div>
                 </div>
+
+                {/* Pack Calculator Segment */}
+                {showPackCalc && (
+                  <div className="p-3 rounded-2xl bg-primary/5 border border-dashed border-primary/30 animate-in fade-in slide-in-from-top-1 duration-300">
+                    <div className="flex items-center gap-2 mb-2">
+                       <Calculator size={12} className="text-primary" />
+                       <span className="text-[9px] font-black uppercase tracking-tight text-primary">Yield Calculator (Pack to Unit)</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <label className="text-[7px] font-bold uppercase text-primary/60 tracking-widest">Pack Cost (₱)</label>
+                        <input 
+                          type="number"
+                          placeholder="52.00"
+                          value={packData.cost}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setPackData(prev => ({ ...prev, cost: val }));
+                            if (val && packData.qty) {
+                              const unitCost = parseFloat(val) / parseFloat(packData.qty);
+                              setFormData(f => ({ ...f, cost_price: unitCost.toFixed(2) }));
+                            }
+                          }}
+                          className="w-full bg-white/50 border-b border-primary/20 text-[11px] font-bold px-1 py-1 focus:outline-none focus:border-primary"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[7px] font-bold uppercase text-primary/60 tracking-widest">Qty in Pack</label>
+                        <input 
+                          type="number"
+                          placeholder="60"
+                          value={packData.qty}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setPackData(prev => ({ ...prev, qty: val }));
+                            if (val) {
+                              setFormData(f => ({ ...f, stock: val }));
+                              if (packData.cost) {
+                                const unitCost = parseFloat(packData.cost) / parseFloat(val);
+                                setFormData(f => ({ ...f, cost_price: unitCost.toFixed(2), stock: val }));
+                              }
+                            }
+                          }}
+                          className="w-full bg-white/50 border-b border-primary/20 text-[11px] font-bold px-1 py-1 focus:outline-none focus:border-primary"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="p-2 rounded-2xl bg-primary/5 border border-primary/10 flex items-center gap-2">
                   <div className="flex-1">

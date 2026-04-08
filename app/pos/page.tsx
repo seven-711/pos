@@ -104,9 +104,18 @@ export default function POSPage() {
     if (!qtyTarget) return;
 
     const existing = cart.find((item: CartItem) => item.id === qtyTarget.id);
+    const totalRequested = (existing?.quantity || 0) + qtyValue;
+
+    if (totalRequested > qtyTarget.stock) {
+      setToastMsg(`Insufficient stock! Only ${qtyTarget.stock} available.`);
+      setToastType("error");
+      setShowToast(true);
+      return;
+    }
+
     if (existing) {
       setCart(cart.map((item: CartItem) =>
-        item.id === qtyTarget.id ? { ...item, quantity: item.quantity + qtyValue } : item
+        item.id === qtyTarget.id ? { ...item, quantity: totalRequested } : item
       ));
     } else {
       setCart([...cart, {
@@ -254,12 +263,14 @@ export default function POSPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-              {filteredProducts.map(product => (
-                <div
-                  key={product.id}
-                  onClick={() => addToCart(product)}
-                  className="recessed-card rounded-[2.5rem] p-2 transition-all duration-200 active:scale-95 cursor-pointer group"
-                >
+              {filteredProducts.map(product => {
+                const isOutOfStock = (product.stock || 0) <= 0;
+                return (
+                  <div
+                    key={product.id}
+                    onClick={() => !isOutOfStock && addToCart(product)}
+                    className={`recessed-card rounded-[2.5rem] p-2 transition-all duration-200 ${isOutOfStock ? 'opacity-50 cursor-not-allowed' : 'active:scale-95 cursor-pointer group'}`}
+                  >
                   <div className="frosted-inner rounded-[2rem] overflow-hidden flex flex-col h-full">
                     {/* Product Image Area */}
                     <div className="p-2">
@@ -279,12 +290,21 @@ export default function POSPage() {
                           </div>
                         )}
                         {/* Stock Badge - Premium Position */}
-                        <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-md px-2.5 py-1.5 rounded-2xl shadow-sm border border-white/50 min-w-[56px]">
+                        <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-md px-2.5 py-1.5 rounded-2xl shadow-sm border border-white/50 min-w-[56px] z-10">
                           <div className="text-[7px] font-black uppercase tracking-widest text-on-surface-variant/60 leading-none mb-0.5 text-center">Stock</div>
                           <div className={`text-[10px] font-black leading-none text-center ${product.stock < 10 ? 'text-error' : 'text-primary'}`}>
                             {product.stock}U
                           </div>
                         </div>
+
+                        {/* Sold Out Overlay */}
+                        {isOutOfStock && (
+                          <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-20">
+                            <span className="bg-white text-error px-4 py-1.5 rounded-full font-black text-[10px] uppercase tracking-[0.2em] shadow-xl border border-error/20">
+                              Sold Out
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -318,7 +338,8 @@ export default function POSPage() {
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -413,7 +434,7 @@ export default function POSPage() {
             <div className="flex items-center justify-center gap-6 mb-10">
               <button
                 onClick={() => setQtyValue(Math.max(1, qtyValue - 1))}
-                className="w-16 h-16 rounded-2xl bg-surface-container-highest hover:bg-surface-variant flex items-center justify-center text-primary active:scale-90 transition-all font-bold text-4xl"
+                className="w-16 h-16 rounded-2xl bg-surface-container-highest hover:bg-surface-variant flex items-center justify-center text-primary active:scale-90 transition-all font-bold text-4xl cursor-pointer"
               >
                 <Minus size={32} />
               </button>
@@ -421,8 +442,9 @@ export default function POSPage() {
                 {qtyValue}
               </div>
               <button
+                disabled={qtyValue + (cart.find(i => i.id === qtyTarget?.id)?.quantity || 0) >= (qtyTarget?.stock || 0)}
                 onClick={() => setQtyValue(qtyValue + 1)}
-                className="w-16 h-16 rounded-2xl bg-surface-container-highest hover:bg-surface-variant flex items-center justify-center text-primary active:scale-90 transition-all font-bold text-4xl"
+                className="w-16 h-16 rounded-2xl bg-surface-container-highest hover:bg-surface-variant flex items-center justify-center text-primary active:scale-90 disabled:opacity-20 disabled:active:scale-100 transition-all font-bold text-4xl cursor-pointer"
               >
                 <Plus size={32} />
               </button>
