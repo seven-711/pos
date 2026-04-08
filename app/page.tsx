@@ -15,6 +15,7 @@ import {
   Receipt,
   ArrowRight
 } from "lucide-react";
+import { useSession, type Session } from "@/lib/contexts/SessionContext";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -71,13 +72,7 @@ type Transaction = {
   transaction_items: TransactionItem[];
 };
 
-type Session = {
-  id: string;
-  started_at: string;
-  ended_at: string | null;
-  total_sales: number | null;
-  total_profit: number | null;
-};
+
 
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
@@ -88,8 +83,7 @@ export default function Dashboard() {
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [txCount, setTxCount] = useState(0);
 
-  // Current active session
-  const [activeSession, setActiveSession] = useState<Session | null>(null);
+  const { activeSession, openSession, closeSession } = useSession();
   const [sessionDuration, setSessionDuration] = useState("");
 
   // Feed & Alerts
@@ -110,6 +104,7 @@ export default function Dashboard() {
   const [categoryChartData, setCategoryChartData] = useState<any>({ labels: [], datasets: [] });
   const [error, setError] = useState<string | null>(null);
   const [isTimeout, setIsTimeout] = useState(false);
+  const [showReminder, setShowReminder] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -118,7 +113,7 @@ export default function Dashboard() {
     
     fetchDashboardData();
     return () => clearTimeout(timer);
-  }, []);
+  }, [activeSession]);
 
   useEffect(() => {
     if (!activeSession) return;
@@ -142,103 +137,99 @@ export default function Dashboard() {
   }, [activeSession]);
 
   const fetchDashboardData = async () => {
-    setLoading(true);
     setError(null);
     setIsTimeout(false);
+    setLoading(true);
 
     try {
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      const todayEnd = new Date();
-      todayEnd.setHours(23, 59, 59, 999);
+      // We use the activeSession from context instead of local state
 
-      // 1. Transactions Today & Activity Feed
-      const { data, error: txErr } = await supabase
+      const currentSession = activeSession;
+      const isLive = !!currentSession;
+      
+      const startTime = currentSession?.started_at ? new Date(currentSession.started_at) : new Date();
+      if (!isLive) startTime.setHours(0,0,0,0); 
+
+      if (currentSession?.ended_at) {
+        setTotalSales(Number(currentSession.total_sales || 0));
+        setTotalProfit(Number(currentSession.total_profit || 0));
+        setTxCount(0); 
+      }
+
+      const queryStart = activeSession?.started_at || new Date(new Date().setHours(0,0,0,0)).toISOString();
+      const queryEnd = activeSession?.ended_at || new Date().toISOString();
+
+      // 2. Fetch Transactions
+      const { data: txDataRaw, error: txErr } = await supabase
         .from("transactions")
         .select("*, transaction_items(quantity, price, profit, products(name, categories(name)))")
-        .gte("created_at", todayStart.toISOString())
-        .lte("created_at", todayEnd.toISOString())
+        .gte("created_at", queryStart)
+        .lte("created_at", queryEnd)
         .order("created_at", { ascending: true });
 
-      const txData = data as Transaction[] | null;
-
+      const txData = txDataRaw as Transaction[] | null;
       if (txErr) throw txErr;
 
       if (txData) {
-        setTxCount(txData.length);
+        if (isLive) {
+          setTxCount(txData.length);
+          const sales = txData.reduce((acc, t) => acc + Number(t.total_amount || 0), 0);
+          const profit = txData.reduce((acc, t) => acc + Number(t.total_profit || 0), 0);
+          setTotalSales(sales);
+          setTotalProfit(profit);
+        }
         setRecentTX([...txData].reverse().slice(0, 5));
-        const sales = txData.reduce((acc, t) => acc + Number(t.total_amount || 0), 0);
-        const profit = txData.reduce((acc, t) => acc + Number(t.total_profit || 0), 0);
-        setTotalSales(sales);
-        setTotalProfit(profit);
 
-        // Hourly aggregation
+        // Hourly aggregation & Peak hours
         const hourlyMap: Record<string, number> = {};
+        const peakMap: number[] = new Array(12).fill(0);
         txData.forEach((t) => {
           const hour = new Date(t.created_at).getHours();
           const label = `${hour % 12 === 0 ? 12 : hour % 12}${hour < 12 ? "am" : "pm"}`;
           hourlyMap[label] = (hourlyMap[label] || 0) + Number(t.total_profit || 0);
+          if (hour >= 9 && hour <= 20) peakMap[hour - 9]++;
         });
         setHourlyProfitLabels(Object.keys(hourlyMap));
         setHourlyProfitData(Object.values(hourlyMap));
-
-        // Peak hours (9am to 8pm)
-        const peakMap: number[] = new Array(12).fill(0);
-        txData.forEach((t) => {
-          const hour = new Date(t.created_at).getHours();
-          if (hour >= 9 && hour <= 20) peakMap[hour - 9]++;
-        });
         setPeakHoursData(peakMap);
 
         // Category Intelligence
         const categoryMap: Record<string, number> = {};
-        txData.forEach((tx: Transaction) => {
-          tx.transaction_items?.forEach((item: TransactionItem) => {
+        txData.forEach((tx) => {
+          tx.transaction_items?.forEach((item) => {
             const catName = item.products?.categories?.name || 'Uncategorized';
             const price = item.price || item.products?.selling_price || 0;
-            const qty = item.quantity || 0;
-            const sub = Number(price) * Number(qty);
+            const sub = Number(price) * Number(item.quantity || 0);
             categoryMap[catName] = (categoryMap[catName] || 0) + sub;
           });
         });
-
-        const labels = Object.keys(categoryMap);
-        const vals = Object.values(categoryMap);
-
         setCategoryChartData({
-          labels,
+          labels: Object.keys(categoryMap),
           datasets: [{
-            data: vals,
-            backgroundColor: ["#00286d", "#046b5e", "#693527", "#8c6e5e", "#003d9b"],
-            borderWidth: 0,
-            cutout: "75%",
+            data: Object.values(categoryMap),
+            backgroundColor: ["#00286d", "#046b5e", "#693527", "#8c6e5e", "#003d9b", "#5c4033", "#2f4f4f"],
+            borderWidth: 0, cutout: "75%",
           }]
         });
       }
 
-      // 2. Today's Expenses
+      // 3. Expenses
       const { data: expData, error: expErr } = await supabase
         .from("expenses")
         .select("amount")
-        .gte("created_at", todayStart.toISOString())
-        .lte("created_at", todayEnd.toISOString());
-
+        .gte("created_at", queryStart)
+        .lte("created_at", queryEnd);
       if (expErr) throw expErr;
-      if (expData) {
-        setTotalExpenses(expData.reduce((acc, e) => acc + Number(e.amount || 0), 0));
-      }
+      setTotalExpenses(expData?.reduce((acc, e) => acc + Number(e.amount || 0), 0) || 0);
 
-      // 3. Weekly Volume
+      // 4. Weekly Volume (Keep 7-day view)
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-      sevenDaysAgo.setHours(0, 0, 0, 0);
-
       const { data: weekTx, error: weekErr } = await supabase
         .from("transactions")
         .select("total_amount, created_at")
         .gte("created_at", sevenDaysAgo.toISOString())
         .order("created_at", { ascending: true });
-
       if (weekErr) throw weekErr;
       if (weekTx) {
         const dayMap: Record<string, number> = {};
@@ -251,53 +242,26 @@ export default function Dashboard() {
         setDailyVolumeData(Object.values(dayMap));
       }
 
-      // 4. Low Stock Alerts
+      // 5. Low Stock
       const { data: stockData, error: stockErr } = await supabase
         .from("products")
-        .select("name, stock, sku")
-        .lte("stock", 10)
-        .limit(3);
+        .select("id, name, stock")
+        .lte("stock", 10).limit(3);
       if (stockErr) throw stockErr;
       if (stockData) setLowStock(stockData.map(s => ({ ...s, quantity: s.stock })));
 
-      // 5. Active Session
-      const { data: sessionData, error: sessionErr } = await supabase
-        .from("store_sessions")
-        .select("*")
-        .is("ended_at", null)
-        .limit(1);
-      if (sessionErr) throw sessionErr;
-      if (sessionData?.length) setActiveSession(sessionData[0]);
-
     } catch (err: any) {
       console.error("Dashboard Sync Error:", err);
-      setError(err.message || "Connection failure");
+      let msg = err.message || "Connection failure";
+      if (err.code) msg = `[${err.code}] ${msg}`;
+      if (err.hint) msg += ` (Hint: ${err.hint})`;
+      setError(msg);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleOpenSession = async () => {
-    const { data, error } = await supabase
-      .from("store_sessions")
-      .insert([{ started_at: new Date().toISOString() }])
-      .select()
-      .single();
-    if (data) setActiveSession(data);
-  };
-
-  const handleCloseSession = async () => {
-    if (!activeSession) return;
-    const { error } = await supabase
-      .from("store_sessions")
-      .update({
-        ended_at: new Date().toISOString(),
-        total_sales: totalSales,
-        total_profit: totalProfit,
-      })
-      .eq("id", activeSession.id);
-    if (!error) setActiveSession(null);
-  };
+  // Global session handlers are used instead
 
   const netProfit = totalProfit - totalExpenses;
   const roi = totalSales > 0 ? ((totalProfit / totalSales) * 100).toFixed(0) : "0";
@@ -400,7 +364,9 @@ export default function Dashboard() {
       <div className="flex flex-col gap-2 mb-2 mt-2">
         <div className="flex justify-between items-end">
           <div>
-            <p className="text-secondary font-label text-[10px] font-bold uppercase tracking-[0.25em] mb-1">Status Protocol</p>
+            <p className="text-secondary font-label text-[10px] font-bold uppercase tracking-[0.25em] mb-1">
+              {activeSession ? "Live Intelligence Flow" : "Archived Session Summary"}
+            </p>
             <h1 className="text-xl font-extrabold tracking-tight text-primary font-heading uppercase">Dashboard</h1>
           </div>
           <div className="hidden md:flex bg-surface-container rounded-2xl p-1 gap-1 border border-outline-variant/10">
@@ -498,7 +464,7 @@ export default function Dashboard() {
                 </div>
               ) : (
                 lowStock.map(item => (
-                  <div key={item.sku} className="flex justify-between items-center group">
+                  <div key={item.id} className="flex justify-between items-center group">
                     <div>
                       <p className="text-[10px] font-bold text-on-surface">{item.name}</p>
                     </div>
@@ -568,37 +534,6 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* Terminal Status Footer */}
-      <section className="bg-surface-container-low p-4 rounded-xl border border-outline-variant/10 shadow-sm mb-4 flex flex-col md:flex-row justify-between items-center gap-4">
-        <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${activeSession ? 'bg-secondary/10 border-secondary/20 text-secondary' : 'bg-surface-container border-outline-variant/10 text-on-surface-variant opacity-40'}`}>
-            <Clock size={20} className={activeSession ? 'animate-pulse' : ''} />
-          </div>
-          <div>
-            <h3 className="font-black text-sm font-heading text-primary uppercase">
-              {activeSession ? "ACTIVE" : "OFFLINE"}
-            </h3>
-          </div>
-        </div>
-        <div className="flex gap-2 w-full md:w-auto">
-          {activeSession ? (
-            <button
-              onClick={handleCloseSession}
-              className="flex-1 md:flex-none px-6 py-2.5 bg-secondary text-white rounded-xl font-black text-[10px] uppercase tracking-widest"
-            >
-              Close
-            </button>
-          ) : (
-            <button
-              onClick={handleOpenSession}
-              className="flex-1 md:flex-none px-6 py-2.5 bg-primary text-white rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2"
-            >
-              <PlayCircle size={14} />
-              Open
-            </button>
-          )}
-        </div>
-      </section>
     </div>
   );
 }

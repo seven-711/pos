@@ -19,6 +19,8 @@ export const metadata: Metadata = {
   description: "Advanced AI CRM and Point of Sale System",
 };
 
+import { SessionProvider } from "@/lib/contexts/SessionContext";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -36,9 +38,11 @@ export default function RootLayout({
         )}
       </head>
       <body className={`${manrope.variable} ${inter.variable} antialiased surface-base min-h-screen text-[var(--color-on-surface)]`}>
-        <SidebarLayout>
-          {children}
-        </SidebarLayout>
+        <SessionProvider>
+          <SidebarLayout>
+            {children}
+          </SidebarLayout>
+        </SessionProvider>
       </body>
     </html>
   );

@@ -197,6 +197,33 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
+      {/* Executive Overview Highlight */}
+      <div className="bg-gradient-to-br from-primary to-primary-container p-4 rounded-2xl relative overflow-hidden group shadow-lg mb-8">
+        <div className="absolute right-0 top-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-2xl group-hover:bg-white/20 transition-all duration-700"></div>
+        <div className="relative z-10 w-full flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="max-w-xl">
+            <h3 className="font-bold text-on-primary mb-1.5 font-heading text-sm uppercase tracking-wider flex items-center gap-2">
+              <Info size={16} />
+              Executive Overview
+            </h3>
+            <p className="text-on-primary/90 text-xs leading-relaxed font-medium">
+              Your growth velocity reflects a positive trend in high-margin beverage categories. Afternoon traffic density suggests an opportunity for a daily "Happy Hour" promotion to further accelerate capital turnover.
+            </p>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <div className="bg-white/10 px-4 py-2 rounded-xl border border-white/5 flex flex-col justify-center min-w-[100px] backdrop-blur-sm">
+              <span className="text-on-primary text-sm font-black block leading-none">{metrics.salesCount}</span>
+              <span className="text-[8px] font-black uppercase tracking-widest text-on-primary/50 mt-1">Sessions</span>
+            </div>
+            <div className="bg-white/10 px-4 py-2 rounded-xl border border-white/5 flex flex-col justify-center min-w-[100px] backdrop-blur-sm">
+              <span className="text-on-primary text-sm font-black block leading-none">{formatCurrency(metrics.netProfit)}</span>
+              <span className="text-[8px] font-black uppercase tracking-widest text-on-primary/50 mt-1">Net Equity</span>
+            </div>
+          </div>
+        </div>
+        <UserCheck className="absolute -right-4 -bottom-4 text-on-primary/5 w-24 h-24" strokeWidth={1} />
+      </div>
+
       {/* Bento Grid Insights */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         {/* Key Metrics */}
@@ -286,7 +313,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Secondary Analysis Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-32">
         {/* Top Product List */}
         <div className="bg-surface-container-low p-6 rounded-2xl flex flex-col border border-outline-variant/10 shadow-sm">
           <h3 className="font-bold font-heading text-primary mb-6 flex justify-between items-center text-lg">
@@ -339,7 +366,7 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Category Split */}
-        <div className="bg-surface-container-low p-6 rounded-2xl flex flex-col border border-outline-variant/10 shadow-sm overflow-hidden">
+        <div className="bg-surface-container-low p-6 rounded-2xl flex flex-col border border-outline-variant/10 shadow-sm">
           <h3 className="font-bold font-heading text-primary mb-6 flex justify-between items-center text-lg">
             Category Mix
             <PieChart size={18} className="text-on-surface-variant" />
@@ -368,30 +395,6 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Abstract Insight Card */}
-      <div className="bg-gradient-to-br from-primary to-primary-container p-10 rounded-3xl relative overflow-hidden group shadow-2xl mb-12">
-        <div className="absolute right-0 top-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl group-hover:bg-white/20 transition-all duration-700"></div>
-        <div className="relative z-10 max-w-2xl">
-          <h3 className="font-bold text-on-primary mb-4 font-heading text-2xl flex items-center gap-2">
-            Executive Overview
-            <Info size={20} />
-          </h3>
-          <p className="text-on-primary/80 text-lg leading-relaxed mb-8 font-medium">
-            Your current growth velocity is mirroring an upward trend in high-margin beverage sales. Based on recent transactions, afternoon traffic density indicates an opportunity for a daily "Happy Hour" promotion to further accelerate capital turnover.
-          </p>
-          <div className="flex gap-6">
-            <div className="bg-white/15 px-6 py-4 rounded-2xl backdrop-blur-md border border-white/10 shadow-lg">
-              <span className="text-on-primary text-2xl font-bold block">{metrics.salesCount}</span>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-on-primary/60">Sessions Ledgered</span>
-            </div>
-            <div className="bg-white/15 px-6 py-4 rounded-2xl backdrop-blur-md border border-white/10 shadow-lg">
-              <span className="text-on-primary text-2xl font-bold block">{formatCurrency(metrics.netProfit)}</span>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-on-primary/60">Live Net Equity</span>
-            </div>
-          </div>
-        </div>
-        <UserCheck className="absolute -right-8 -bottom-8 text-on-primary/5 w-64 h-64" strokeWidth={1} />
-      </div>
     </div>
   );
 }

@@ -50,9 +50,14 @@
   --color-secondary-fixed-dim: #84d5c5;
 }
 
-@layer base {
-  body {
-    background-color: var(--color-background);
-    color: var(--color-on-surface);
+@layer utilities {
+  .recessed-card {
+    background: var(--color-surface-container);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.01);
+    border: 8px solid rgba(255, 255, 255, 0.4);
+  }
+  .frosted-inner {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px);
   }
 }

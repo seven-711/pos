@@ -20,7 +20,6 @@ import {
 interface Product {
   id: string;
   name: string;
-  sku: string;
   stock: number;
   cost_price: number;
   selling_price: number;
@@ -86,8 +85,7 @@ export default function InventoryPage() {
   };
 
   const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    (p.sku && p.sku.toLowerCase().includes(searchQuery.toLowerCase()))
+    p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const lowStockProducts = products.filter(p => p.stock <= 10);
@@ -207,7 +205,7 @@ export default function InventoryPage() {
                     )}
                   </div>
                   <div>
-                    <p className="text-[10px] font-mono text-on-surface-variant leading-none mb-1 font-bold">SKU: {p.sku || p.id.split('-')[0].toUpperCase()}</p>
+                    <p className="text-[10px] font-mono text-on-surface-variant leading-none mb-1 font-bold">UID: {p.id.split('-')[0].toUpperCase()}</p>
                     <p className="font-bold text-sm text-on-surface">{p.name}</p>
                     <p className="text-xs font-semibold text-secondary">₱{Number(p.cost_price || 0).toFixed(2)} cost</p>
                   </div>

@@ -27,7 +27,6 @@ interface Category {
 interface Product {
   id: string;
   name: string;
-  sku: string;
   stock: number;
   cost_price: number;
   selling_price: number;
@@ -90,7 +89,7 @@ export default function POSPage() {
   };
 
   const filteredProducts = products.filter((p: Product) => {
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.sku && p.sku.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = !selectedCategory || p.category_id === selectedCategory;
     return matchesSearch && matchesCategory;
   });
@@ -259,33 +258,63 @@ export default function POSPage() {
                 <div
                   key={product.id}
                   onClick={() => addToCart(product)}
-                  className="bg-surface-container-low p-4 rounded-xl hover:bg-surface-container transition-all group cursor-pointer active:scale-95 duration-100 border border-outline-variant/10"
+                  className="recessed-card rounded-[2.5rem] p-2 transition-all duration-200 active:scale-95 cursor-pointer group"
                 >
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="w-12 h-12 rounded-lg overflow-hidden flex items-center justify-center bg-surface-container-highest">
-                      {product.image_url ? (
-                        <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-primary/10">
-                          {product.categories?.name?.toLowerCase().includes('coffee') ? <Coffee className="text-primary" size={24} /> : <Package className="text-primary" size={24} />}
+                  <div className="frosted-inner rounded-[2rem] overflow-hidden flex flex-col h-full">
+                    {/* Product Image Area */}
+                    <div className="p-2">
+                      <div className="w-full aspect-[4/5] rounded-[1.5rem] overflow-hidden bg-surface-container-highest relative">
+                        {product.image_url ? (
+                          <img 
+                            src={product.image_url} 
+                            alt={product.name} 
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-primary/5">
+                            {product.categories?.name?.toLowerCase().includes('coffee') ? 
+                              <Coffee className="text-primary/20 w-12 h-12" /> : 
+                              <Package className="text-primary/20 w-12 h-12" />
+                            }
+                          </div>
+                        )}
+                        {/* Stock Badge - Premium Position */}
+                        <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-md px-2.5 py-1.5 rounded-2xl shadow-sm border border-white/50 min-w-[56px]">
+                          <div className="text-[7px] font-black uppercase tracking-widest text-on-surface-variant/60 leading-none mb-0.5 text-center">Stock</div>
+                          <div className={`text-[10px] font-black leading-none text-center ${product.stock < 10 ? 'text-error' : 'text-primary'}`}>
+                            {product.stock}U
+                          </div>
                         </div>
-                      )}
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <span className="text-[10px] font-label font-bold uppercase tracking-tighter text-on-surface-variant">Stock</span>
-                      <p className={`text-sm font-bold ${product.stock < 10 ? 'text-error' : 'text-on-surface'}`}>{product.stock} Units</p>
-                    </div>
-                  </div>
-                  <h3 className="font-heading font-bold text-lg mb-1">{product.name}</h3>
-                  <p className="text-2xl font-bold text-primary mb-4">₱{Number(product.selling_price).toFixed(2)}</p>
-                  <div className="grid grid-cols-2 gap-2 border-t border-outline-variant/15 pt-3">
-                    <div>
-                      <span className="text-[10px] font-label font-bold uppercase tracking-tighter text-on-surface-variant">Profit</span>
-                      <p className="text-xs font-semibold text-secondary">+₱{(product.selling_price - product.cost_price).toFixed(2)}</p>
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-label font-bold uppercase tracking-tighter text-on-surface-variant">ROI</span>
-                      <p className="text-xs font-semibold text-primary">{product.cost_price > 0 ? (((product.selling_price - product.cost_price) / product.cost_price) * 100).toFixed(0) : 0}%</p>
+
+                    {/* Content Area */}
+                    <div className="px-5 pb-5 pt-1">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <h3 className="font-heading font-extrabold text-sm text-on-surface line-clamp-1 flex-1 uppercase tracking-tight">{product.name}</h3>
+                        {product.stock > 0 && (
+                          <CheckCircle2 size={14} className="text-secondary opacity-60" />
+                        )}
+                      </div>
+                      <p className="text-lg font-black text-primary mb-3">
+                        ₱{Number(product.selling_price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </p>
+
+                      {/* Bottom Stats Grid */}
+                      <div className="grid grid-cols-2 gap-2 pt-3 border-t border-on-surface/5">
+                        <div>
+                          <span className="text-[7px] font-black uppercase tracking-widest text-on-surface-variant/30 block mb-0.5">Yield</span>
+                          <p className="text-[9px] font-bold text-secondary-fixed-dim bg-secondary/5 w-fit px-1 rounded-sm">
+                            +₱{(product.selling_price - product.cost_price).toFixed(2)}
+                          </p>
+                        </div>
+                        <div className="text-right flex flex-col items-end">
+                          <span className="text-[7px] font-black uppercase tracking-widest text-on-surface-variant/30 block mb-0.5">ROI</span>
+                          <p className="text-[9px] font-bold text-primary opacity-60">
+                            {product.cost_price > 0 ? (((product.selling_price - product.cost_price) / product.cost_price) * 100).toFixed(0) : 0}%
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

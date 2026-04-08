@@ -24,7 +24,6 @@ interface Category {
 interface Product {
   id: string;
   name: string;
-  sku?: string;
   stock: number;
   min_stock: number;
   cost_price: number;
@@ -88,7 +87,6 @@ export default function ProductsPage() {
   const filteredProducts = products.filter((p: Product) => {
     const s = searchQuery.toLowerCase();
     return p.name.toLowerCase().includes(s) || 
-           (p.sku && p.sku.toLowerCase().includes(s)) || 
            (p.categories?.name && p.categories.name.toLowerCase().includes(s));
   });
 
@@ -116,6 +114,10 @@ export default function ProductsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // 1. Show local preview instantly
+    const localUrl = URL.createObjectURL(file);
+    setFormData(prev => ({ ...prev, image_url: localUrl }));
+
     setIsUploading(true);
     try {
       const fileExt = file.name.split('.').pop();
@@ -132,10 +134,19 @@ export default function ProductsPage() {
         .from('products')
         .getPublicUrl(filePath);
 
+      // 2. Update with the real persistent URL once upload succeeds
       setFormData(prev => ({ ...prev, image_url: publicUrl }));
     } catch (err: any) {
       console.error("Upload Error:", err);
-      alert("Failed to upload image. Ensure the 'products' bucket exists and is public.");
+      let errorMsg = err.message || "Unknown error";
+      if (err.statusCode === "404" || err.error === "Not Found") {
+        errorMsg = "The 'products' bucket does not exist. Please run the SQL setup script.";
+      }
+      if (err.statusCode === "403") {
+        errorMsg = "Permission denied. Check your Supabase RLS policies for storage.";
+      }
+      
+      alert(`Failed to upload image: ${errorMsg}\n\nNote: The preview you see is temporary until fixed.`);
     } finally {
       setIsUploading(false);
     }
@@ -311,7 +322,7 @@ export default function ProductsPage() {
                         </div>
                         <div>
                           <div className="font-bold text-on-surface group-hover:text-primary transition-colors">{product.name}</div>
-                          <div className="text-xs text-on-surface-variant">{product.categories?.name || 'Uncategorized'} • ID: {product.id.split('-')[0]}</div>
+                          <div className="text-xs text-on-surface-variant">{product.categories?.name || 'Uncategorized'} • ID: {product.id.split('-')[0].toUpperCase()}</div>
                         </div>
                       </div>
                     </td>
