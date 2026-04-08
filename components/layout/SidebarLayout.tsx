@@ -116,7 +116,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
 
         {/* Main scrollable area */}
         <main className="flex-1 overflow-y-auto w-full p-6 md:p-12 pb-48 md:pb-40 relative z-0">
-          <div className={`transition-all duration-700 h-full ${!activeSession ? 'opacity-40 blur-sm grayscale' : 'opacity-100 blur-0'}`}>
+          <div className={`transition-all duration-700 w-full ${!activeSession ? 'opacity-40 blur-sm grayscale' : 'opacity-100 blur-0'}`}>
             {children}
           </div>
         </main>
