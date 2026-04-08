@@ -2,23 +2,23 @@
 
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { 
-  BarChart2, 
-  LineChart, 
-  Activity, 
-  Archive, 
-  Calculator, 
-  CheckCircle2, 
-  Sparkles, 
-  FileText, 
-  FileSpreadsheet, 
-  TrendingUp, 
-  AlertTriangle, 
-  ArrowRight, 
-  Hourglass, 
-  Download, 
-  ChevronDown, 
-  Plus, 
+import {
+  BarChart2,
+  LineChart,
+  Activity,
+  Archive,
+  Calculator,
+  CheckCircle2,
+  Sparkles,
+  FileText,
+  FileSpreadsheet,
+  TrendingUp,
+  AlertTriangle,
+  ArrowRight,
+  Hourglass,
+  Download,
+  ChevronDown,
+  Plus,
   Box,
   Loader2,
   Trash2
@@ -28,7 +28,7 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [reports, setReports] = useState<any[]>([]);
-  
+
   // Analytics State for Cards
   const [stats, setStats] = useState({
     liquidityRisk: 0,
@@ -53,13 +53,13 @@ export default function ReportsPage() {
 
   const fetchIntelligence = async () => {
     setLoading(true);
-    
+
     // 1. Fetch Low Stock for Liquidity Alert
     const { count: lowStockCount } = await supabase
       .from('products')
       .select('*', { count: 'exact', head: true })
       .lte('quantity', 10);
-    
+
     // 2. Fetch Weekly Growth for Projection
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -83,7 +83,7 @@ export default function ReportsPage() {
   const handleExecuteAnalysis = async () => {
     if (!startDate || !endDate) return;
     setGenerating(true);
-    
+
     // Simulations and real calc can happen here
     // For now, we "generate" a report entry into local state based on actual data points
     const { data: filteredTX } = await supabase
@@ -93,7 +93,7 @@ export default function ReportsPage() {
       .lte('created_at', new Date(endDate).toISOString());
 
     const totalSales = filteredTX?.reduce((acc: number, t: any) => acc + Number(t.total_amount), 0) || 0;
-    
+
     const newReport = {
       id: Math.random().toString(36).substr(2, 9),
       name: `${reportType.toUpperCase()}_${startDate}_TO_${endDate}`,
@@ -124,7 +124,7 @@ export default function ReportsPage() {
 
   return (
     <div className="max-w-7xl mx-auto w-full relative px-4 pb-12">
-      
+
       {/* Page Header */}
       <div className="mb-10">
         <p className="text-secondary font-label text-[10px] font-black uppercase tracking-[0.3em] mb-1">Intelligence Protocol</p>
@@ -142,7 +142,7 @@ export default function ReportsPage() {
             </div>
             <h3 className="font-heading text-2xl font-black uppercase tracking-tight text-primary">Generate New Report</h3>
           </div>
-          
+
           <div className="flex flex-col gap-6">
             {/* Report Type Selection */}
             <div className="space-y-6">
@@ -154,18 +154,18 @@ export default function ReportsPage() {
                   { name: "Inventory Status", icon: <Archive size={20} /> },
                   { name: "ROI Analysis", icon: <Calculator size={20} /> }
                 ].map(type => (
-                  <label 
-                    key={type.name} 
+                  <label
+                    key={type.name}
                     className={`flex items-center p-4 rounded-2xl cursor-pointer border-2 transition-all group ${reportType === type.name ? 'border-primary bg-primary/5' : 'border-transparent bg-white hover:border-outline-variant/50'}`}
                   >
-                    <input 
-                      checked={reportType === type.name} 
+                    <input
+                      checked={reportType === type.name}
                       onChange={() => setReportType(type.name)}
-                      className="hidden" 
-                      type="radio" 
+                      className="hidden"
+                      type="radio"
                     />
                     <div className={`${reportType === type.name ? 'text-primary' : 'text-on-surface-variant'} mr-4 transition-colors`}>
-                       {type.icon}
+                      {type.icon}
                     </div>
                     <span className={`flex-1 font-bold text-sm ${reportType === type.name ? 'text-primary' : 'text-on-surface'}`}>{type.name}</span>
                     <CheckCircle2 className={`text-primary transition-opacity ${reportType === type.name ? 'opacity-100' : 'opacity-0'}`} size={20} />
@@ -173,7 +173,7 @@ export default function ReportsPage() {
                 ))}
               </div>
             </div>
-            
+
             {/* Date & Actions */}
             <div className="flex flex-col h-full justify-between">
               <div className="space-y-6">
@@ -181,26 +181,26 @@ export default function ReportsPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-white px-4 py-2.5 rounded-2xl border border-outline-variant/10 focus-within:border-primary transition-all shadow-sm">
                     <span className="block text-[9px] text-on-surface-variant font-black mb-1 uppercase tracking-widest">START DATE</span>
-                    <input 
-                      className="w-full bg-transparent border-none p-0 text-xs font-extrabold focus:ring-0 outline-none text-primary"                       type="date" 
+                    <input
+                      className="w-full bg-transparent border-none p-0 text-xs font-extrabold focus:ring-0 outline-none text-primary" type="date"
                       value={startDate}
                       onChange={e => setStartDate(e.target.value)}
                     />
                   </div>
                   <div className="bg-white px-4 py-2.5 rounded-2xl border border-outline-variant/10 focus-within:border-primary transition-all shadow-sm">
                     <span className="block text-[9px] text-on-surface-variant font-black mb-1 uppercase tracking-widest">END DATE</span>
-                    <input 
-                      className="w-full bg-transparent border-none p-0 text-xs font-extrabold focus:ring-0 outline-none text-primary" 
-                      type="date" 
+                    <input
+                      className="w-full bg-transparent border-none p-0 text-xs font-extrabold focus:ring-0 outline-none text-primary"
+                      type="date"
                       value={endDate}
                       onChange={e => setEndDate(e.target.value)}
                     />
                   </div>
                 </div>
               </div>
-              
+
               <div className="mt-12 space-y-4">
-                <button 
+                <button
                   onClick={handleExecuteAnalysis}
                   disabled={generating}
                   className="w-full py-5 bg-gradient-to-r from-primary to-primary-container text-white rounded-2xl font-heading font-black text-sm tracking-[0.2em] uppercase flex items-center justify-center gap-3 transition-all hover:shadow-2xl active:scale-[0.98] cursor-pointer disabled:opacity-60"
@@ -227,7 +227,7 @@ export default function ReportsPage() {
             </div>
             <TrendingUp className="absolute bottom-[-20px] right-[-20px] text-white opacity-5 w-48 h-48" />
           </div>
-          
+
           <div className={`px-10 py-8 rounded-3xl flex flex-col justify-between shadow-xl transition-all border ${stats.liquidityRisk > 0 ? 'bg-error text-white shadow-error/10 border-error/5' : 'bg-surface-container-low border-outline-variant/10'}`}>
             <div>
               <div className={`flex items-center gap-2 mb-6 ${stats.liquidityRisk > 0 ? 'text-white' : 'text-on-surface-variant'}`}>
@@ -235,8 +235,8 @@ export default function ReportsPage() {
                 <span className="text-[10px] font-black tracking-[0.2em] uppercase opacity-70">Liquidity Alert</span>
               </div>
               <p className={`text-base font-bold leading-relaxed mb-6 ${stats.liquidityRisk > 0 ? 'text-white/90' : 'text-on-surface-variant'}`}>
-                {stats.liquidityRisk > 0 
-                  ? `${stats.liquidityRisk} items are currently reaching critical low-stock thresholds. Action required for optimal ROI.` 
+                {stats.liquidityRisk > 0
+                  ? `${stats.liquidityRisk} items are currently reaching critical low-stock thresholds. Action required for optimal ROI.`
                   : "All inventory segments report healthy liquidity levels. No immediate risk detected."}
               </p>
             </div>
@@ -256,11 +256,11 @@ export default function ReportsPage() {
             <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mt-1">Archive of generated transactional archives.</p>
           </div>
           <div className="flex gap-2 w-full md:w-auto">
-             <button className="flex-1 md:flex-none px-6 py-2.5 bg-primary text-white text-[10px] font-black rounded-xl uppercase tracking-widest cursor-pointer shadow-lg shadow-primary/20">LIVE HISTORY</button>
-             <button className="flex-1 md:flex-none px-6 py-2.5 bg-surface-container-highest text-on-surface-variant text-[10px] font-black rounded-xl uppercase tracking-widest cursor-pointer border border-outline-variant/10">SCHEDULED</button>
+            <button className="flex-1 md:flex-none px-6 py-2.5 bg-primary text-white text-[10px] font-black rounded-xl uppercase tracking-widest cursor-pointer shadow-lg shadow-primary/20">LIVE HISTORY</button>
+            <button className="flex-1 md:flex-none px-6 py-2.5 bg-surface-container-highest text-on-surface-variant text-[10px] font-black rounded-xl uppercase tracking-widest cursor-pointer border border-outline-variant/10">SCHEDULED</button>
           </div>
         </div>
-        
+
         <div className="overflow-x-auto">
           <table className="w-full text-left min-w-[900px]">
             <thead className="bg-surface-container text-on-surface-variant">
@@ -311,10 +311,10 @@ export default function ReportsPage() {
                       </div>
                     </td>
                     <td className="px-10 py-6 text-right">
-                       <div className="flex flex-col items-end gap-1">
-                         <span className="text-sm font-black text-primary">{fmt(report.totalSales)}</span>
-                         <span className="text-[8px] font-black text-on-surface-variant uppercase tracking-tighter italic">Ledgered Balance</span>
-                       </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="text-sm font-black text-primary">{fmt(report.totalSales)}</span>
+                        <span className="text-[8px] font-black text-on-surface-variant uppercase tracking-tighter italic">Ledgered Balance</span>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -322,7 +322,7 @@ export default function ReportsPage() {
             </tbody>
           </table>
         </div>
-        
+
         {reports.length > 0 && (
           <div className="px-10 py-6 bg-surface-container-low flex items-center justify-center border-t border-outline-variant/10">
             <button className="text-[10px] font-black uppercase text-on-surface-variant hover:text-primary tracking-[0.25em] flex items-center gap-2 transition-all cursor-pointer">

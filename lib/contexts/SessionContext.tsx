@@ -35,7 +35,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         .limit(1);
 
       if (error) throw error;
-      
+
       const current = sessions?.[0] || null;
       // If the latest session hasn't ended, it's the active one
       setActiveSession(current && !current.ended_at ? current : null);
@@ -56,12 +56,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       .insert([{ started_at: new Date().toISOString() }])
       .select()
       .single();
-    
+
     if (error) {
       console.error("Failed to open session:", error);
       return;
     }
-    
+
     if (data) {
       setActiveSession(data);
     }
@@ -69,7 +69,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const closeSession = async (totalSales?: number, totalProfit?: number) => {
     if (!activeSession) return;
-    
+
     let finalSales = totalSales ?? 0;
     let finalProfit = totalProfit ?? 0;
 
@@ -80,10 +80,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           .from("transactions")
           .select("total_amount, total_profit")
           .gte("created_at", activeSession.started_at);
-        
+
         if (!txErr && txs) {
-          finalSales = txs.reduce((acc, t) => acc + (t.total_amount || 0), 0);
-          finalProfit = txs.reduce((acc, t) => acc + (t.total_profit || 0), 0);
+          finalSales = txs.reduce((acc: number, t: any) => acc + (t.total_amount || 0), 0);
+          finalProfit = txs.reduce((acc: number, t: any) => acc + (t.total_profit || 0), 0);
         }
       } catch (err) {
         console.error("Aggregation Error during Close:", err);
@@ -98,12 +98,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         total_profit: finalProfit,
       })
       .eq("id", activeSession.id);
-      
+
     if (error) {
       console.error("Failed to close session:", error);
       return;
     }
-    
+
     setActiveSession(null);
   };
 
