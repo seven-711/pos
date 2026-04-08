@@ -49,11 +49,11 @@ export default function CategoriesPage() {
       setCategories(catData);
       
       // Calculate Stats
-      const totalProducts = catData.reduce((acc, cat) => acc + (cat.products?.length || 0), 0);
+      const totalProducts = catData.reduce((acc: number, cat: any) => acc + (cat.products?.length || 0), 0);
       setStats({
         totalCategories: catData.length,
         totalProducts: totalProducts,
-        activeCategories: catData.filter(c => c.products?.length > 0).length
+        activeCategories: catData.filter((c: any) => c.products?.length > 0).length
       });
     }
     
