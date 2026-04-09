@@ -16,7 +16,8 @@ import {
   Loader2,
   ShoppingCart,
   Trash2,
-  AlertCircle
+  AlertCircle,
+  Tag
 } from "lucide-react";
 
 interface Category {
@@ -28,8 +29,11 @@ interface Product {
   id: string;
   name: string;
   stock: number;
+  min_stock: number;
   cost_price: number;
   selling_price: number;
+  bundle_qty?: number | null;
+  bundle_price?: number | null;
   category_id: string;
   image_url?: string;
   categories?: { name: string };
@@ -132,8 +136,23 @@ export default function POSPage() {
     setCart(cart.filter((item: CartItem) => item.id !== id));
   };
 
-  const calculateSubtotal = () => cart.reduce((acc: number, item: CartItem) => acc + (item.selling_price * item.quantity), 0);
-  const calculateProfit = () => cart.reduce((acc: number, item: CartItem) => acc + ((item.selling_price - item.cost_price) * item.quantity), 0);
+  const getItemTotal = (item: CartItem) => {
+    if (item.bundle_qty && item.bundle_price && item.quantity >= item.bundle_qty) {
+      const bundleCount = Math.floor(item.quantity / item.bundle_qty);
+      const remainder = item.quantity % item.bundle_qty;
+      return (bundleCount * item.bundle_price) + (remainder * item.selling_price);
+    }
+    return item.selling_price * item.quantity;
+  };
+
+  const getItemProfit = (item: CartItem) => {
+    const revenue = getItemTotal(item);
+    const totalCost = item.cost_price * item.quantity;
+    return revenue - totalCost;
+  };
+
+  const calculateSubtotal = () => cart.reduce((acc: number, item: CartItem) => acc + getItemTotal(item), 0);
+  const calculateProfit = () => cart.reduce((acc: number, item: CartItem) => acc + getItemProfit(item), 0);
 
   const handleCheckout = async () => {
     if (cart.length === 0) return;
@@ -164,17 +183,17 @@ export default function POSPage() {
       // 2. Create Transaction Items
       const txItems = cart.map(item => {
         const qty = Number(item.quantity) || 1;
-        const sell = Number(item.selling_price) || 0;
+        const totalLinePrice = getItemTotal(item);
+        const totalLineProfit = getItemProfit(item);
         const cost = Number(item.cost_price) || 0;
-        const profitPerUnit = sell - cost;
         
         return {
           transaction_id: tx.id,
           product_id: item.id,
           quantity: qty,
-          price: sell,
+          price: Number((totalLinePrice / qty).toFixed(2)), // Effective unit price
           cost_price: cost,
-          profit: Number((profitPerUnit * qty).toFixed(2))
+          profit: Number(totalLineProfit.toFixed(2))
         };
       });
 
@@ -262,45 +281,66 @@ export default function POSPage() {
               <Loader2 size={48} className="animate-spin" />
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-6">
               {filteredProducts.map(product => {
                 const isOutOfStock = (product.stock || 0) <= 0;
+                const yieldAmt = product.selling_price - product.cost_price;
+                const roi = product.cost_price > 0 ? (yieldAmt / product.cost_price) * 100 : 0;
+                
                 return (
                   <div
                     key={product.id}
                     onClick={() => !isOutOfStock && addToCart(product)}
-                    className={`recessed-card rounded-[2.5rem] p-2 transition-all duration-200 ${isOutOfStock ? 'opacity-50 cursor-not-allowed' : 'active:scale-95 cursor-pointer group'}`}
+                    className={`recessed-card rounded-[1.5rem] sm:rounded-3xl p-1.5 sm:p-2 transition-all duration-300 ${isOutOfStock ? 'opacity-40 cursor-not-allowed' : 'active:scale-95 cursor-pointer group'}`}
                   >
-                  <div className="frosted-inner rounded-[2rem] overflow-hidden flex flex-col h-full">
+                  <div className="frosted-inner rounded-xl sm:rounded-2xl overflow-hidden flex flex-col h-full shadow-lg">
                     {/* Product Image Area */}
-                    <div className="p-2">
-                      <div className="w-full aspect-[4/5] rounded-[1.5rem] overflow-hidden bg-surface-container-highest relative">
+                    <div className="p-1.5 sm:p-2">
+                      <div className="w-full aspect-[4/5] rounded-xl sm:rounded-2xl overflow-hidden bg-gradient-to-br from-surface-container-highest to-surface-dim relative">
                         {product.image_url ? (
                           <img 
                             src={product.image_url} 
                             alt={product.name} 
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out" 
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-primary/5">
+                          <div className="w-full h-full flex flex-col items-center justify-center bg-primary/5 group-hover:bg-primary/10 transition-colors">
                             {product.categories?.name?.toLowerCase().includes('coffee') ? 
-                              <Coffee className="text-primary/20 w-12 h-12" /> : 
-                              <Package className="text-primary/20 w-12 h-12" />
+                              <Coffee className="text-primary/20 w-10 h-10 sm:w-12 sm:h-12 group-hover:scale-110 transition-transform" /> : 
+                              <Package className="text-primary/20 w-10 h-10 sm:w-12 sm:h-12 group-hover:scale-110 transition-transform" />
                             }
                           </div>
                         )}
-                        {/* Stock Badge - Premium Position */}
-                        <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-md px-2.5 py-1.5 rounded-2xl shadow-sm border border-white/50 min-w-[56px] z-10">
-                          <div className="text-[7px] font-black uppercase tracking-widest text-on-surface-variant/60 leading-none mb-0.5 text-center">Stock</div>
-                          <div className={`text-[10px] font-black leading-none text-center ${product.stock < 10 ? 'text-error' : 'text-primary'}`}>
-                            {product.stock}U
+                        
+                        {/* Stock Badge - Compact Premium Tag */}
+                        <div className="absolute top-2.5 right-2.5 z-10 group-hover:scale-110 group-hover:translate-y-[-1px] transition-all duration-300">
+                          <div className={`
+                            relative flex flex-col items-center min-w-[34px] sm:min-w-[42px] p-1 sm:p-1.5 rounded-xl border backdrop-blur-2xl shadow-xl
+                            ${product.stock <= (product.min_stock || 10) ? 'bg-error text-on-error border-error-container/20' : 
+                              product.stock <= (product.min_stock || 10) + 5 ? 'bg-amber-500/90 text-white border-white/20' : 
+                              'bg-black/80 text-white border-white/10'}
+                          `}>
+                            {/* Status Dot */}
+                            <div className={`
+                              absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-white
+                              ${product.stock <= (product.min_stock || 10) ? 'bg-white animate-pulse' : 
+                                product.stock <= (product.min_stock || 10) + 5 ? 'bg-white' : 
+                                'bg-secondary'}
+                            `} />
+                            
+                            <span className="text-[5px] sm:text-[6px] font-black uppercase tracking-[0.15em] opacity-60 leading-none mb-0.5">
+                              Stock
+                            </span>
+                            <span className="text-[10px] sm:text-[12px] font-black leading-none font-heading">
+                              {product.stock}
+                            </span>
                           </div>
                         </div>
 
                         {/* Sold Out Overlay */}
                         {isOutOfStock && (
-                          <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-20">
-                            <span className="bg-white text-error px-4 py-1.5 rounded-full font-black text-[10px] uppercase tracking-[0.2em] shadow-xl border border-error/20">
+                          <div className="absolute inset-0 bg-black/50 backdrop-blur-[4px] flex items-center justify-center z-20">
+                            <span className="bg-white/95 text-error px-3 py-1 sm:px-5 sm:py-2 rounded-full font-black text-[8px] sm:text-[10px] uppercase tracking-[0.2em] shadow-2xl border border-error/20">
                               Sold Out
                             </span>
                           </div>
@@ -309,29 +349,43 @@ export default function POSPage() {
                     </div>
 
                     {/* Content Area */}
-                    <div className="px-5 pb-5 pt-1">
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <h3 className="font-heading font-extrabold text-sm text-on-surface line-clamp-1 flex-1 uppercase tracking-tight">{product.name}</h3>
+                    <div className="px-3 sm:px-5 pb-4 sm:pb-5 pt-1">
+                      <div className="flex items-center gap-1.5 mb-0.5 sm:mb-1">
+                        <h3 className="font-heading font-extrabold text-[11px] sm:text-sm text-on-surface line-clamp-1 flex-1 uppercase tracking-tight group-hover:text-primary transition-colors">{product.name}</h3>
                         {product.stock > 0 && (
-                          <CheckCircle2 size={14} className="text-secondary opacity-60" />
+                          <div className="w-1.5 h-1.5 rounded-full bg-secondary shadow-[0_0_8px_rgba(4,107,94,0.4)] animate-pulse" />
                         )}
                       </div>
-                      <p className="text-lg font-black text-primary mb-3">
-                        ₱{Number(product.selling_price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </p>
+                      
+                      <div className="flex items-baseline gap-1 mb-2 sm:mb-3">
+                        <span className="text-[10px] sm:text-xs font-bold text-primary opacity-50">₱</span>
+                        <p className="text-base sm:text-xl font-black text-primary tracking-tighter">
+                          {Number(product.selling_price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
+                      </div>
 
-                      {/* Bottom Stats Grid */}
-                      <div className="grid grid-cols-2 gap-2 pt-3 border-t border-on-surface/5">
-                        <div>
-                          <span className="text-[7px] font-black uppercase tracking-widest text-on-surface-variant/30 block mb-0.5">Yield</span>
-                          <p className="text-[9px] font-bold text-secondary-fixed-dim bg-secondary/5 w-fit px-1 rounded-sm">
-                            +₱{(product.selling_price - product.cost_price).toFixed(2)}
+                      {/* Bundle Indicator - Pill Style */}
+                      {product.bundle_qty && product.bundle_qty > 0 && (
+                        <div className="flex items-center gap-1 mb-2.5 bg-primary/5 border border-primary/10 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full w-fit">
+                          <Tag size={8} className="text-primary" />
+                          <span className="text-[8px] sm:text-[9px] font-bold text-primary uppercase tracking-tight">
+                            Save ₱{( (product.selling_price * product.bundle_qty) - product.bundle_price! ).toFixed(2)} on {product.bundle_qty}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Premium Stats Grid */}
+                      <div className="grid grid-cols-2 gap-1.5 sm:gap-2 pt-2.5 sm:pt-3 border-t border-on-surface/5">
+                        <div className="bg-secondary/5 px-1.5 py-1 rounded-lg border border-secondary/5">
+                          <span className="text-[6px] sm:text-[7px] font-black uppercase tracking-[0.15em] text-secondary/40 block mb-0.5">Yield</span>
+                          <p className="text-[9px] sm:text-[10px] font-black text-secondary leading-none">
+                            +₱{yieldAmt.toFixed(2)}
                           </p>
                         </div>
-                        <div className="text-right flex flex-col items-end">
-                          <span className="text-[7px] font-black uppercase tracking-widest text-on-surface-variant/30 block mb-0.5">ROI</span>
-                          <p className="text-[9px] font-bold text-primary opacity-60">
-                            {product.cost_price > 0 ? (((product.selling_price - product.cost_price) / product.cost_price) * 100).toFixed(0) : 0}%
+                        <div className="bg-primary/5 px-1.5 py-1 rounded-lg border border-primary/5 text-right">
+                          <span className="text-[6px] sm:text-[7px] font-black uppercase tracking-[0.15em] text-primary/40 block mb-0.5">ROI</span>
+                          <p className="text-[9px] sm:text-[10px] font-black text-primary leading-none">
+                            {roi.toFixed(0)}%
                           </p>
                         </div>
                       </div>

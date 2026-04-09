@@ -5,11 +5,11 @@ import { Bell, UserCircle } from "lucide-react";
 
 export function TopNav() {
   return (
-    <header className="w-full h-16 shrink-0 surface-low flex items-center justify-between px-4 md:px-8 z-[40] border-b border-[var(--color-outline-variant)]/10 shadow-sm relative pointer-events-auto">
+    <header className="w-full h-16 shrink-0 surface-low flex items-center justify-between px-4 md:px-8 z-[0] border-b border-[var(--color-outline-variant)]/10 shadow-sm relative pointer-events-auto print:hidden">
       {/* Brand — Mobile & Desktop (Hamburger removed from here as per user request to move to BottomNav) */}
       <div className="flex items-center gap-3 text-[var(--color-primary)] relative">
         <span className="text-xl font-bold font-heading select-none">
-          POS ni Estela
+          POS
         </span>
       </div>
 

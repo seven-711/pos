@@ -39,7 +39,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isStatusExpanded, setIsStatusExpanded] = useState(false);
-  const { activeSession, openSession, closeSession } = useSession();
+  const { activeSession, openSession, closeSession, isLayoutHidden } = useSession();
 
   // Close menu when pathname changes
   useEffect(() => {
@@ -102,7 +102,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       )}
 
       {/* ── Desktop Sidebar ── */}
-      <aside className="hidden md:flex flex-col w-64 shrink-0 surface-low p-6 border-r border-[var(--color-outline-variant)]/10 overflow-y-auto">
+      <aside className="hidden md:flex flex-col w-64 shrink-0 surface-low p-6 border-r border-[var(--color-outline-variant)]/10 overflow-y-auto print:hidden">
         <div className="mb-10 text-2xl font-bold tracking-tight text-[var(--color-primary)] font-heading">
           POS ni Estela
         </div>
@@ -115,15 +115,16 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
         <TopNav />
 
         {/* Main scrollable area */}
-        <main className="flex-1 overflow-y-auto w-full p-6 md:p-12 pb-48 md:pb-40 relative z-0">
+        <main className="flex-1 overflow-y-auto w-full p-3 md:p-6 pb-48 md:pb-40 relative z-0">
           <div className={`transition-all duration-700 w-full ${(!activeSession && (pathname === '/pos' || pathname === '/')) ? 'opacity-40 blur-sm grayscale pointer-events-none select-none' : 'opacity-100 blur-0'}`}>
             {children}
           </div>
         </main>
 
         {/* ── Desktop Terminal Status Footer (Original Structure) ── */}
-        <div className="hidden md:flex fixed bottom-0 left-64 right-0 z-[100] p-4 bg-[var(--color-surface-container-low)] shadow-[0_-4px_24px_rgba(0,0,0,0.05)] border-t border-[var(--color-outline-variant)]/10">
-          <div className="max-w-7xl mx-auto w-full flex justify-between items-center px-4">
+        {!isLayoutHidden && (
+          <div className="hidden md:flex fixed bottom-0 left-64 right-0 z-[10] p-4 bg-[var(--color-surface-container-low)] shadow-[0_-4px_24px_rgba(0,0,0,0.05)] border-t border-[var(--color-outline-variant)]/10 print:hidden">
+            <div className="max-w-7xl mx-auto w-full flex justify-between items-center px-4">
             <div className="flex items-center gap-4">
               <div className={`w-11 h-11 rounded-xl flex items-center justify-center border transition-all ${activeSession ? 'bg-secondary/10 border-secondary/20 text-secondary' : 'bg-surface-container border-outline-variant/10 text-on-surface-variant opacity-40'}`}>
                 <Clock size={22} className={activeSession ? 'animate-pulse' : ''} />
@@ -166,20 +167,22 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                 OPEN
               </button>
             </div>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* ── Mobile Terminal Status Orb ── */}
-        <div 
-          onClick={() => !isStatusExpanded && setIsStatusExpanded(true)}
-          className={`
-            md:hidden fixed z-[100] transition-all duration-700 ease-in-out cursor-pointer overflow-hidden
-            ${isStatusExpanded 
-              ? "bottom-24 left-4 right-4 h-16 rounded-full p-2 bg-[var(--color-surface-container-low)]/95 backdrop-blur-2xl border-[var(--color-outline-variant)]/20 shadow-2xl" 
-              : `bottom-24 left-4 w-14 h-14 rounded-full p-0 flex items-center justify-center shadow-xl border-2 ${activeSession ? "bg-red-500 border-red-400 shadow-red-500/40 text-white" : "bg-green-600 border-green-500 shadow-green-600/40 text-white"}`}
-            border shadow-[0_-4px_24px_rgba(0,0,0,0.05)]
-          `}
-        >
+        {!isLayoutHidden && (
+          <div 
+            onClick={() => !isStatusExpanded && setIsStatusExpanded(true)}
+            className={`
+              md:hidden fixed z-[10] transition-all duration-700 ease-in-out cursor-pointer overflow-hidden print:hidden
+              ${isStatusExpanded 
+                ? "bottom-24 left-4 right-4 h-16 rounded-full p-2 bg-[var(--color-surface-container-low)]/95 backdrop-blur-2xl border-[var(--color-outline-variant)]/20 shadow-2xl" 
+                : `bottom-24 left-4 w-14 h-14 rounded-full p-0 flex items-center justify-center shadow-xl border-2 ${activeSession ? "bg-red-500 border-red-400 shadow-red-500/40 text-white" : "bg-green-600 border-green-500 shadow-green-600/40 text-white"}`}
+              border shadow-[0_-4px_24px_rgba(0,0,0,0.05)]
+            `}
+          >
            <div className={`flex items-center h-full transition-all duration-500 ${isStatusExpanded ? "justify-between px-2 gap-4" : "justify-center"}`}>
              <div className="flex items-center gap-3 shrink-0">
                <div className={`
@@ -227,11 +230,12 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
              </div>
            </div>
         </div>
-      </div>
+      )}
 
       {/* ── Mobile Bottom Navigation ── */}
-      <div className="md:hidden">
+      <div className="md:hidden print:hidden">
         <BottomNav onMenuClick={() => setIsMobileMenuOpen(true)} />
+      </div>
       </div>
     </div>
   );

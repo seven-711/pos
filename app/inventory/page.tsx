@@ -21,6 +21,7 @@ interface Product {
   id: string;
   name: string;
   stock: number;
+  min_stock: number;
   cost_price: number;
   selling_price: number;
   category_id: string;
@@ -88,7 +89,7 @@ export default function InventoryPage() {
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const lowStockProducts = products.filter(p => p.stock <= 10);
+  const lowStockProducts = products.filter(p => p.stock <= (p.min_stock || 10));
   const totalSkuCount = products.length;
   const totalValuation = products.reduce((acc, p) => acc + (Number(p.stock) * Number(p.cost_price || 0)), 0);
 
@@ -194,7 +195,7 @@ export default function InventoryPage() {
             filteredProducts.map(p => (
               <div 
                 key={p.id}
-                className={`p-4 rounded-xl flex items-center justify-between group bg-surface-container-low hover:bg-surface-container transition-all border border-outline-variant/10 ${p.stock <= 10 ? 'border-l-4 border-l-error' : ''}`}
+                className={`p-4 rounded-xl flex items-center justify-between group bg-surface-container-low hover:bg-surface-container transition-all border border-outline-variant/10 ${p.stock <= (p.min_stock || 10) ? 'border-l-4 border-l-error' : ''}`}
               >
                 <div className="flex gap-4 items-center">
                   <div className="w-12 h-12 rounded-lg overflow-hidden flex items-center justify-center bg-surface-container-highest">
@@ -212,8 +213,8 @@ export default function InventoryPage() {
                 </div>
                 <div className="flex items-center gap-6">
                   <div className="text-right shrink-0">
-                    <p className={`text-[10px] font-bold uppercase mb-1 ${p.stock <= 10 ? 'text-error' : 'text-on-surface-variant'}`}>{p.stock <= 10 ? 'Low Stock' : 'In Stock'}</p>
-                    <span className={`px-3 py-1 rounded font-bold text-sm inline-block ${p.stock <= 10 ? 'bg-error-container text-on-error-container' : 'bg-surface-container-highest text-on-surface'}`}>{p.stock}</span>
+                    <p className={`text-[10px] font-bold uppercase mb-1 ${p.stock <= (p.min_stock || 10) ? 'text-error' : 'text-on-surface-variant'}`}>{p.stock <= (p.min_stock || 10) ? 'Low Stock' : 'In Stock'}</p>
+                    <span className={`px-3 py-1 rounded font-bold text-sm inline-block ${p.stock <= (p.min_stock || 10) ? 'bg-error-container text-on-error-container' : 'bg-surface-container-highest text-on-surface'}`}>{p.stock}</span>
                   </div>
                   <button 
                     onClick={() => { setSelectedProduct(p); setAdjustQty(0); setShowAdjustModal(true); }}
@@ -319,7 +320,7 @@ export default function InventoryPage() {
           </div>
           <div>
             <p className="text-sm font-bold text-on-surface">Smart Alerts</p>
-            <p className="text-[10px] text-on-surface-variant uppercase tracking-tighter font-bold">Active at 10 unit threshold</p>
+            <p className="text-[10px] text-on-surface-variant uppercase tracking-tighter font-bold">Active at custom item thresholds</p>
           </div>
         </div>
         <div className="w-12 h-6 bg-secondary rounded-full relative">

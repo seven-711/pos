@@ -17,6 +17,8 @@ interface SessionContextType {
   openSession: () => Promise<void>;
   closeSession: (totalSales?: number, totalProfit?: number) => Promise<void>;
   refreshSession: () => Promise<void>;
+  isLayoutHidden: boolean;
+  setIsLayoutHidden: (hidden: boolean) => void;
 }
 
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
@@ -24,6 +26,7 @@ const SessionContext = createContext<SessionContextType | undefined>(undefined);
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [activeSession, setActiveSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isLayoutHidden, setIsLayoutHidden] = useState(false);
 
   const refreshSession = async () => {
     setLoading(true);
@@ -108,7 +111,15 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <SessionContext.Provider value={{ activeSession, loading, openSession, closeSession, refreshSession }}>
+    <SessionContext.Provider value={{ 
+      activeSession, 
+      loading, 
+      openSession, 
+      closeSession, 
+      refreshSession,
+      isLayoutHidden,
+      setIsLayoutHidden
+    }}>
       {children}
     </SessionContext.Provider>
   );

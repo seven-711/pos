@@ -14,7 +14,8 @@ import {
   Upload,
   XCircle,
   Store,
-  Calculator
+  Calculator,
+  Tag
 } from "lucide-react";
 
 interface Category {
@@ -29,6 +30,8 @@ interface Product {
   min_stock: number;
   cost_price: number;
   selling_price: number;
+  bundle_qty?: number | null;
+  bundle_price?: number | null;
   category_id: string;
   image_url?: string;
   created_at: string;
@@ -51,6 +54,8 @@ export default function ProductsPage() {
     min_stock: '10',
     cost_price: '',
     selling_price: '',
+    bundle_qty: '',
+    bundle_price: '',
     image_url: ''
   });
   const [isUploading, setIsUploading] = useState(false);
@@ -102,6 +107,8 @@ export default function ProductsPage() {
       min_stock: String(product.min_stock || 10),
       cost_price: String(product.cost_price || 0),
       selling_price: String(product.selling_price || 0),
+      bundle_qty: product.bundle_qty ? String(product.bundle_qty) : '',
+      bundle_price: product.bundle_price ? String(product.bundle_price) : '',
       image_url: product.image_url || ''
     });
     setShowAddModal(true);
@@ -112,7 +119,7 @@ export default function ProductsPage() {
     setEditingProduct(null);
     setShowPackCalc(false);
     setPackData({ cost: '', qty: '' });
-    setFormData({ name: '', category_id: '', stock: '', min_stock: '10', cost_price: '', selling_price: '', image_url: '' });
+    setFormData({ name: '', category_id: '', stock: '', min_stock: '10', cost_price: '', selling_price: '', bundle_qty: '', bundle_price: '', image_url: '' });
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -168,6 +175,8 @@ export default function ProductsPage() {
         min_stock: parseInt(formData.min_stock) || 10,
         cost_price: parseFloat(formData.cost_price),
         selling_price: parseFloat(formData.selling_price),
+        bundle_qty: formData.bundle_qty ? parseInt(formData.bundle_qty) : null,
+        bundle_price: formData.bundle_price ? parseFloat(formData.bundle_price) : null,
         image_url: formData.image_url || null
       };
 
@@ -335,15 +344,35 @@ export default function ProductsPage() {
                       <div className="flex items-center gap-2">
                         <span className={`font-semibold ${isLowStock ? 'text-tertiary font-bold' : 'text-on-surface'}`}>{product.stock}</span>
                         {isLowStock ? (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-error-container text-on-error-container font-bold uppercase">Low</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-error-container text-on-error-container font-bold uppercase whitespace-nowrap transition-all">Low Stock</span>
                         ) : (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary-container text-on-secondary-container font-bold uppercase">In Stock</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary-container text-on-secondary-container font-bold uppercase whitespace-nowrap transition-all">In Stock</span>
                         )}
                       </div>
                     </td>
                     <td className="px-6 py-5 text-right text-sm text-on-surface-variant font-mono">₱{cost.toFixed(2)}</td>
-                    <td className="px-6 py-5 text-right text-sm font-bold text-on-surface font-mono">₱{sell.toFixed(2)}</td>
-                    <td className="px-6 py-5 text-right text-sm font-bold text-secondary font-mono">+₱{profit.toFixed(2)}</td>
+                    <td className="px-6 py-5 text-right">
+                      <div className="flex flex-col items-end">
+                        <span className="text-sm font-bold text-on-surface font-mono">₱{sell.toFixed(2)}</span>
+                        {product.bundle_qty && product.bundle_price && (
+                          <div className="flex items-center gap-1 mt-1 px-1.5 py-0.5 bg-secondary/5 rounded border border-secondary/10 whitespace-nowrap">
+                            <Tag size={10} className="text-secondary" />
+                            <span className="text-[9px] font-bold text-secondary uppercase tracking-tighter">
+                              ₱{Number(product.bundle_price).toFixed(2)} / {product.bundle_qty}pcs
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-5 text-right">
+                      <div className={`inline-block px-2.5 py-1 rounded-lg font-black font-mono text-sm shadow-sm border whitespace-nowrap ${
+                        profit >= 0 
+                        ? 'bg-secondary/10 text-secondary border-secondary/20' 
+                        : 'bg-error/10 text-error border-error/20'
+                      }`}>
+                        {profit >= 0 ? '+' : ''}₱{profit.toFixed(2)}
+                      </div>
+                    </td>
                     <td className="px-6 py-5 text-right">
                       <span className="bg-secondary/10 text-secondary text-xs font-bold px-2.5 py-1 rounded-full">{roi.toFixed(0)}%</span>
                     </td>
@@ -385,23 +414,23 @@ export default function ProductsPage() {
           />
           {/* Modal Content */}
           <div className="relative w-full max-w-sm bg-white rounded-[2rem] shadow-[0_24px_48px_rgba(0,0,0,0.15)] border border-outline-variant/5">
-            <div className="px-3 pt-2 pb-1 bg-white flex flex-col items-center gap-1 sticky top-0 z-10">
+            <div className="px-3 pt-1.5 pb-0.5 bg-white flex flex-col items-center gap-0.5 sticky top-0 z-10 border-b border-outline-variant/5">
               <button 
                 onClick={closeModal} 
-                className="absolute top-1 right-3 p-2 text-on-surface-variant hover:text-primary transition-colors rounded-full hover:bg-surface-container-high"
+                className="absolute top-1 right-2 p-1.5 text-on-surface-variant hover:text-primary transition-colors rounded-full hover:bg-surface-container-high"
               >
-                <X size={16} strokeWidth={3} />
+                <X size={14} strokeWidth={3} />
               </button>
-              <h3 className="text-sm font-black text-on-surface tracking-tight uppercase">
-                {editingProduct ? "Edit" : "Add New"}
+              <h3 className="text-[10px] font-black text-on-surface tracking-widest uppercase opacity-40">
+                {editingProduct ? "Revise" : "New Entry"}
               </h3>
             </div>
             
-            <form className="px-3 pb-4 space-y-1.5" onSubmit={handleSaveProduct}>
-              {/* Image Card */}
-              <div className="p-1 rounded-2xl bg-secondary/5 border border-secondary/10">
+            <form className="px-2.5 pb-3 space-y-1 mt-2" onSubmit={handleSaveProduct}>
+              {/* Image Card (Ultra Tighter) */}
+              <div className="p-1 rounded-xl bg-secondary/5 border border-secondary/10">
                 <div className="relative group">
-                  <div className={`w-full h-20 rounded-xl border-1 border-dashed transition-all flex flex-col items-center justify-center gap-1 overflow-hidden bg-white/50 ${formData.image_url ? 'border-primary/20' : 'border-outline-variant/30'}`}>
+                  <div className={`w-full h-16 rounded-lg border-1 border-dashed transition-all flex flex-col items-center justify-center overflow-hidden bg-white/50 ${formData.image_url ? 'border-primary/20' : 'border-outline-variant/30'}`}>
                     {formData.image_url ? (
                       <>
                         <img src={formData.image_url} alt="Preview" className="w-full h-full object-cover" />
@@ -410,15 +439,15 @@ export default function ProductsPage() {
                           onClick={() => setFormData({...formData, image_url: ''})}
                           className="absolute top-1 right-1 p-1 bg-black/50 text-white rounded-full hover:bg-black/70 backdrop-blur-md"
                         >
-                          <XCircle size={14} />
+                          <XCircle size={12} />
                         </button>
                       </>
                     ) : (
                       <>
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-primary/5">
-                          {isUploading ? <Loader2 size={16} className="animate-spin text-primary" /> : <Upload size={16} className="text-primary" />}
+                        <div className="w-6 h-6 rounded-full flex items-center justify-center bg-primary/5 mb-0.5">
+                          {isUploading ? <Loader2 size={12} className="animate-spin text-primary" /> : <Upload size={12} className="text-primary" />}
                         </div>
-                        <p className="text-[10px] font-bold text-on-surface-variant leading-none">Add Photo</p>
+                        <p className="text-[8px] font-bold text-on-surface-variant leading-none uppercase tracking-tighter">Add Visual</p>
                         <input 
                           type="file" accept="image/*" onChange={handleImageUpload}
                           className="absolute inset-0 opacity-0 cursor-pointer" disabled={isUploading}
@@ -431,31 +460,31 @@ export default function ProductsPage() {
 
               {/* Input Cards */}
               <div className="space-y-1">
-                <div className="p-2 rounded-2xl bg-surface-container-low border border-outline-variant/10 flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                    <Package size={16} className="text-primary" />
+                <div className="p-1.5 rounded-xl bg-surface-container-low border border-outline-variant/10 flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <Package size={14} className="text-primary" />
                   </div>
                   <div className="flex-1">
-                    <label className="text-[8px] font-bold uppercase tracking-widest text-on-surface-variant leading-none">Name</label>
+                    <label className="text-[7px] font-black uppercase tracking-widest text-on-surface-variant opacity-60 leading-none block mb-0.5">Name</label>
                     <input 
                       required value={formData.name}
                       onChange={(e) => setFormData({...formData, name: e.target.value})}
-                      className="w-full bg-transparent text-xs font-bold leading-tight outline-none mt-0.5" 
+                      className="w-full bg-transparent text-[11px] font-bold leading-tight outline-none" 
                       placeholder="e.g. Mocha Frappe" 
                     />
                   </div>
                 </div>
 
-                <div className="p-2 rounded-2xl bg-surface-container-low border border-outline-variant/10 flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-secondary/10 flex items-center justify-center shrink-0">
-                    <Store size={16} className="text-secondary" />
+                <div className="p-1.5 rounded-xl bg-surface-container-low border border-outline-variant/10 flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-secondary/10 flex items-center justify-center shrink-0">
+                    <Store size={14} className="text-secondary" />
                   </div>
                   <div className="flex-1">
-                    <label className="text-[8px] font-bold uppercase tracking-widest text-on-surface-variant leading-none">Category</label>
+                    <label className="text-[7px] font-black uppercase tracking-widest text-on-surface-variant opacity-60 leading-none block mb-0.5">Category</label>
                     <select 
                       value={formData.category_id}
                       onChange={(e) => setFormData({...formData, category_id: e.target.value})}
-                      className="w-full bg-transparent text-xs font-bold outline-none mt-0.5 cursor-pointer"
+                      className="w-full bg-transparent text-[11px] font-bold outline-none cursor-pointer"
                     >
                       <option value="">-- No Category --</option>
                       {categories.map((c: any) => (
@@ -465,30 +494,30 @@ export default function ProductsPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-1.5">
-                  <div className="p-2 rounded-2xl bg-surface-container-low border border-outline-variant/10">
+                <div className="grid grid-cols-2 gap-1">
+                  <div className="p-1.5 rounded-xl bg-surface-container-low border border-outline-variant/10">
                     <div className="flex justify-between items-center mb-0.5">
-                      <label className="text-[8px] font-bold uppercase tracking-widest text-on-surface-variant leading-none">Stock</label>
+                      <label className="text-[7px] font-black uppercase tracking-widest text-on-surface-variant opacity-60 leading-none">Stock</label>
                       <button 
                         type="button"
                         onClick={() => setShowPackCalc(!showPackCalc)}
-                        className={`text-[8px] font-black uppercase transition-colors ${showPackCalc ? 'text-primary' : 'text-on-surface-variant opacity-40 hover:opacity-100'}`}
+                        className={`text-[7px] font-black uppercase tracking-tighter transition-colors ${showPackCalc ? 'text-primary' : 'text-on-surface-variant opacity-30 hover:opacity-100'}`}
                       >
-                        {showPackCalc ? 'Close Calc' : 'Pack Calc'}
+                        {showPackCalc ? 'Close' : 'Calc'}
                       </button>
                     </div>
                     <input 
                       required type="number" value={formData.stock}
                       onChange={(e) => setFormData({...formData, stock: e.target.value})}
-                      className="w-full bg-transparent text-xs font-black outline-none" 
+                      className="w-full bg-transparent text-[11px] font-black outline-none leading-none" 
                     />
                   </div>
-                  <div className="p-2 rounded-2xl bg-surface-container-low border border-outline-variant/10">
-                    <label className="text-[8px] font-bold uppercase tracking-widest text-on-surface-variant leading-none">Min. Alert</label>
+                  <div className="p-1.5 rounded-xl bg-surface-container-low border border-outline-variant/10">
+                    <label className="text-[7px] font-black uppercase tracking-widest text-on-surface-variant opacity-60 leading-none block mb-0.5">Min Alert</label>
                     <input 
                       required type="number" value={formData.min_stock}
                       onChange={(e) => setFormData({...formData, min_stock: e.target.value})}
-                      className="w-full bg-transparent text-xs font-black outline-none mt-0.5" 
+                      className="w-full bg-transparent text-[11px] font-black outline-none leading-none" 
                     />
                   </div>
                 </div>
@@ -505,7 +534,7 @@ export default function ProductsPage() {
                         <label className="text-[7px] font-bold uppercase text-primary/60 tracking-widest">Pack Cost (₱)</label>
                         <input 
                           type="number"
-                          placeholder="52.00"
+                          placeholder="Price per pack"
                           value={packData.cost}
                           onChange={(e) => {
                             const val = e.target.value;
@@ -522,7 +551,7 @@ export default function ProductsPage() {
                         <label className="text-[7px] font-bold uppercase text-primary/60 tracking-widest">Qty in Pack</label>
                         <input 
                           type="number"
-                          placeholder="60"
+                          placeholder="Pila sulod"
                           value={packData.qty}
                           onChange={(e) => {
                             const val = e.target.value;
@@ -542,37 +571,63 @@ export default function ProductsPage() {
                   </div>
                 )}
 
-                <div className="p-2 rounded-2xl bg-primary/5 border border-primary/10 flex items-center gap-2">
-                  <div className="flex-1">
-                    <div className="flex gap-4">
-                      <div className="flex-1">
-                        <label className="text-[8px] font-bold uppercase tracking-widest text-primary leading-none block mb-0.5">Cost</label>
-                        <input 
-                          required type="number" step="0.01" value={formData.cost_price}
-                          onChange={(e) => setFormData({...formData, cost_price: e.target.value})}
-                          className="w-full bg-transparent border-b border-primary/20 text-xs font-black outline-none" 
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <label className="text-[8px] font-bold uppercase tracking-widest text-primary leading-none block mb-0.5">Selling</label>
-                        <input 
-                          required type="number" step="0.01" value={formData.selling_price}
-                          onChange={(e) => setFormData({...formData, selling_price: e.target.value})}
-                          className="w-full bg-transparent border-b border-primary/20 text-xs font-black outline-none text-primary" 
-                        />
-                      </div>
+                <div className="grid grid-cols-2 gap-1">
+                  <div className="p-1.5 rounded-xl bg-surface-container-low border border-outline-variant/10">
+                    <label className="text-[7px] font-black uppercase tracking-widest text-on-surface-variant opacity-60 leading-none">Price (1pc)</label>
+                    <input 
+                      required type="number" step="0.01" value={formData.selling_price}
+                      onChange={(e) => setFormData({...formData, selling_price: e.target.value})}
+                      className="w-full bg-transparent text-[11px] font-black outline-none" 
+                      placeholder="2.00"
+                    />
+                  </div>
+                  <div className="p-1.5 rounded-xl bg-surface-container-low border border-outline-variant/10">
+                    <label className="text-[7px] font-black uppercase tracking-widest text-on-surface-variant opacity-60 leading-none">Unit Cost</label>
+                    <input 
+                      required type="number" step="0.01" value={formData.cost_price}
+                      onChange={(e) => setFormData({...formData, cost_price: e.target.value})}
+                      className="w-full bg-transparent text-[11px] font-black outline-none" 
+                      placeholder="1.50"
+                    />
+                  </div>
+                </div>
+
+                {/* Bundle Optimization Area (Condensed) */}
+                <div className="p-2 rounded-xl bg-secondary/5 border border-secondary/10 space-y-1">
+                  <div className="flex items-center gap-1.5">
+                    <Tag size={10} className="text-secondary" />
+                    <span className="text-[8px] font-black uppercase tracking-tight text-secondary">Bundle</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="flex items-center gap-1">
+                      <label className="text-[7px] font-bold text-secondary/60 uppercase">Qty</label>
+                      <input 
+                        type="number" placeholder="4"
+                        value={formData.bundle_qty}
+                        onChange={(e) => setFormData({...formData, bundle_qty: e.target.value})}
+                        className="w-full bg-white/40 border-b border-secondary/10 text-[10px] font-bold px-1 outline-none"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <label className="text-[7px] font-bold text-secondary/60 uppercase">Price</label>
+                      <input 
+                        type="number" step="0.01" placeholder="5.00"
+                        value={formData.bundle_price}
+                        onChange={(e) => setFormData({...formData, bundle_price: e.target.value})}
+                        className="w-full bg-white/40 border-b border-secondary/10 text-[10px] font-bold px-1 outline-none"
+                      />
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Action Button */}
-              <div className="pt-2">
+              <div className="pt-1.5">
                 <button 
-                  className="w-full py-2.5 rounded-2xl bg-primary text-white font-black text-xs shadow-md active:scale-95 transition-all cursor-pointer uppercase tracking-widest" 
+                  className="w-full py-2.5 rounded-xl bg-primary text-white font-black text-[10px] shadow-sm active:scale-95 transition-all cursor-pointer uppercase tracking-[0.2em]" 
                   type="submit"
                 >
-                  {editingProduct ? "Done Writing" : "Save Product"}
+                  {editingProduct ? "Done Writing" : "Save Entry"}
                 </button>
               </div>
             </form>
