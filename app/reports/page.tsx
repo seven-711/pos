@@ -21,13 +21,53 @@ import {
   Plus,
   Box,
   Loader2,
-  Trash2
+  Trash2,
+  X
 } from "lucide-react";
+import { useSession } from "@/lib/contexts/SessionContext";
+
+interface Transaction {
+  id: string;
+  total_amount: number;
+  total_profit: number;
+  created_at: string;
+}
+
+interface TransactionItem {
+  id: string;
+  transaction_id: string;
+  product_id: string;
+  quantity: number;
+  price: number;
+  products?: { name: string };
+}
+
+interface LowStockProduct {
+  id: string;
+  name: string;
+  stock: number;
+  min_stock: number;
+  categories?: { name: string };
+}
+
+const getReportColor = (cat: string) => {
+  switch (cat) {
+    case "Sales Summary": return "text-primary bg-primary/10";
+    case "Profit Summary": return "text-on-surface bg-surface-container-highest";
+    case "Inventory Status": return "text-amber-600 bg-amber-50";
+    case "ROI Analysis": return "text-emerald-600 bg-emerald-50";
+    default: return "text-on-surface-variant bg-surface-container-highest";
+  }
+};
 
 export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [reports, setReports] = useState<any[]>([]);
+  const [selectedReport, setSelectedReport] = useState<any | null>(null);
+  const [showAudit, setShowAudit] = useState(false);
+  const [showLowStockModal, setShowLowStockModal] = useState(false);
+  const [lowStockItems, setLowStockItems] = useState<LowStockProduct[]>([]);
 
   // Analytics State for Cards
   const [stats, setStats] = useState({
@@ -35,6 +75,8 @@ export default function ReportsPage() {
     forecastedGrowth: 0,
     activeSKUs: 0
   });
+
+  const { setIsLayoutHidden } = useSession();
 
   // Filter State
   const [reportType, setReportType] = useState("Sales Summary");
@@ -51,63 +93,120 @@ export default function ReportsPage() {
     fetchIntelligence();
   }, []);
 
+  useEffect(() => {
+    setIsLayoutHidden(showAudit || showLowStockModal);
+    return () => setIsLayoutHidden(false);
+  }, [showAudit, showLowStockModal]);
+
   const fetchIntelligence = async () => {
     setLoading(true);
 
-    // 1. Fetch Low Stock for Liquidity Alert
-    const { count: lowStockCount } = await supabase
-      .from('products')
-      .select('*', { count: 'exact', head: true })
-      .lte('quantity', 10);
+    try {
+      // 1. Fetch real product stock for Liquidity Alert
+      const { data: prods } = await supabase
+        .from('products')
+        .select('id, name, stock, min_stock, categories(name)');
+      
+      const filteredLow = (prods as any[])?.filter(p => Number(p.stock) <= Number(p.min_stock)) || [];
+      setLowStockItems(filteredLow as LowStockProduct[]);
 
-    // 2. Fetch Weekly Growth for Projection
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const { data: recentTX } = await supabase
-      .from('transactions')
-      .select('total_amount, created_at')
-      .gte('created_at', sevenDaysAgo.toISOString());
+      // 2. Fetch Weekly Growth for Projection (Sales Velocity)
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const { data: recentTX } = await supabase
+        .from('transactions')
+        .select('total_amount, created_at')
+        .gte('created_at', sevenDaysAgo.toISOString());
 
-    if (recentTX) {
-      const growth = (recentTX.length / 7) * 1.5; // Simplified logic
-      setStats({
-        liquidityRisk: lowStockCount || 0,
-        forecastedGrowth: Number(growth.toFixed(1)),
-        activeSKUs: 0 // Placeholder
-      });
+      if (recentTX) {
+        const growth = recentTX.length > 0 ? (recentTX.length / 50) * 10 : 0;
+        setStats({
+          liquidityRisk: filteredLow.length,
+          forecastedGrowth: Number(growth.toFixed(1)),
+          activeSKUs: prods?.length || 0
+        });
+      }
+    } catch (err) {
+      console.error("Intelligence Sync Error:", err);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   const handleExecuteAnalysis = async () => {
     if (!startDate || !endDate) return;
     setGenerating(true);
 
-    // Simulations and real calc can happen here
-    // For now, we "generate" a report entry into local state based on actual data points
-    const { data: filteredTX } = await supabase
-      .from('transactions')
-      .select('total_amount, total_profit')
-      .gte('created_at', new Date(startDate).toISOString())
-      .lte('created_at', new Date(endDate).toISOString());
+    try {
+      // 1. Fetch real transactions between dates
+      // We set time to start and end of selected days
+      const start = new Date(`${startDate}T00:00:00Z`).toISOString();
+      const end = new Date(`${endDate}T23:59:59Z`).toISOString();
 
-    const totalSales = filteredTX?.reduce((acc: number, t: any) => acc + Number(t.total_amount), 0) || 0;
+      const { data: filteredTX, error: txErr } = await supabase
+        .from('transactions')
+        .select('*')
+        .gte('created_at', start)
+        .lte('created_at', end);
 
-    const newReport = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: `${reportType.toUpperCase()}_${startDate}_TO_${endDate}`,
-      category: reportType,
-      timestamp: new Date().toLocaleString(),
-      status: 'Generated',
-      totalSales: totalSales
-    };
+      if (txErr) throw txErr;
 
-    // Minor delay for "premium" feeling
-    setTimeout(() => {
-      setReports([newReport, ...reports]);
+      // 2. Fetch all related line items for detailed analysis
+      const txIds = (filteredTX as Transaction[])?.map((t: Transaction) => t.id) || [];
+      let metrics = {
+        revenue: 0,
+        profit: 0,
+        count: filteredTX?.length || 0,
+        avgValue: 0,
+        itemCount: 0,
+        topProduct: 'None'
+      };
+
+      if (txIds.length > 0) {
+        const { data: items, error: itemsErr } = await supabase
+          .from('transaction_items')
+          .select('*, products(name)')
+          .in('transaction_id', txIds);
+
+        if (itemsErr) throw itemsErr;
+
+        const typedTX = filteredTX as Transaction[];
+        const typedItems = items as TransactionItem[];
+
+        // Calculate Detail Metrics
+        metrics.revenue = typedTX.reduce((acc: number, t: Transaction) => acc + Number(t.total_amount), 0);
+        metrics.profit = typedTX.reduce((acc: number, t: Transaction) => acc + Number(t.total_profit), 0);
+        metrics.avgValue = metrics.revenue / metrics.count;
+        metrics.itemCount = typedItems?.reduce((acc: number, i: TransactionItem) => acc + Number(i.quantity), 0) || 0;
+
+        // Find Top Product
+        const prodMap: Record<string, number> = {};
+        typedItems?.forEach((i: TransactionItem) => {
+          const name = i.products?.name || 'Unknown';
+          prodMap[name] = (prodMap[name] || 0) + i.quantity;
+        });
+        const top = Object.entries(prodMap).sort((a,b) => b[1] - a[1])[0];
+        if (top) metrics.topProduct = top[0];
+      }
+
+      const newReport = {
+        id: Math.random().toString(36).substr(2, 9),
+        name: `${reportType.toUpperCase()}_${startDate.replace(/-/g, '')}_TO_${endDate.replace(/-/g, '')}`,
+        category: reportType,
+        timestamp: new Date().toLocaleString(),
+        status: 'Generated',
+        totalSales: metrics.revenue,
+        details: metrics, // Store full intelligence for the modal
+        range: { start: startDate, end: endDate }
+      };
+
+      setReports(prev => [newReport, ...prev]);
+    } catch (err) {
+      console.error("Analysis Error:", err);
+      alert("Failed to generate real-time analysis.");
+    } finally {
       setGenerating(false);
-    }, 1500);
+    }
   };
 
   const fmt = (n: number) =>
@@ -140,7 +239,7 @@ export default function ReportsPage() {
             <div className="w-12 h-12 bg-primary flex items-center justify-center rounded-2xl shadow-xl shadow-primary/20">
               <BarChart2 className="text-white" size={24} />
             </div>
-            <h3 className="font-heading text-2xl font-black uppercase tracking-tight text-primary">Generate New Report</h3>
+            <h3 className="font-heading font-black uppercase tracking-tight text-primary">Generate Report</h3>
           </div>
 
           <div className="flex flex-col gap-6">
@@ -149,14 +248,14 @@ export default function ReportsPage() {
               <label className="block text-[10px] font-black uppercase tracking-[0.25em] text-on-surface-variant mb-4">Report Parameters</label>
               <div className="space-y-3">
                 {[
-                  { name: "Sales Summary", icon: <LineChart size={20} /> },
-                  { name: "Profit Summary", icon: <Activity size={20} /> },
-                  { name: "Inventory Status", icon: <Archive size={20} /> },
-                  { name: "ROI Analysis", icon: <Calculator size={20} /> }
+                  { name: "Sales Summary", icon: <LineChart size={20} />, color: "border-primary bg-primary/5", text: "text-primary" },
+                  { name: "Profit Summary", icon: <Activity size={20} />, color: "border-on-surface bg-surface-container-high", text: "text-on-surface" },
+                  { name: "Inventory Status", icon: <Archive size={20} />, color: "border-amber-600 bg-amber-50", text: "text-amber-600" },
+                  { name: "ROI Analysis", icon: <Calculator size={20} />, color: "border-emerald-600 bg-emerald-50", text: "text-emerald-600" }
                 ].map(type => (
                   <label
                     key={type.name}
-                    className={`flex items-center p-4 rounded-2xl cursor-pointer border-2 transition-all group ${reportType === type.name ? 'border-primary bg-primary/5' : 'border-transparent bg-white hover:border-outline-variant/50'}`}
+                    className={`flex items-center p-4 rounded-2xl cursor-pointer border-2 transition-all group ${reportType === type.name ? type.color : 'border-transparent bg-white hover:border-outline-variant/50'}`}
                   >
                     <input
                       checked={reportType === type.name}
@@ -164,11 +263,11 @@ export default function ReportsPage() {
                       className="hidden"
                       type="radio"
                     />
-                    <div className={`${reportType === type.name ? 'text-primary' : 'text-on-surface-variant'} mr-4 transition-colors`}>
+                    <div className={`${reportType === type.name ? type.text : 'text-on-surface-variant'} mr-4 transition-colors`}>
                       {type.icon}
                     </div>
-                    <span className={`flex-1 font-bold text-sm ${reportType === type.name ? 'text-primary' : 'text-on-surface'}`}>{type.name}</span>
-                    <CheckCircle2 className={`text-primary transition-opacity ${reportType === type.name ? 'opacity-100' : 'opacity-0'}`} size={20} />
+                    <span className={`flex-1 font-bold text-sm ${reportType === type.name ? type.text : 'text-on-surface'}`}>{type.name}</span>
+                    <CheckCircle2 className={`transition-opacity ${reportType === type.name ? 'opacity-100 ' + type.text : 'opacity-0'}`} size={20} />
                   </label>
                 ))}
               </div>
@@ -179,7 +278,7 @@ export default function ReportsPage() {
               <div className="space-y-6">
                 <label className="block text-[10px] font-black uppercase tracking-[0.25em] text-on-surface-variant mb-4">Timeframe Range</label>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-white px-4 py-2.5 rounded-2xl border border-outline-variant/10 focus-within:border-primary transition-all shadow-sm">
+                  <div className="bg-white px-2 py-1.5 rounded-2xl border border-outline-variant/10 focus-within:border-primary transition-all shadow-sm">
                     <span className="block text-[9px] text-on-surface-variant font-black mb-1 uppercase tracking-widest">START DATE</span>
                     <input
                       className="w-full bg-transparent border-none p-0 text-xs font-extrabold focus:ring-0 outline-none text-primary" type="date"
@@ -187,7 +286,7 @@ export default function ReportsPage() {
                       onChange={e => setStartDate(e.target.value)}
                     />
                   </div>
-                  <div className="bg-white px-4 py-2.5 rounded-2xl border border-outline-variant/10 focus-within:border-primary transition-all shadow-sm">
+                  <div className="bg-white px-2 py-1.5 rounded-2xl border border-outline-variant/10 focus-within:border-primary transition-all shadow-sm">
                     <span className="block text-[9px] text-on-surface-variant font-black mb-1 uppercase tracking-widest">END DATE</span>
                     <input
                       className="w-full bg-transparent border-none p-0 text-xs font-extrabold focus:ring-0 outline-none text-primary"
@@ -203,10 +302,9 @@ export default function ReportsPage() {
                 <button
                   onClick={handleExecuteAnalysis}
                   disabled={generating}
-                  className="w-full py-5 bg-gradient-to-r from-primary to-primary-container text-white rounded-2xl font-heading font-black text-sm tracking-[0.2em] uppercase flex items-center justify-center gap-3 transition-all hover:shadow-2xl active:scale-[0.98] cursor-pointer disabled:opacity-60"
+                  className="w-full py-5 bg-gradient-to-r from-primary to-primary-container text-white rounded-2xl font-heading font-black text-sm tracking-[0.1em] uppercase flex items-center justify-center gap-1 transition-all hover:shadow-2xl active:scale-[0.98] cursor-pointer disabled:opacity-60"
                 >
-                  {generating ? <Loader2 className="animate-spin" size={20} /> : <Sparkles size={20} />}
-                  EXECUTE ANALYSIS
+                  {generating ? "Calibrating..." : "Execute Analysis"}
                 </button>
               </div>
             </div>
@@ -216,7 +314,7 @@ export default function ReportsPage() {
 
         {/* Quick Insights Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="bg-secondary px-10 py-8 rounded-3xl relative overflow-hidden group shadow-xl shadow-secondary/10 hover:translate-y-[-4px] transition-all">
+          <div className="bg-secondary px-6 py-6 rounded-3xl relative overflow-hidden group shadow-xl shadow-secondary/10 hover:translate-y-[-4px] transition-all">
             <div className="relative z-10">
               <div className="flex items-center gap-2 text-on-secondary mb-6">
                 <TrendingUp size={16} className="text-on-secondary opacity-60" />
@@ -228,7 +326,7 @@ export default function ReportsPage() {
             <TrendingUp className="absolute bottom-[-20px] right-[-20px] text-white opacity-5 w-48 h-48" />
           </div>
 
-          <div className={`px-10 py-8 rounded-3xl flex flex-col justify-between shadow-xl transition-all border ${stats.liquidityRisk > 0 ? 'bg-error text-white shadow-error/10 border-error/5' : 'bg-surface-container-low border-outline-variant/10'}`}>
+          <div className={`px-6 py-6 rounded-3xl flex flex-col justify-between shadow-xl transition-all border ${stats.liquidityRisk > 0 ? 'bg-error text-white shadow-error/10 border-error/5' : 'bg-surface-container-low border-outline-variant/10'}`}>
             <div>
               <div className={`flex items-center gap-2 mb-6 ${stats.liquidityRisk > 0 ? 'text-white' : 'text-on-surface-variant'}`}>
                 <AlertTriangle size={18} />
@@ -240,7 +338,11 @@ export default function ReportsPage() {
                   : "All inventory segments report healthy liquidity levels. No immediate risk detected."}
               </p>
             </div>
-            <button className={`w-full py-4 mt-4 text-[10px] font-black uppercase tracking-[0.2em] rounded-xl transition-all flex items-center justify-center gap-2 group cursor-pointer ${stats.liquidityRisk > 0 ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-primary/5 text-primary hover:bg-primary/10'}`}>
+            <button 
+              onClick={() => setShowLowStockModal(true)}
+              disabled={stats.liquidityRisk === 0}
+              className={`w-full py-4 mt-4 text-[10px] font-black uppercase tracking-[0.2em] rounded-xl transition-all flex items-center justify-center gap-2 group cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${stats.liquidityRisk > 0 ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-primary/5 text-primary'}`}
+            >
               VIEW ITEMS
               <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
             </button>
@@ -250,13 +352,13 @@ export default function ReportsPage() {
 
       {/* Recent Reports Activity - Report Repository */}
       <section className="bg-surface-container-low rounded-3xl overflow-hidden border border-outline-variant/10 shadow-sm relative">
-        <div className="px-10 py-8 flex flex-col md:flex-row items-center justify-between border-b border-outline-variant/10 bg-white/50 gap-4">
+        <div className="px-6 py-6 flex flex-col md:flex-row items-center justify-between border-b border-outline-variant/10 bg-white/50 gap-4">
           <div>
             <h3 className="font-heading text-xl font-black uppercase tracking-tight text-primary">Report Repository</h3>
             <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mt-1">Archive of generated transactional archives.</p>
           </div>
           <div className="flex gap-2 w-full md:w-auto">
-            <button className="flex-1 md:flex-none px-6 py-2.5 bg-primary text-white text-[10px] font-black rounded-xl uppercase tracking-widest cursor-pointer shadow-lg shadow-primary/20">LIVE HISTORY</button>
+            <button className="flex-1 md:flex-none px-6 py-2 bg-primary text-white text-[10px] font-black rounded-xl uppercase tracking-widest cursor-pointer shadow-lg shadow-primary/20">HISTORY</button>
             <button className="flex-1 md:flex-none px-6 py-2.5 bg-surface-container-highest text-on-surface-variant text-[10px] font-black rounded-xl uppercase tracking-widest cursor-pointer border border-outline-variant/10">SCHEDULED</button>
           </div>
         </div>
@@ -265,11 +367,11 @@ export default function ReportsPage() {
           <table className="w-full text-left min-w-[900px]">
             <thead className="bg-surface-container text-on-surface-variant">
               <tr>
-                <th className="px-10 py-5 text-[10px] font-black text-on-surface-variant tracking-[0.2em] uppercase">Document Narrative</th>
-                <th className="px-10 py-5 text-[10px] font-black text-on-surface-variant tracking-[0.2em] uppercase">Sector</th>
-                <th className="px-10 py-5 text-[10px] font-black text-on-surface-variant tracking-[0.2em] uppercase">Protocol Date</th>
-                <th className="px-10 py-5 text-[10px] font-black text-on-surface-variant tracking-[0.2em] uppercase">Status</th>
-                <th className="px-10 py-5 text-[10px] font-black text-on-surface-variant tracking-[0.2em] uppercase text-right">Result</th>
+                <th className="px-6 py-4 text-[10px] font-black text-on-surface-variant tracking-[0.2em] uppercase">Document Narrative</th>
+                <th className="px-6 py-4 text-[10px] font-black text-on-surface-variant tracking-[0.2em] uppercase">Sector</th>
+                <th className="px-6 py-4 text-[10px] font-black text-on-surface-variant tracking-[0.2em] uppercase">Protocol Date</th>
+                <th className="px-6 py-4 text-[10px] font-black text-on-surface-variant tracking-[0.2em] uppercase">Status</th>
+                <th className="px-6 py-4 text-[10px] font-black text-on-surface-variant tracking-[0.2em] uppercase text-right">Result</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/5">
@@ -290,15 +392,15 @@ export default function ReportsPage() {
               ) : (
                 reports.map(report => (
                   <tr key={report.id} className="hover:bg-primary/5 transition-all group bg-white">
-                    <td className="px-10 py-6">
+                    <td className="px-6 py-5">
                       <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-surface-container-highest rounded-2xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${getReportColor(report.category).split(' ')[1]} ${getReportColor(report.category).split(' ')[0]} group-hover:scale-110 transition-transform`}>
                           <FileText size={20} />
                         </div>
-                        <span className="text-sm font-extrabold text-on-surface group-hover:text-primary transition-colors">{report.name}</span>
+                        <span className={`text-sm font-extrabold transition-colors ${getReportColor(report.category).split(' ')[0]}`}>{report.name}</span>
                       </div>
                     </td>
-                    <td className="px-10 py-6">
+                    <td className="px-6 py-5">
                       <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">{report.category}</span>
                     </td>
                     <td className="px-10 py-6">
@@ -311,9 +413,20 @@ export default function ReportsPage() {
                       </div>
                     </td>
                     <td className="px-10 py-6 text-right">
-                      <div className="flex flex-col items-end gap-1">
-                        <span className="text-sm font-black text-primary">{fmt(report.totalSales)}</span>
-                        <span className="text-[8px] font-black text-on-surface-variant uppercase tracking-tighter italic">Ledgered Balance</span>
+                      <div className="flex items-center justify-end gap-6">
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="text-sm font-black text-primary">{fmt(report.totalSales)}</span>
+                          <span className="text-[8px] font-black text-on-surface-variant uppercase tracking-tighter italic">Ledgered Balance</span>
+                        </div>
+                        <button 
+                          onClick={() => {
+                            setSelectedReport(report);
+                            setShowAudit(true);
+                          }}
+                          className="p-3 bg-primary/10 text-primary rounded-xl hover:bg-primary hover:text-white transition-all cursor-pointer group/btn"
+                        >
+                          <FileText size={18} className="group-hover/btn:scale-110 transition-transform" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -333,12 +446,184 @@ export default function ReportsPage() {
         )}
       </section>
 
-      {/* Floating Action Contextual */}
-      <div className="fixed bottom-24 right-6 md:bottom-8 md:right-8 z-50">
-        <button className="w-14 h-14 bg-primary flex items-center justify-center text-white rounded-2xl shadow-2xl hover:scale-110 transition-transform active:scale-95 group cursor-pointer">
-          <Plus size={28} className="group-hover:rotate-90 transition-transform duration-300" />
-        </button>
-      </div>
+
+      {/* Strategic Audit Ledger Modal */}
+      {showAudit && selectedReport && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-2 md:p-10 overflow-hidden">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-surface/40 backdrop-blur-xl print:hidden"
+            onClick={() => setShowAudit(false)}
+          />
+          
+          {/* Document Content */}
+          <div id="report-canvas" className="relative w-full max-w-2xl bg-white shadow-[0_32px_64px_rgba(0,0,0,0.15)] rounded-3xl md:rounded-[2.5rem] border border-outline-variant/5 flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-300">
+            
+            {/* Modal Control Bar (Excluded from Print) */}
+            <div className="px-6 py-4 border-b border-outline-variant/10 flex items-center justify-between bg-white print:hidden">
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => setShowAudit(false)}
+                  className="p-2 hover:bg-surface-container-high rounded-full text-on-surface-variant transition-colors"
+                >
+                  <ChevronDown className="rotate-90" size={20} />
+                </button>
+                <span className="text-[7px] font-black text-on-surface-variant uppercase tracking-[0.2em]">Audit Preview</span>
+              </div>
+              <div className="flex items-center gap-2">
+                 <button 
+                  onClick={() => window.print()}
+                  className="px-4 py-2 bg-primary text-white rounded-xl text-[7px] font-black uppercase tracking-widest flex items-center gap-2 hover:shadow-lg active:scale-95 transition-all"
+                >
+                  <Download size={14} />
+                  Save as PDF
+                </button>
+              </div>
+            </div>
+
+            {/* Print Body */}
+            <div className="flex-grow overflow-y-auto p-5 md:p-8 space-y-6 custom-scrollbar">
+              {/* Document Header */}
+              <div className="flex flex-col md:flex-row justify-between items-start gap-4 border-b-2 border-primary/10 pb-6">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-primary flex items-center justify-center rounded-2xl text-white shadow-xl shadow-primary/20">
+                      <FileText size={20} />
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-heading font-black text-primary tracking-tight leading-none">STRATEGIC AUDIT LEDGER</h4>
+                      <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest mt-1">Index: {selectedReport.id.toUpperCase()}</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-6 pt-2">
+                    <div>
+                      <p className="text-[7px] font-black text-on-surface-variant uppercase opacity-50 mb-0.5">Generated PST</p>
+                      <p className="text-[11px] font-bold text-on-surface uppercase">{selectedReport.timestamp}</p>
+                    </div>
+                    <div>
+                      <p className="text-[7px] font-black text-on-surface-variant uppercase opacity-50 mb-0.5">Ledger Category</p>
+                      <p className="text-[11px] font-bold text-on-surface uppercase">{selectedReport.category}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="md:text-right bg-primary/5 px-4 py-3 rounded-2xl border border-primary/10 w-full md:w-auto self-stretch md:self-auto flex flex-col justify-center">
+                  <p className="text-[9px] font-black text-primary uppercase tracking-[0.2em] mb-0.5 opacity-70 leading-none">Analysis Period</p>
+                  <p className="text-sm font-black text-primary font-mono whitespace-nowrap">{selectedReport.range.start} - {selectedReport.range.end}</p>
+                </div>
+              </div>
+
+              {/* KPI Intensity Grid */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="bg-surface-container-low p-4 rounded-2xl border border-outline-variant/10">
+                  <p className="text-[8px] font-black text-on-surface-variant uppercase mb-1">Total Revenue</p>
+                  <p className="text-lg font-black text-primary font-mono">{fmt(selectedReport.details.revenue)}</p>
+                </div>
+                <div className="bg-surface-container-low p-4 rounded-2xl border border-outline-variant/10">
+                   <p className="text-[8px] font-black text-on-surface-variant uppercase mb-1">Net Profit</p>
+                   <p className="text-lg font-black text-secondary font-mono">{fmt(selectedReport.details.profit)}</p>
+                </div>
+                <div className="bg-surface-container-low p-4 rounded-2xl border border-outline-variant/10">
+                   <p className="text-[8px] font-black text-on-surface-variant uppercase mb-1">Efficiency (AOV)</p>
+                   <p className="text-lg font-black text-primary font-mono">{fmt(selectedReport.details.avgValue)}</p>
+                </div>
+                <div className="bg-surface-container-low p-4 rounded-2xl border border-outline-variant/10">
+                   <p className="text-[8px] font-black text-on-surface-variant uppercase mb-1">Volume Traded</p>
+                   <p className="text-lg font-black text-on-surface font-mono">{selectedReport.details.count} TX</p>
+                </div>
+              </div>
+
+              {/* Strategic Insights Breakdown */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Sparkles size={14} className="text-primary" />
+                  <h5 className="text-[10px] font-black text-on-surface uppercase tracking-[0.2em]">Strategic Insights</h5>
+                </div>
+                
+                <div className="bg-white rounded-[1.5rem] border border-primary/10 overflow-hidden shadow-sm">
+                  <div className="px-5 py-3 bg-primary/5 border-b border-primary/10 flex justify-between items-center">
+                    <span className="text-[9px] font-black text-primary uppercase tracking-widest">Transaction Intelligence</span>
+                    <span className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">{selectedReport.details.itemCount} Items Handled</span>
+                  </div>
+                  <div className="p-5 space-y-5">
+                     <div className="flex justify-between items-end">
+                       <div className="space-y-0.5">
+                          <p className="text-[7px] font-black text-on-surface-variant uppercase opacity-50">ALPHA PRODUCT (Top Performer)</p>
+                          <p className="text-base font-black text-primary uppercase tracking-tight">{selectedReport.details.topProduct}</p>
+                       </div>
+                       <TrendingUp className="text-primary mb-1" size={20} />
+                     </div>
+                     <div className="bg-surface-container-high/30 p-4 rounded-xl border border-outline-variant/10">
+                        <div className="flex items-start gap-3">
+                           <Activity size={16} className="text-secondary shrink-0 mt-0.5" />
+                           <div>
+                              <p className="text-[11px] font-bold text-on-surface leading-normal italic">
+                                "{selectedReport.category} analysis completed for {selectedReport.range.start} to {selectedReport.range.end}. Data confirms consistent liquidity baseline with optimal throughput on {selectedReport.details.topProduct}."
+                              </p>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Document Footer (Print Only) */}
+              <div className="hidden print:block pt-10 border-t border-outline-variant/10 text-center">
+                 <p className="text-[9px] font-black text-on-surface-variant uppercase tracking-[0.3em]">Official Performance Audit Ledger • POS ni Estela</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Low Stock Audit Modal */}
+      {showLowStockModal && (
+        <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4 overflow-hidden">
+          <div className="absolute inset-0 bg-surface/60 backdrop-blur-2xl" onClick={() => setShowLowStockModal(false)} />
+          <div className="relative w-full max-w-xl bg-white rounded-[2.5rem] shadow-2xl border border-outline-variant/10 flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-300 overflow-hidden">
+            <div className="px-8 py-6 border-b border-outline-variant/5 flex items-center justify-between bg-surface-container-low/30">
+               <div>
+                  <h4 className="text-xl font-heading font-black text-primary leading-tight">LIQUIDITY RISK AUDIT</h4>
+                  <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mt-1">{stats.liquidityRisk} Critical Items Identifed</p>
+               </div>
+               <button onClick={() => setShowLowStockModal(false)} className="w-10 h-10 bg-surface-container rounded-2xl flex items-center justify-center text-on-surface-variant hover:bg-error/10 hover:text-error transition-all">
+                  <X size={20} />
+               </button>
+            </div>
+
+            <div className="flex-grow overflow-y-auto p-6 space-y-4 custom-scrollbar">
+               {lowStockItems.map((item) => (
+                 <div key={item.id} className="bg-surface-container-lowest p-5 rounded-3xl border border-outline-variant/10 flex items-center justify-between group hover:border-primary/20 transition-all">
+                    <div className="space-y-1">
+                       <p className="text-[10px] font-black text-primary uppercase tracking-widest opacity-70">{item.categories?.name || 'Inventory Segment'}</p>
+                       <h5 className="text-sm font-black text-on-surface group-hover:text-primary transition-colors">{item.name}</h5>
+                       <div className="flex items-center gap-2 mt-2">
+                          <div className="w-32 h-2 bg-surface-container rounded-full overflow-hidden">
+                             <div 
+                                className={`h-full transition-all duration-1000 ${item.stock <= 5 ? 'bg-error' : 'bg-amber-500'}`}
+                                style={{ width: `${Math.min((item.stock / item.min_stock) * 100, 100)}%` }}
+                             />
+                          </div>
+                          <span className="text-[9px] font-black uppercase text-on-surface-variant">{item.stock} / {item.min_stock}</span>
+                       </div>
+                    </div>
+                    <a 
+                      href="/products" 
+                      className="px-4 py-2.5 bg-primary/5 text-primary text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-primary hover:text-white transition-all whitespace-nowrap"
+                    >
+                      RESTOCK
+                    </a>
+                 </div>
+               ))}
+            </div>
+
+            <div className="p-6 bg-surface-container-low/30 border-t border-outline-variant/5">
+                <p className="text-[10px] font-bold text-on-surface-variant text-center opacity-60 italic">
+                  "Manual inventory verification recommended before reorder protocol execution."
+                </p>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

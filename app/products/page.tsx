@@ -61,6 +61,7 @@ export default function ProductsPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [showPackCalc, setShowPackCalc] = useState(false);
   const [packData, setPackData] = useState({ cost: '', qty: '' });
+  const [calcMode, setCalcMode] = useState<'pack' | 'market'>('pack');
 
   useEffect(() => {
     fetchData();
@@ -406,15 +407,15 @@ export default function ProductsPage() {
 
       {/* Add Product Modal Overlay */}
       {showAddModal && (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center p-2 overflow-y-auto py-10">
+        <div className="fixed inset-0 z-[999] flex items-start justify-center p-2 overflow-y-auto py-8 md:py-20 transition-all sm:items-center">
           {/* Backdrop */}
           <div 
             className="absolute inset-0 bg-surface/60 backdrop-blur-md"
             onClick={() => setShowAddModal(false)}
           />
-          {/* Modal Content */}
-          <div className="relative w-full max-w-sm bg-white rounded-[2rem] shadow-[0_24px_48px_rgba(0,0,0,0.15)] border border-outline-variant/5">
-            <div className="px-3 pt-1.5 pb-0.5 bg-white flex flex-col items-center gap-0.5 sticky top-0 z-10 border-b border-outline-variant/5">
+          {/* Modal Content - Seamless and Scrollable */}
+          <div className="relative w-full max-w-sm bg-white rounded-[2rem] shadow-[0_24px_48px_rgba(0,0,0,0.15)] border border-outline-variant/5 my-8 overflow-hidden">
+            <div className="px-3 pt-5 pb-3 bg-white flex flex-col items-center gap-0.5 border-b border-outline-variant/5">
               <button 
                 onClick={closeModal} 
                 className="absolute top-1 right-2 p-1.5 text-on-surface-variant hover:text-primary transition-colors rounded-full hover:bg-surface-container-high"
@@ -522,19 +523,56 @@ export default function ProductsPage() {
                   </div>
                 </div>
 
-                {/* Pack Calculator Segment */}
+                {/* Professional Dual-Mode Yield Calculator */}
                 {showPackCalc && (
-                  <div className="p-3 rounded-2xl bg-primary/5 border border-dashed border-primary/30 animate-in fade-in slide-in-from-top-1 duration-300">
-                    <div className="flex items-center gap-2 mb-2">
-                       <Calculator size={12} className="text-primary" />
-                       <span className="text-[9px] font-black uppercase tracking-tight text-primary">Yield Calculator (Pack to Unit)</span>
+                  <div className="p-3 rounded-2xl bg-secondary/5 border border-dashed border-secondary/30 animate-in fade-in slide-in-from-top-1 duration-300">
+                    {/* Mode Selector */}
+                    <div className="flex p-0.5 bg-surface-container-high rounded-lg mb-3">
+                      <button 
+                        type="button"
+                        onClick={() => setCalcMode('pack')}
+                        className={`flex-1 py-1 text-[8px] font-black uppercase tracking-widest rounded-md transition-all ${calcMode === 'pack' ? 'bg-white shadow-sm text-primary' : 'text-on-surface-variant opacity-40'}`}
+                      >
+                        Fixed Pack
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => setCalcMode('market')}
+                        className={`flex-1 py-1 text-[8px] font-black uppercase tracking-widest rounded-md transition-all ${calcMode === 'market' ? 'bg-white shadow-sm text-secondary' : 'text-on-surface-variant opacity-40'}`}
+                      >
+                        Market Bulk
+                      </button>
                     </div>
+
+                    <div className="flex items-center justify-between mb-2">
+                       <div className="flex items-center gap-2">
+                         <Calculator size={10} className={calcMode === 'market' ? 'text-secondary' : 'text-primary'} />
+                         <span className={`text-[8px] font-black uppercase tracking-tight ${calcMode === 'market' ? 'text-secondary' : 'text-primary'}`}>
+                           {calcMode === 'pack' ? 'Pre-packed Box Calculation' : 'Market Weight Calculation'}
+                         </span>
+                       </div>
+                       {parseFloat(formData.cost_price) > 0 && parseFloat(formData.selling_price) > 0 && calcMode === 'market' && (
+                         <div className={`px-2 py-0.5 rounded text-[7px] font-black uppercase ${parseFloat(formData.cost_price) >= parseFloat(formData.selling_price) ? 'bg-error-container text-on-error-container' : 'bg-primary/20 text-primary'}`}>
+                           {parseFloat(formData.cost_price) >= parseFloat(formData.selling_price) ? 'No Profit Warning' : 'Margin Secure'}
+                         </div>
+                       )}
+                    </div>
+
+                    {/* Context Guide */}
+                    <p className="text-[7px] font-bold text-on-surface-variant/40 uppercase mb-2">
+                      {calcMode === 'pack' 
+                        ? "USE FOR: BOXES OR CRATES WITH FIXED QUANTITIES (E.G. CANNED DRINKS)" 
+                        : "USE FOR: ITEMS BOUGHT BY KILO/WEIGHT ON A SCALE (E.G. ONIONS/GARLIC)"}
+                    </p>
+
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1">
-                        <label className="text-[7px] font-bold uppercase text-primary/60 tracking-widest">Pack Cost (₱)</label>
+                        <label className={`text-[7px] font-bold uppercase tracking-widest ${calcMode === 'market' ? 'text-secondary/60' : 'text-primary/60'}`}>
+                          {calcMode === 'pack' ? 'Carton Cost (₱)' : 'Market Price (Bulk)'}
+                        </label>
                         <input 
                           type="number"
-                          placeholder="Price per pack"
+                          placeholder={calcMode === 'pack' ? "Price per box" : "Price on scale"}
                           value={packData.cost}
                           onChange={(e) => {
                             const val = e.target.value;
@@ -544,14 +582,16 @@ export default function ProductsPage() {
                               setFormData(f => ({ ...f, cost_price: unitCost.toFixed(2) }));
                             }
                           }}
-                          className="w-full bg-white/50 border-b border-primary/20 text-[11px] font-bold px-1 py-1 focus:outline-none focus:border-primary"
+                          className={`w-full bg-white/50 border-b text-[11px] font-bold px-1 py-1 focus:outline-none transition-colors ${calcMode === 'market' ? 'border-secondary/20 focus:border-secondary' : 'border-primary/20 focus:border-primary'}`}
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[7px] font-bold uppercase text-primary/60 tracking-widest">Qty in Pack</label>
+                        <label className={`text-[7px] font-bold uppercase tracking-widest ${calcMode === 'market' ? 'text-secondary/60' : 'text-primary/60'}`}>
+                          {calcMode === 'pack' ? 'Items in Box' : 'Yield Count (pcs)'}
+                        </label>
                         <input 
                           type="number"
-                          placeholder="Pila sulod"
+                          placeholder={calcMode === 'pack' ? "Sulod sa carton" : "Pila kabuok?"}
                           value={packData.qty}
                           onChange={(e) => {
                             const val = e.target.value;
@@ -564,7 +604,7 @@ export default function ProductsPage() {
                               }
                             }
                           }}
-                          className="w-full bg-white/50 border-b border-primary/20 text-[11px] font-bold px-1 py-1 focus:outline-none focus:border-primary"
+                          className={`w-full bg-white/50 border-b text-[11px] font-bold px-1 py-1 focus:outline-none transition-colors ${calcMode === 'market' ? 'border-secondary/20 focus:border-secondary' : 'border-primary/20 focus:border-primary'}`}
                         />
                       </div>
                     </div>
@@ -621,10 +661,10 @@ export default function ProductsPage() {
                 </div>
               </div>
 
-              {/* Action Button */}
-              <div className="pt-1.5">
+              {/* Action Button - Added huge bottom padding for mobile scroll clearance */}
+              <div className="pt-2 pb-20 md:pb-6">
                 <button 
-                  className="w-full py-2.5 rounded-xl bg-primary text-white font-black text-[10px] shadow-sm active:scale-95 transition-all cursor-pointer uppercase tracking-[0.2em]" 
+                  className="w-full py-3 rounded-xl bg-primary text-white font-black text-[11px] shadow-lg shadow-primary/20 active:scale-95 transition-all cursor-pointer uppercase tracking-[0.2em]" 
                   type="submit"
                 >
                   {editingProduct ? "Done Writing" : "Save Entry"}

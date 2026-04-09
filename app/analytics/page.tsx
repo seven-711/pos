@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
 import {
   Calendar,
   ChevronDown,
@@ -19,8 +18,10 @@ import {
   Printer,
   FileText,
   X as CloseIcon,
-  CheckCircle2
+  CheckCircle2,
+  Clock
 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 import { useSession } from "@/lib/contexts/SessionContext";
 
 interface Transaction {
@@ -296,7 +297,7 @@ export default function AnalyticsPage() {
           <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight text-primary font-heading">Performance Ledger</h1>
         </div>
         <div className="flex gap-2">
-          <div className="relative group bg-surface-container-high rounded-xl px-4 py-2.5 flex items-center gap-3 cursor-pointer hover:bg-surface-highest transition-colors shadow-sm border border-outline-variant/5">
+          <div className="relative group bg-surface-container-high rounded-xl px-3 py-2 flex items-center gap-2 cursor-pointer hover:bg-surface-highest transition-colors shadow-sm border border-outline-variant/5 w-full md:w-36 overflow-hidden">
             <Calendar size={18} className="text-primary" />
             <input 
               type="date"
@@ -382,69 +383,72 @@ export default function AnalyticsPage() {
 
         {/* Main Trend Chart */}
         <div className="md:col-span-3 bg-surface-container-low rounded-3xl p-4 md:p-8 flex flex-col border border-outline-variant/10 shadow-md">
-          <div className="flex justify-between items-start mb-6 md:mb-12">
-            <div>
-              <h3 className="text-base md:text-xl font-bold text-primary font-heading flex items-center gap-2">
+          <div className="flex justify-between items-center mb-6 md:mb-10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary border border-primary/10 shadow-sm shrink-0">
                 <BarChart3 size={20} />
-                Hourly Performance
-              </h3>
-              <div className="flex items-center gap-2 mt-1">
-                <p className="text-on-surface-variant text-sm">Revenue density aggregated by hour</p>
-                <span className="w-1 h-1 rounded-full bg-on-surface-variant/30"></span>
-                <p className="text-[10px] font-black text-secondary uppercase tracking-[0.2em] animate-pulse">
-                  System Phase: {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })} PST
-                </p>
+              </div>
+              <div className="flex flex-col">
+                <h3 className="text-sm md:text-xl font-black text-primary font-heading leading-tight flex items-center gap-2">
+                  Hourly Trend
+                  <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-full bg-secondary/10 border border-secondary/20 scale-75 md:scale-100 origin-left">
+                    <span className="w-1 h-1 rounded-full bg-secondary animate-pulse"></span>
+                    <span className="text-[8px] font-black text-secondary uppercase tracking-tighter">Live</span>
+                  </div>
+                </h3>
               </div>
             </div>
-            <div className="flex gap-4">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-primary/20"></div>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Baseline</span>
+            <div className="flex gap-3 md:gap-5">
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary/20"></div>
+                <span className="text-[9px] md:text-[10px] font-black text-on-surface-variant uppercase tracking-tighter opacity-50">Base</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-primary"></div>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Active</span>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(var(--color-primary-rgb),0.4)]"></div>
+                <span className="text-[9px] md:text-[10px] font-black text-primary uppercase tracking-tighter">Gross</span>
               </div>
             </div>
           </div>
 
-          {/* Dynamic Sales Chart */}
-          <div className="flex-grow flex items-end gap-3 px-2 h-64 mt-4 min-h-[250px]">
-            {hourlyTrend.length === 0 ? (
-              <div className="w-full flex flex-col items-center justify-center opacity-30 gap-2">
-                <BarChart3 size={48} />
-                <p className="font-bold">Awaiting Transaction Stream</p>
-              </div>
-            ) : (
-              hourlyTrend.map(([time, val], idx) => {
-                const maxVal = Math.max(...hourlyTrend.map(v => v[1]), 1);
-                const height = (val / maxVal) * 100;
-                const isCurrentHour = new Date().getHours() === idx && selectedDate === new Date().toISOString().split('T')[0];
-                
-                return (
-                  <div key={idx} className="flex-1 group relative h-full flex items-end">
-                    <div
-                      style={{ height: `${Math.max(4, height)}%` }}
-                      className={`w-full ${val > 0 ? (isCurrentHour ? 'bg-secondary ring-4 ring-secondary/20' : 'bg-primary') : (isCurrentHour ? 'bg-secondary/20 ring-2 ring-secondary/10' : 'bg-primary/5')} hover:bg-primary-container rounded-t-md transition-all duration-700 ease-out cursor-pointer shadow-sm relative`}
-                    >
-                      {isCurrentHour && (
-                        <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-[8px] font-black text-secondary uppercase whitespace-nowrap tracking-tighter">
-                          Now
+          {/* Dynamic Sales Chart - Added Horizontal Scroll for Mobile */}
+          <div className="flex-grow overflow-x-auto pb-8 -mx-2 hide-scrollbar scroll-smooth">
+            <div className="flex items-end gap-1 md:gap-3 px-2 h-64 mt-4 min-w-[700px] md:min-w-full min-h-[250px]">
+              {hourlyTrend.length === 0 ? (
+                <div className="w-full flex flex-col items-center justify-center opacity-30 gap-2">
+                  <BarChart3 size={48} />
+                  <p className="font-bold">Awaiting Transaction Stream</p>
+                </div>
+              ) : (
+                hourlyTrend.map(([time, val], idx) => {
+                  const maxVal = Math.max(...hourlyTrend.map(v => v[1]), 1);
+                  const height = (val / maxVal) * 100;
+                  const isCurrentHour = new Date().getHours() === idx && selectedDate === new Date().toISOString().split('T')[0];
+                  
+                  return (
+                    <div key={idx} className="flex-1 group relative h-full flex items-end">
+                      <div
+                        style={{ height: `${Math.max(4, height)}%` }}
+                        className={`w-full ${val > 0 ? (isCurrentHour ? 'bg-secondary ring-4 ring-secondary/20' : 'bg-primary') : (isCurrentHour ? 'bg-secondary/20 ring-2 ring-secondary/10' : 'bg-primary/5')} hover:bg-primary-container rounded-t-md transition-all duration-700 ease-out cursor-pointer shadow-sm relative`}
+                      >
+                        {isCurrentHour && (
+                          <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-[8px] font-black text-secondary uppercase whitespace-nowrap tracking-tighter">
+                            Now
+                          </div>
+                        )}
+                        <div className="absolute -top-12 left-1/2 -translate-x-[50%] bg-surface-container-highest text-white text-[10px] px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none shadow-lg">
+                          {time} • {formatCurrency(val)}
+                        </div>
+                      </div>
+                      {idx % 2 === 0 && (
+                        <div className={`absolute -bottom-6 left-0 text-[8px] font-bold ${isCurrentHour ? 'text-secondary' : 'text-on-surface-variant/50'}`}>
+                          {time}
                         </div>
                       )}
-                      <div className="absolute -top-12 left-1/2 -translate-x-[50%] bg-surface-container-highest text-white text-[10px] px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none shadow-lg">
-                        {time} • {formatCurrency(val)}
-                      </div>
                     </div>
-                    {idx % 2 === 0 && (
-                      <div className={`absolute -bottom-6 left-0 text-[8px] font-bold ${isCurrentHour ? 'text-secondary' : 'text-on-surface-variant/50'}`}>
-                        {time}
-                      </div>
-                    )}
-                  </div>
-                );
-              })
-            )}
+                  );
+                })
+              )}
+            </div>
           </div>
           <div className="mt-12 flex justify-between pt-4 border-t border-outline-variant/10 text-[9px] font-bold text-on-surface-variant/40 uppercase tracking-widest">
             <span>Entry Protocol</span>
@@ -454,7 +458,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Secondary Analysis Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-20 md:mb-32">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
         {/* Top Product List */}
         <div className="bg-surface-container-low p-4 md:p-6 rounded-2xl flex flex-col border border-outline-variant/10 shadow-sm">
           <h3 className="font-bold font-heading text-primary mb-4 md:mb-6 flex justify-between items-center text-base md:text-lg">
@@ -476,34 +480,6 @@ export default function AnalyticsPage() {
               ))
             )}
           </div>
-        </div>
-
-        {/* Peak Hours Analysis */}
-        <div className="bg-surface-container-low p-4 md:p-6 rounded-2xl flex flex-col border border-outline-variant/10 shadow-sm">
-          <h3 className="font-bold font-heading text-primary mb-4 md:mb-6 text-base md:text-lg">Peak Service Intensity</h3>
-          <div className="grid grid-cols-12 gap-1 h-24 md:h-32 items-end">
-            {peakHours.map((count, h) => {
-              const maxCount = Math.max(...peakHours);
-              const height = maxCount > 0 ? (count / maxCount) * 100 : 0;
-              return (
-                <div key={h} className="group relative h-full flex items-end">
-                  <div
-                    style={{ height: `${height}%` }}
-                    className={`w-full bg-primary/20 rounded-t-sm group-hover:bg-primary transition-colors ${height > 70 ? 'bg-primary/60' : ''}`}
-                  ></div>
-                  <div className="absolute -top-6 left-1/2 -translate-x-[50%] text-[8px] font-bold text-primary opacity-0 group-hover:opacity-100 whitespace-nowrap">{h}:00</div>
-                </div>
-              );
-            })}
-          </div>
-          <div className="flex justify-between mt-3 text-[8px] font-bold text-on-surface-variant uppercase tracking-widest">
-            <span>00:00</span>
-            <span>12:00</span>
-            <span>23:59</span>
-          </div>
-          <p className="mt-6 text-xs text-on-surface-variant leading-relaxed font-medium">
-            Service density is concentrated around <strong className="text-primary">{peakHours.indexOf(Math.max(...peakHours))}:00 </strong>. Staff readiness optimized for high volume.
-          </p>
         </div>
 
         {/* Category Split */}
@@ -532,6 +508,53 @@ export default function AnalyticsPage() {
                 </div>
               ))
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* Peak Service Intensity - Now Full Width */}
+      <div className="bg-surface-container-low p-4 md:p-8 rounded-3xl flex flex-col border border-outline-variant/10 shadow-md mb-20 md:mb-32">
+        <h3 className="font-bold font-heading text-primary mb-6 md:mb-8 text-base md:text-xl flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-secondary/5 flex items-center justify-center text-secondary border border-secondary/10 shadow-sm shrink-0">
+             <Clock size={20} />
+          </div>
+          Peak Service Intensity
+        </h3>
+        
+        <div className="overflow-x-auto hide-scrollbar pb-10 -mx-2">
+          <div className="flex items-end gap-1 md:gap-1.5 h-24 md:h-32 mb-6 min-w-[650px] md:min-w-full px-2">
+            {peakHours.map((count, h) => {
+              const maxCount = Math.max(...peakHours);
+              const height = maxCount > 0 ? (count / maxCount) * 100 : 0;
+              return (
+                <div key={h} className="group relative h-full flex items-end flex-1">
+                  <div
+                    style={{ height: `${Math.max(4, height)}%` }}
+                    className={`w-full transition-all duration-500 rounded-t-sm ${height > 70 ? 'bg-secondary' : 'bg-primary/20 group-hover:bg-primary/40'}`}
+                  ></div>
+                  <div className="absolute -top-10 left-1/2 -translate-x-[50%] bg-surface-container-highest text-white text-[9px] px-2 py-1 rounded md opacity-0 group-hover:opacity-100 whitespace-nowrap z-20 shadow-xl transition-opacity">
+                    {h}:00 • {count} TX
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center pt-6 border-t border-outline-variant/10 gap-4 md:gap-8">
+          <div className="flex gap-6 md:gap-8 text-[9px] md:text-[10px] font-black text-on-surface-variant/40 uppercase tracking-[0.2em] shrink-0 w-full md:w-auto overflow-x-hidden">
+            <span>00:00 START</span>
+            <span className="hidden md:block text-primary/30">12:00 MIDDAY</span>
+            <span className="ml-auto md:ml-0">23:59 CLOSE</span>
+          </div>
+          
+          <div className="flex flex-col md:items-end gap-2 max-w-2xl">
+            <div className="flex items-center gap-2 md:justify-end">
+              <span className="px-2 py-0.5 rounded-full bg-secondary/10 text-secondary text-[8px] font-black uppercase tracking-widest border border-secondary/20">Strategy Recommendation</span>
+            </div>
+            <p className="text-xs md:text-sm text-on-surface-variant font-medium text-left md:text-right leading-relaxed">
+              Operational density peaks at <strong className="text-secondary">{peakHours.indexOf(Math.max(...peakHours))}:00 </strong>. Workforce allocation should be <span className="text-primary font-bold underline decoration-primary/20 underline-offset-4 tracking-tight">prioritized at this threshold</span> to maximize service throughput and efficiency.
+            </p>
           </div>
         </div>
       </div>
