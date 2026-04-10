@@ -95,11 +95,8 @@ export default function AnalyticsPage() {
     setLoading(true);
 
     try {
-      // Calculate local day boundaries and convert to UTC for Supabase
-      const start = new Date(`${dateStr}T00:00:00`);
-      const end = new Date(`${dateStr}T23:59:59.999`);
-      const startOfDay = start.toISOString();
-      const endOfDay = end.toISOString();
+      const startOfDay = `${dateStr}T00:00:00+08:00`;
+      const endOfDay = `${dateStr}T23:59:59.999+08:00`;
 
       // Fetch transactions for selected day
       const { data: txData, error: txErr } = await supabase

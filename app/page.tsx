@@ -7,15 +7,18 @@ import {
   PiggyBank,
   TrendingUp,
   Clock,
-  Loader2,
   PlayCircle,
   Activity,
   AlertCircle,
   CheckCircle2,
   Receipt,
-  ArrowRight
+  ArrowRight,
+  Loader2,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { useSession, type Session } from "@/lib/contexts/SessionContext";
+import { getLocalTimestamp } from "@/lib/utils/time";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -83,7 +86,8 @@ export default function Dashboard() {
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [txCount, setTxCount] = useState(0);
 
-  const { activeSession, openSession, closeSession } = useSession();
+  const [showPreview, setShowPreview] = useState(false);
+  const { activeSession, refreshSession, isLayoutHidden, setIsLayoutHidden } = useSession();
   const [sessionDuration, setSessionDuration] = useState("");
 
   // Feed & Alerts
@@ -147,17 +151,22 @@ export default function Dashboard() {
       const currentSession = activeSession;
       const isLive = !!currentSession;
       
-      const startTime = currentSession?.started_at ? new Date(currentSession.started_at) : new Date();
-      if (!isLive) startTime.setHours(0,0,0,0); 
+      const todayStr = new Date().toLocaleDateString('en-CA');
+      const startOfDay = `${todayStr}T00:00:00+08:00`;
+      const endOfDay = `${todayStr}T23:59:59+08:00`;
 
-      if (currentSession?.ended_at) {
-        setTotalSales(Number(currentSession.total_sales || 0));
-        setTotalProfit(Number(currentSession.total_profit || 0));
-        setTxCount(0); 
-      }
+      // We still check for sessions to determine context, but the data is for the full day
+      const { data: latestSessions } = await supabase
+        .from("store_sessions")
+        .select("*")
+        .order("started_at", { ascending: false })
+        .limit(1);
+      
+      const latest = latestSessions?.[0];
 
-      const queryStart = activeSession?.started_at || new Date(new Date().setHours(0,0,0,0)).toISOString();
-      const queryEnd = activeSession?.ended_at || new Date().toISOString();
+      // Standardize query boundaries to the Full Calendar Day
+      const queryStart = startOfDay;
+      const queryEnd = endOfDay;
 
       // 2. Fetch Transactions
       const { data: txDataRaw, error: txErr } = await supabase
@@ -184,7 +193,8 @@ export default function Dashboard() {
         const hourlyMap: Record<string, number> = {};
         const peakMap: number[] = new Array(12).fill(0);
         txData.forEach((t) => {
-          const hour = new Date(t.created_at).getHours();
+          const localDate = new Date(t.created_at);
+          const hour = localDate.getHours();
           const label = `${hour % 12 === 0 ? 12 : hour % 12}${hour < 12 ? "am" : "pm"}`;
           hourlyMap[label] = (hourlyMap[label] || 0) + Number(t.total_profit || 0);
           if (hour >= 9 && hour <= 20) peakMap[hour - 9]++;
@@ -419,14 +429,27 @@ export default function Dashboard() {
         <div className="flex justify-between items-end">
           <div>
             <p className="text-secondary font-label text-[10px] font-bold uppercase tracking-[0.25em] mb-1">
-              {activeSession ? "Live Intelligence Flow" : "Archived Session Summary"}
+              {(activeSession && !showPreview) ? "Live Intelligence Flow" : totalSales > 0 ? "Last Session Summary" : "System Standby"}
             </p>
             <h1 className="text-xl font-extrabold tracking-tight text-primary font-heading uppercase">Dashboard</h1>
           </div>
-          <div className="hidden md:flex bg-surface-container rounded-2xl p-1 gap-1 border border-outline-variant/10">
-            <div className="flex items-center px-4 py-2 gap-2 text-xs font-bold text-secondary">
-              <div className="w-2 h-2 rounded-full bg-secondary animate-pulse"></div>
-              SYSTEM LIVE
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setShowPreview(!showPreview)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[9px] font-black uppercase tracking-wider transition-all ${
+                showPreview 
+                  ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" 
+                  : "bg-surface-container text-secondary border-outline-variant/10 hover:bg-surface-highest"
+              }`}
+            >
+              {showPreview ? <EyeOff size={12} /> : <Eye size={12} />}
+              {showPreview ? "Exit Preview" : "Preview Close"}
+            </button>
+            <div className="hidden md:flex bg-surface-container rounded-2xl p-1 gap-1 border border-outline-variant/10">
+              <div className={`flex items-center px-4 py-2 gap-2 text-xs font-bold ${(activeSession && !showPreview) ? "text-secondary" : "text-on-surface-variant/40"}`}>
+                <div className={`w-2 h-2 rounded-full ${(activeSession && !showPreview) ? "bg-secondary animate-pulse" : "bg-outline-variant"}`}></div>
+                {(activeSession && !showPreview) ? "SYSTEM LIVE" : "SESSION CLOSED"}
+              </div>
             </div>
           </div>
         </div>

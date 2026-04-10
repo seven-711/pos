@@ -18,7 +18,8 @@ import {
   Users,
   X,
   PlayCircle,
-  Clock
+  Clock,
+  AlertTriangle
 } from "lucide-react";
 import { useSession } from "@/lib/contexts/SessionContext";
 
@@ -39,6 +40,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isStatusExpanded, setIsStatusExpanded] = useState(false);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const { activeSession, openSession, closeSession, isLayoutHidden } = useSession();
 
   // Close menu when pathname changes
@@ -144,7 +146,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
             
             <div className="flex gap-3">
               <button
-                onClick={() => closeSession()} 
+                onClick={() => setShowCloseConfirm(true)} 
                 disabled={!activeSession}
                 className={`px-10 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${
                   activeSession 
@@ -207,7 +209,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                ${isStatusExpanded ? "scale-100 opacity-100" : "translate-x-20 scale-0 opacity-0"}
              `}>
                <button
-                 onClick={(e) => { e.stopPropagation(); closeSession(); setIsStatusExpanded(false); }} 
+                 onClick={(e) => { e.stopPropagation(); setShowCloseConfirm(true); setIsStatusExpanded(false); }} 
                  disabled={!activeSession}
                  className={`px-6 py-2.5 rounded-full font-black text-[9px] uppercase tracking-widest transition-all ${
                    activeSession ? "bg-[var(--color-error)] text-white" : "bg-surface-container text-on-surface-variant opacity-20"
@@ -232,10 +234,45 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      {/* ── Mobile Bottom Navigation ── */}
-      <div className="md:hidden print:hidden">
-        <BottomNav onMenuClick={() => setIsMobileMenuOpen(true)} />
-      </div>
+      {/* ── Close Confirmation Modal ── */}
+      {showCloseConfirm && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 md:p-6 animate-in fade-in duration-300">
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-md" 
+            onClick={() => setShowCloseConfirm(false)}
+          />
+          <div className="relative w-full max-w-sm bg-surface-container-low rounded-3xl p-8 border border-outline-variant/10 shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-4 duration-500">
+            <div className="w-16 h-16 bg-error/10 text-error rounded-2xl flex items-center justify-center mx-auto mb-6 border border-error/20">
+              <AlertTriangle size={32} />
+            </div>
+            
+            <div className="text-center mb-10">
+              <h3 className="text-xl font-black font-heading text-on-surface mb-2 uppercase tracking-tighter">Close Store Session?</h3>
+              <p className="text-sm text-on-surface-variant leading-relaxed px-2">
+                This will finalize the ledger and lock the dashboard into <span className="text-primary font-bold">Summary Mode</span> until your next shift.
+              </p>
+            </div>
+            
+            <div className="flex flex-col gap-3">
+              <button 
+                onClick={() => {
+                  closeSession();
+                  setShowCloseConfirm(false);
+                }}
+                className="w-full py-4 bg-error text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-error/20 active:scale-[0.98] transition-all"
+              >
+                Yes, Close Shop
+              </button>
+              <button 
+                onClick={() => setShowCloseConfirm(false)}
+                className="w-full py-4 bg-surface-container-high text-on-surface-variant rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-surface-highest transition-all"
+              >
+                No, Keep Selling
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );

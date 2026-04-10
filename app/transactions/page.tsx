@@ -177,15 +177,15 @@ export default function TransactionsPage() {
       </div>
 
       {/* Global Intelligence Bar */}
-      <div className="bg-primary p-1 md:p-1.5 rounded-2xl mb-8 shadow-xl shadow-primary/10 flex flex-col md:flex-row items-center gap-1">
+      <div className="bg-primary p-2 md:p-1.5 rounded-2xl mb-8 shadow-xl shadow-primary/10 flex flex-col md:flex-row items-center gap-2 md:gap-1">
          {/* Search Input Integrated */}
-         <div className="relative flex-1 w-full h-14 md:h-12 bg-white/10 rounded-xl flex items-center px-4 overflow-hidden group">
+         <div className="relative flex-1 w-full h-14 md:h-12 bg-white/10 rounded-xl flex items-center px-2 md:px-4 overflow-hidden group">
             <Search className="text-white/40 group-hover:text-white/60 transition-colors" size={20} />
             <input 
               value={searchQuery}
               onChange={e => { setSearchQuery(e.target.value); setPage(0); }}
               placeholder="Search Global Ledger by Receipt ID or Amount..."
-              className="bg-transparent border-none w-full h-full text-white placeholder:text-white/30 text-sm font-medium outline-none px-4"
+              className="bg-transparent border-none w-full h-full text-white placeholder:text-white/30 text-sm font-medium outline-none p-3 md:px-4"
             />
          </div>
          
@@ -195,7 +195,7 @@ export default function TransactionsPage() {
                 <button 
                   key={item}
                   onClick={() => { setPaymentFilter(item === 'All' ? null : item); setPage(0); }}
-                  className={`flex-1 px-6 py-2.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${
+                  className={`flex-1 px-2 md:px-6 py-2.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${
                     (item === 'All' && !paymentFilter) || paymentFilter === item 
                     ? 'bg-white text-primary shadow-lg' 
                     : 'text-white/60 hover:text-white hover:bg-white/5'

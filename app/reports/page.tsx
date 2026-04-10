@@ -154,8 +154,8 @@ export default function ReportsPage() {
       // 1. Fetch real transactions between dates
       // We set time to start and end of selected days
       // Correct Local Day boundaries
-      const start = new Date(`${startDate}T00:00:00`).toISOString();
-      const end = new Date(`${endDate}T23:59:59.999`).toISOString();
+      const start = `${startDate}T00:00:00+08:00`;
+      const end = `${endDate}T23:59:59.999+08:00`;
 
       const { data: filteredTX, error: txErr } = await supabase
         .from('transactions')
