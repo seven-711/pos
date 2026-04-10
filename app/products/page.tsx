@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { getLocalTimestamp } from "@/lib/utils/time";
 import { 
   Search, 
   Plus, 
@@ -15,7 +16,9 @@ import {
   XCircle,
   Store,
   Calculator,
-  Tag
+  Tag,
+  CheckCircle2,
+  AlertCircle
 } from "lucide-react";
 
 interface Category {
@@ -62,10 +65,22 @@ export default function ProductsPage() {
   const [showPackCalc, setShowPackCalc] = useState(false);
   const [packData, setPackData] = useState({ cost: '', qty: '' });
   const [calcMode, setCalcMode] = useState<'pack' | 'market'>('pack');
+  
+  // Toast State
+  const [showToast, setShowToast] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
+  const [toastType, setToastType] = useState<"success" | "error">("success");
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (showToast) {
+      const timer = setTimeout(() => setShowToast(false), 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [showToast]);
 
   const fetchData = async () => {
     try {
@@ -159,7 +174,9 @@ export default function ProductsPage() {
         errorMsg = "Permission denied. Check your Supabase RLS policies for storage.";
       }
       
-      alert(`Failed to upload image: ${errorMsg}\n\nNote: The preview you see is temporary until fixed.`);
+      setToastMsg(`Failed to upload image: ${errorMsg}`);
+      setToastType("error");
+      setShowToast(true);
     } finally {
       setIsUploading(false);
     }
@@ -178,7 +195,8 @@ export default function ProductsPage() {
         selling_price: parseFloat(formData.selling_price),
         bundle_qty: formData.bundle_qty ? parseInt(formData.bundle_qty) : null,
         bundle_price: formData.bundle_price ? parseFloat(formData.bundle_price) : null,
-        image_url: formData.image_url || null
+        image_url: formData.image_url || null,
+        created_at: getLocalTimestamp()
       };
 
       if (editingProduct) {
@@ -204,10 +222,15 @@ export default function ProductsPage() {
         }
       }
       
+      setToastMsg(editingProduct ? "Product updated successfully!" : "Product added to inventory!");
+      setToastType("success");
+      setShowToast(true);
       closeModal();
     } catch (error) {
       console.error("Error saving product:", error);
-      alert("Failed to save product.");
+      setToastMsg("Failed to save product. Check constraints.");
+      setToastType("error");
+      setShowToast(true);
     }
   };
 
@@ -216,8 +239,13 @@ export default function ProductsPage() {
     const { error } = await supabase.from('products').delete().eq('id', id);
     if (!error) {
       setProducts(products.filter(p => p.id !== id));
+      setToastMsg("Product removed from index.");
+      setToastType("success");
+      setShowToast(true);
     } else {
-      alert("Error deleting product.");
+      setToastMsg("Deletion failed: Reference integrity check.");
+      setToastType("error");
+      setShowToast(true);
     }
   };
 
@@ -675,6 +703,20 @@ export default function ProductsPage() {
         </div>
       )}
 
+      {showToast && (
+        <div className={`fixed top-4 right-4 md:top-6 md:right-6 z-[1100] ${toastType === 'success' ? 'bg-secondary text-white' : 'bg-error text-white'} px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300 max-w-[280px] md:max-w-xs border border-white/10`}>
+          <div className="w-7 h-7 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
+            {toastType === 'success' ? <CheckCircle2 size={16} strokeWidth={3} /> : <AlertCircle size={16} />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-black text-[11px] tracking-tight uppercase opacity-80">{toastType === 'success' ? 'Ledger Update' : 'System Alert'}</p>
+            <p className="text-[12px] font-bold leading-tight truncate">{toastMsg}</p>
+          </div>
+          <button onClick={() => setShowToast(false)} className="opacity-40 hover:opacity-100 transition-opacity p-1 ml-1">
+            <X size={14} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

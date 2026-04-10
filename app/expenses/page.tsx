@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { getLocalTimestamp } from "@/lib/utils/time";
 import {
   TrendingUp,
   PlusCircle,
@@ -96,7 +97,8 @@ export default function ExpensesPage() {
         .insert([{ 
           title: form.title, 
           category: form.category, 
-          amount: parseFloat(form.amount) 
+          amount: parseFloat(form.amount),
+          created_at: getLocalTimestamp()
         }])
         .select()
         .single();

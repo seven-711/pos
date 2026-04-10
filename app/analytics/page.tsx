@@ -79,6 +79,7 @@ export default function AnalyticsPage() {
   }>({ tx: [], items: [], exp: [] });
 
   const [showPreview, setShowPreview] = useState(false);
+  const [activeBarIdx, setActiveBarIdx] = useState<number | null>(null);
 
   useEffect(() => {
     fetchData(selectedDate);
@@ -187,22 +188,23 @@ export default function AnalyticsPage() {
     }));
     setCategoryData(catArray);
 
-    // 4. Peak Hours
+    // 4 & 5. Peak Hours and Hourly Trend (Single Pass Aggregation)
     const hours = new Array(24).fill(0);
+    const trendMap: Record<number, number> = {};
+    
     tx.forEach(t => {
-      const h = new Date(t.created_at).getHours();
+      const localDate = new Date(t.created_at);
+      const h = localDate.getHours();
       hours[h]++;
+      trendMap[h] = (trendMap[h] || 0) + Number(t.total_amount);
     });
+
     setPeakHours(hours);
 
-    // 5. Hourly Trend (00:00 to 23:00) using 12h labels
     const trendData: [string, number][] = [];
     for (let i = 0; i < 24; i++) {
         const hourLabel = `${String(i).padStart(2, '0')}:00`;
-        const revenue = tx
-            .filter(t => new Date(t.created_at).getHours() === i)
-            .reduce((acc, curr) => acc + Number(curr.total_amount), 0);
-        trendData.push([hourLabel, revenue]);
+        trendData.push([hourLabel, trendMap[i] || 0]);
     }
     setHourlyTrend(trendData);
   };
@@ -398,7 +400,7 @@ export default function AnalyticsPage() {
                 </h3>
               </div>
             </div>
-            <div className="flex gap-3 md:gap-5">
+            <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-primary/20"></div>
                 <span className="text-[9px] md:text-[10px] font-black text-on-surface-variant uppercase tracking-tighter opacity-50">Base</span>
@@ -411,8 +413,8 @@ export default function AnalyticsPage() {
           </div>
 
           {/* Dynamic Sales Chart - Added Horizontal Scroll for Mobile */}
-          <div className="flex-grow overflow-x-auto pb-8 -mx-2 hide-scrollbar scroll-smooth">
-            <div className="flex items-end gap-1 md:gap-3 px-2 h-64 mt-4 min-w-[700px] md:min-w-full min-h-[250px]">
+          <div className="flex-grow overflow-x-auto pt-16 pb-8 -mx-2 hide-scrollbar scroll-smooth">
+            <div className="flex items-end gap-1 md:gap-3 px-2 h-64 min-w-[700px] md:min-w-full min-h-[250px]">
               {hourlyTrend.length === 0 ? (
                 <div className="w-full flex flex-col items-center justify-center opacity-30 gap-2">
                   <BarChart3 size={48} />
@@ -425,22 +427,29 @@ export default function AnalyticsPage() {
                   const isCurrentHour = new Date().getHours() === idx && selectedDate === new Date().toISOString().split('T')[0];
                   
                   return (
-                    <div key={idx} className="flex-1 group relative h-full flex items-end">
+                    <div 
+                      key={idx} 
+                      className="flex-1 group relative h-full flex items-end"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveBarIdx(activeBarIdx === idx ? null : idx);
+                      }}
+                    >
                       <div
                         style={{ height: `${Math.max(4, height)}%` }}
-                        className={`w-full ${val > 0 ? (isCurrentHour ? 'bg-secondary ring-4 ring-secondary/20' : 'bg-primary') : (isCurrentHour ? 'bg-secondary/20 ring-2 ring-secondary/10' : 'bg-primary/5')} hover:bg-primary-container rounded-t-md transition-all duration-700 ease-out cursor-pointer shadow-sm relative`}
+                        className={`w-full ${val > 0 ? (isCurrentHour ? 'bg-secondary ring-4 ring-secondary/20' : 'bg-primary') : (isCurrentHour ? 'bg-secondary/20 ring-2 ring-secondary/10' : 'bg-primary/5')} hover:bg-primary-container md:group-hover:bg-primary-container rounded-t-md transition-all duration-700 ease-out cursor-pointer shadow-sm relative ${activeBarIdx === idx ? 'bg-secondary ring-4 ring-secondary/20' : ''}`}
                       >
                         {isCurrentHour && (
                           <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-[8px] font-black text-secondary uppercase whitespace-nowrap tracking-tighter">
                             Now
                           </div>
                         )}
-                        <div className="absolute -top-12 left-1/2 -translate-x-[50%] bg-surface-container-highest text-white text-[10px] px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none shadow-lg">
-                          {time} • {formatCurrency(val)}
+                        <div className={`absolute -top-12 left-1/2 -translate-x-[50%] bg-surface-container-highest text-white text-[10px] px-2 py-1 rounded-md transition-opacity whitespace-nowrap z-20 pointer-events-none shadow-lg ${activeBarIdx === idx ? 'opacity-100 scale-100' : 'opacity-0 md:group-hover:opacity-100 scale-95 md:group-hover:scale-100'}`}>
+                          <span className="text-black font-bold">{time}</span> • {formatCurrency(val)}
                         </div>
                       </div>
                       {idx % 2 === 0 && (
-                        <div className={`absolute -bottom-6 left-0 text-[8px] font-bold ${isCurrentHour ? 'text-secondary' : 'text-on-surface-variant/50'}`}>
+                        <div className={`absolute -bottom-6 left-0 text-[8px] font-bold ${isCurrentHour || activeBarIdx === idx ? 'text-secondary' : 'text-on-surface-variant/50'}`}>
                           {time}
                         </div>
                       )}
@@ -512,49 +521,103 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Peak Service Intensity - Now Full Width */}
-      <div className="bg-surface-container-low p-4 md:p-8 rounded-3xl flex flex-col border border-outline-variant/10 shadow-md mb-20 md:mb-32">
-        <h3 className="font-bold font-heading text-primary mb-6 md:mb-8 text-base md:text-xl flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-secondary/5 flex items-center justify-center text-secondary border border-secondary/10 shadow-sm shrink-0">
-             <Clock size={20} />
+      {/* Peak Service Intensity Intelligence Module */}
+      <div className="bg-surface-container-low p-6 md:p-10 rounded-[2.5rem] flex flex-col border border-outline-variant/10 shadow-xl shadow-surface-container/5 mb-20 md:mb-32">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-secondary/10 flex items-center justify-center text-secondary border border-secondary/20 shadow-inner group-hover:scale-110 transition-transform">
+               <Clock size={24} className="animate-pulse" />
+            </div>
+            <div>
+              <h3 className="font-bold font-heading text-on-surface text-lg md:text-2xl leading-tight">Operational Density</h3>
+              <p className="text-[10px] font-black uppercase text-on-surface-variant/40 tracking-[0.2em]">Peak Service Intensity Audit</p>
+            </div>
           </div>
-          Peak Service Intensity
-        </h3>
+          
+          <div className="flex items-center gap-3 bg-surface-container rounded-2xl px-4 py-2 border border-outline-variant/10">
+            <div className="flex items-center gap-1.5 border-r border-outline-variant/20 pr-4 mr-1">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary/20"></div>
+              <span className="text-[9px] font-black uppercase text-on-surface-variant tracking-tighter">Chill</span>
+            </div>
+            <div className="flex items-center gap-1.5 border-r border-outline-variant/20 pr-4 mr-1">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary"></div>
+              <span className="text-[9px] font-black uppercase text-on-surface-variant tracking-tighter">Active</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-secondary shadow-[0_0_8px_rgba(var(--color-secondary-rgb),0.5)]"></div>
+              <span className="text-[9px] font-black uppercase text-secondary tracking-tighter">Rush</span>
+            </div>
+          </div>
+        </div>
         
-        <div className="overflow-x-auto hide-scrollbar pb-10 -mx-2">
-          <div className="flex items-end gap-1 md:gap-1.5 h-24 md:h-32 mb-6 min-w-[650px] md:min-w-full px-2">
+        <div className="overflow-x-auto hide-scrollbar pt-16 pb-8 -mx-2">
+          <div className="flex items-end gap-1 md:gap-2 h-24 md:h-40 mb-10 min-w-[700px] md:min-w-full px-2">
             {peakHours.map((count, h) => {
               const maxCount = Math.max(...peakHours);
-              const height = maxCount > 0 ? (count / maxCount) * 100 : 0;
+              const percent = maxCount > 0 ? (count / maxCount) * 100 : 0;
+              const isRush = percent >= 75;
+              const isActive = percent >= 30 && percent < 75;
+              const isSelected = activeBarIdx === h + 100; // Offset for differentiation
+
               return (
-                <div key={h} className="group relative h-full flex items-end flex-1">
+                <div 
+                  key={h} 
+                  className="group relative h-full flex flex-col justify-end flex-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveBarIdx(activeBarIdx === h + 100 ? null : h + 100);
+                  }}
+                >
                   <div
-                    style={{ height: `${Math.max(4, height)}%` }}
-                    className={`w-full transition-all duration-500 rounded-t-sm ${height > 70 ? 'bg-secondary' : 'bg-primary/20 group-hover:bg-primary/40'}`}
-                  ></div>
-                  <div className="absolute -top-10 left-1/2 -translate-x-[50%] bg-surface-container-highest text-white text-[9px] px-2 py-1 rounded md opacity-0 group-hover:opacity-100 whitespace-nowrap z-20 shadow-xl transition-opacity">
-                    {h}:00 • {count} TX
+                    style={{ height: `${Math.max(6, percent)}%` }}
+                    className={`w-full transition-all duration-700 rounded-t-lg cursor-pointer ${
+                      isRush 
+                        ? 'bg-secondary shadow-[0_-4px_12px_rgba(var(--color-secondary-rgb),0.2)]' 
+                        : isActive 
+                          ? 'bg-primary' 
+                          : 'bg-primary/10'
+                    } ${isSelected ? 'ring-4 ring-secondary/30 scale-x-110 z-10' : 'hover:scale-x-105'}`}
+                  >
+                    <div className={`absolute -top-12 left-1/2 -translate-x-[50%] bg-surface-container-highest text-white text-[10px] px-2.5 py-1.5 rounded-xl transition-all whitespace-nowrap z-20 pointer-events-none shadow-2xl border border-white/10 ${isSelected ? 'opacity-100 scale-100' : 'opacity-0 md:group-hover:opacity-100 scale-90'}`}>
+                      <span className="font-black text-black">{h}:00</span> • <span className="text-secondary font-bold">{count} Transactions</span>
+                    </div>
                   </div>
+                  {h % 3 === 0 && (
+                    <div className={`absolute -bottom-8 left-1/2 -translate-x-1/2 text-[9px] font-black transition-colors ${isSelected ? 'text-secondary' : 'text-on-surface-variant/30'}`}>
+                      {String(h).padStart(2, '0')}:00
+                    </div>
+                  )}
                 </div>
               );
             })}
           </div>
         </div>
         
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center pt-6 border-t border-outline-variant/10 gap-4 md:gap-8">
-          <div className="flex gap-6 md:gap-8 text-[9px] md:text-[10px] font-black text-on-surface-variant/40 uppercase tracking-[0.2em] shrink-0 w-full md:w-auto overflow-x-hidden">
-            <span>00:00 START</span>
-            <span className="hidden md:block text-primary/30">12:00 MIDDAY</span>
-            <span className="ml-auto md:ml-0">23:59 CLOSE</span>
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center pt-10 border-t border-outline-variant/10">
+          <div className="md:col-span-4 flex items-center gap-6">
+            <div className="space-y-1">
+              <p className="text-[10px] font-black text-on-surface-variant/50 uppercase tracking-[0.2em]">Peak Density</p>
+              <div className="flex items-center gap-2">
+                <span className="text-3xl font-heading font-black text-secondary tracking-tighter">
+                  {String(peakHours.indexOf(Math.max(...peakHours))).padStart(2, '0')}:00
+                </span>
+                <div className="px-2 py-1 rounded-lg bg-secondary/10 border border-secondary/20 text-secondary text-[10px] font-black uppercase tracking-tighter animate-pulse">
+                  {Math.max(...peakHours)} TX
+                </div>
+              </div>
+            </div>
           </div>
           
-          <div className="flex flex-col md:items-end gap-2 max-w-2xl">
-            <div className="flex items-center gap-2 md:justify-end">
-              <span className="px-2 py-0.5 rounded-full bg-secondary/10 text-secondary text-[8px] font-black uppercase tracking-widest border border-secondary/20">Strategy Recommendation</span>
+          <div className="md:col-span-8 bg-surface-container rounded-3xl p-6 border border-outline-variant/10 relative overflow-hidden group">
+            <div className="flex items-center gap-3 mb-3">
+              <span className="w-1.5 h-1.5 rounded-full bg-secondary shadow-[0_0_8px_rgba(var(--color-secondary-rgb),0.6)]"></span>
+              <p className="text-[10px] font-black text-secondary uppercase tracking-[0.2em]">Strategic Intelligence</p>
             </div>
-            <p className="text-xs md:text-sm text-on-surface-variant font-medium text-left md:text-right leading-relaxed">
-              Operational density peaks at <strong className="text-secondary">{peakHours.indexOf(Math.max(...peakHours))}:00 </strong>. Workforce allocation should be <span className="text-primary font-bold underline decoration-primary/20 underline-offset-4 tracking-tight">prioritized at this threshold</span> to maximize service throughput and efficiency.
+            <p className="text-sm text-on-surface-variant font-medium leading-relaxed relative z-10 pr-12">
+              Current SESSION DATA indicates operational density peaks during the <strong className="text-on-surface underline decoration-secondary/30 decoration-2 underline-offset-4">{peakHours.indexOf(Math.max(...peakHours))}:00 threshold</strong>. Recommend shifting inventory logistics and workforce bandwidth to prioritize this window for maximum throughput.
             </p>
+            <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-secondary/5 to-transparent"></div>
+            <TrendingUp className="absolute -right-2 -bottom-2 text-secondary/5 w-24 h-24" />
           </div>
         </div>
       </div>

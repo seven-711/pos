@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { getLocalTimestamp } from "@/lib/utils/time";
 import {
   Search,
   Coffee,
@@ -168,7 +169,8 @@ export default function POSPage() {
         .insert([{
           total_amount: subtotal,
           total_profit: profit,
-          payment_method: 'Cash'
+          payment_method: 'Cash',
+          created_at: getLocalTimestamp()
         }])
         .select()
         .single();
@@ -512,18 +514,17 @@ export default function POSPage() {
         </div>
       )}
 
-      {/* Feedback Toast */}
       {showToast && (
-        <div className={`fixed bottom-24 right-6 z-[600] ${toastType === 'success' ? 'bg-secondary' : 'bg-error'} text-on-secondary px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4 animate-in fade-in slide-in-from-right-5 duration-300`}>
-          <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-            {toastType === 'success' ? <CheckCircle2 size={20} strokeWidth={2.5} /> : <AlertCircle size={20} />}
+        <div className={`fixed top-4 right-4 md:top-6 md:right-6 z-[600] ${toastType === 'success' ? 'bg-secondary' : 'bg-error'} text-on-secondary px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300 max-w-[280px] md:max-w-xs border border-white/10`}>
+          <div className="w-7 h-7 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
+            {toastType === 'success' ? <CheckCircle2 size={16} strokeWidth={3} /> : <AlertCircle size={16} />}
           </div>
-          <div className="flex-1">
-            <p className="font-bold text-sm">{toastType === 'success' ? 'Success' : 'Error'}</p>
-            <p className="text-xs opacity-90">{toastMsg}</p>
+          <div className="flex-1 min-w-0">
+            <p className="font-black text-[11px] tracking-tight uppercase opacity-80">{toastType === 'success' ? 'Success' : 'Error'}</p>
+            <p className="text-[12px] font-bold leading-tight truncate">{toastMsg}</p>
           </div>
-          <button onClick={() => setShowToast(false)} className="opacity-50 hover:opacity-100 transition-opacity">
-            <X size={16} />
+          <button onClick={() => setShowToast(false)} className="opacity-40 hover:opacity-100 transition-opacity p-1 ml-1">
+            <X size={14} />
           </button>
         </div>
       )}

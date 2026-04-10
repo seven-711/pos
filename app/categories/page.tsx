@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { getLocalTimestamp } from "@/lib/utils/time";
 import { 
   Plus, 
   TrendingUp, 
@@ -67,7 +68,10 @@ export default function CategoriesPage() {
     setIsSaving(true);
     const { data, error } = await supabase
       .from('categories')
-      .insert([{ name: newCategoryName.trim() }])
+      .insert([{ 
+        name: newCategoryName.trim(),
+        created_at: getLocalTimestamp()
+      }])
       .select()
       .single();
 

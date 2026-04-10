@@ -22,7 +22,8 @@ import {
   Box,
   Loader2,
   Trash2,
-  X
+  X,
+  AlertCircle
 } from "lucide-react";
 import { useSession } from "@/lib/contexts/SessionContext";
 
@@ -65,6 +66,11 @@ export default function ReportsPage() {
   const [generating, setGenerating] = useState(false);
   const [reports, setReports] = useState<any[]>([]);
   const [selectedReport, setSelectedReport] = useState<any | null>(null);
+  
+  // Toast State
+  const [showToast, setShowToast] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
+  const [toastType, setToastType] = useState<"success" | "error">("success");
   const [showAudit, setShowAudit] = useState(false);
   const [showLowStockModal, setShowLowStockModal] = useState(false);
   const [lowStockItems, setLowStockItems] = useState<LowStockProduct[]>([]);
@@ -92,6 +98,13 @@ export default function ReportsPage() {
   useEffect(() => {
     fetchIntelligence();
   }, []);
+
+  useEffect(() => {
+    if (showToast) {
+      const timer = setTimeout(() => setShowToast(false), 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [showToast]);
 
   useEffect(() => {
     setIsLayoutHidden(showAudit || showLowStockModal);
@@ -140,8 +153,9 @@ export default function ReportsPage() {
     try {
       // 1. Fetch real transactions between dates
       // We set time to start and end of selected days
-      const start = new Date(`${startDate}T00:00:00Z`).toISOString();
-      const end = new Date(`${endDate}T23:59:59Z`).toISOString();
+      // Correct Local Day boundaries
+      const start = new Date(`${startDate}T00:00:00`).toISOString();
+      const end = new Date(`${endDate}T23:59:59.999`).toISOString();
 
       const { data: filteredTX, error: txErr } = await supabase
         .from('transactions')
@@ -201,16 +215,39 @@ export default function ReportsPage() {
       };
 
       setReports(prev => [newReport, ...prev]);
-    } catch (err) {
-      console.error("Analysis Error:", err);
-      alert("Failed to generate real-time analysis.");
+      setToastMsg(`${reportType} Analysis ledgered successfully!`);
+      setToastType("success");
+      setShowToast(true);
+    } catch (err: any) {
+      console.error("Analysis Failure:", err);
+      setToastMsg("Analysis calibration failed.");
+      setToastType("error");
+      setShowToast(true);
     } finally {
       setGenerating(false);
     }
   };
 
   const fmt = (n: number) =>
-    new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(n);
+    new Intl.NumberFormat('en-PH', { 
+      style: 'currency', 
+      currency: 'PHP',
+      minimumFractionDigits: 2
+    }).format(n);
+
+  const generateDetailedCommentary = (report: any) => {
+    if (!report || !report.details) return [];
+    const { details, range, category } = report;
+    const efficiency = details.revenue > 0 ? ((details.profit / details.revenue) * 100).toFixed(1) : "0";
+    
+    const paragraphs = [
+      `The ${category} audit for the period spanning ${range.start} to ${range.end} indicates a total gross yield of ${fmt(details.revenue)}, generating a net operating surplus of ${fmt(details.profit)} after variable cost deductions.`,
+      `This performance reflects a profit efficiency of ${efficiency}%, demonstrating ${Number(efficiency) > 15 ? 'exceptional' : 'stable'} capital retention and margin health. A total of ${details.count} unique transactions were ledgered locally, involving the movement of ${details.itemCount} individual stock units through the POS inventory system.`,
+      `Analytical correlation identifies "${details.topProduct}" as the cycle's primary 'Alpha' SKU, maintaining high-velocity throughput and established market dominance. The Average Order Value (AOV) stabilized at ${fmt(details.avgValue || 0)}, suggesting ${details.avgValue > 500 ? 'high-density' : 'consistent'} purchasing behavior across the customer base.`
+    ];
+
+    return paragraphs;
+  };
 
   if (loading) {
     return (
@@ -309,7 +346,6 @@ export default function ReportsPage() {
               </div>
             </div>
           </div>
-          <Box className="absolute -right-16 -bottom-16 text-primary/5 w-64 h-64 rotate-12" />
         </div>
 
         {/* Quick Insights Cards */}
@@ -552,16 +588,25 @@ export default function ReportsPage() {
                        </div>
                        <TrendingUp className="text-primary mb-1" size={20} />
                      </div>
-                     <div className="bg-surface-container-high/30 p-4 rounded-xl border border-outline-variant/10">
-                        <div className="flex items-start gap-3">
-                           <Activity size={16} className="text-secondary shrink-0 mt-0.5" />
-                           <div>
-                              <p className="text-[11px] font-bold text-on-surface leading-normal italic">
-                                "{selectedReport.category} analysis completed for {selectedReport.range.start} to {selectedReport.range.end}. Data confirms consistent liquidity baseline with optimal throughput on {selectedReport.details.topProduct}."
-                              </p>
-                           </div>
-                        </div>
-                     </div>
+                      <div className="bg-surface-container-high/30 p-5 rounded-3xl border border-outline-variant/10 space-y-4">
+                         <div className="flex items-start gap-4">
+                            <Activity size={18} className="text-secondary shrink-0 mt-1" />
+                            <div className="space-y-4">
+                               {generateDetailedCommentary(selectedReport).map((para, i) => (
+                                 <p key={i} className="text-[11px] font-bold text-on-surface leading-relaxed italic opacity-90">
+                                   "{para}"
+                                 </p>
+                               ))}
+                            </div>
+                         </div>
+                         <div className="pt-4 mt-4 border-t border-outline-variant/10 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                               <div className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></div>
+                               <span className="text-[9px] font-black text-secondary uppercase tracking-[0.2em]">Calibration Verdict: Optimal Cache</span>
+                            </div>
+                            <span className="text-[8px] font-black text-on-surface-variant/40 uppercase tracking-widest italic">Pos ni Estela Intelligence Suite</span>
+                         </div>
+                      </div>
                   </div>
                 </div>
               </div>
@@ -625,6 +670,20 @@ export default function ReportsPage() {
         </div>
       )}
 
+      {showToast && (
+        <div className={`fixed top-4 right-4 md:top-6 md:right-6 z-[1200] ${toastType === 'success' ? 'bg-secondary text-white' : 'bg-error text-white'} px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300 max-w-[280px] md:max-w-xs border border-white/10`}>
+          <div className="w-7 h-7 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
+            {toastType === 'success' ? <CheckCircle2 size={16} strokeWidth={3} /> : <AlertCircle size={16} />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-black text-[11px] tracking-tight uppercase opacity-80">{toastType === 'success' ? 'Intelligence Sync' : 'System Error'}</p>
+            <p className="text-[12px] font-bold leading-tight truncate">{toastMsg}</p>
+          </div>
+          <button onClick={() => setShowToast(false)} className="opacity-40 hover:opacity-100 transition-opacity p-1 ml-1">
+            <X size={14} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

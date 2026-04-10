@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { getLocalTimestamp } from "@/lib/utils/time";
 import { 
   BellRing, 
   SlidersHorizontal, 
@@ -116,7 +117,8 @@ export default function InventoryPage() {
           product_id: selectedProduct.id,
           quantity_change: adjustQty,
           type: adjustQty > 0 ? 'stock_in' : 'adjustment',
-          notes: `Manual adjustment of ${adjustQty} units`
+          notes: `Manual adjustment of ${adjustQty} units`,
+          created_at: getLocalTimestamp()
         }]);
 
       if (logErr) {
