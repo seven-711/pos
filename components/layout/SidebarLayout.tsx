@@ -273,6 +273,11 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       )}
+
+      {/* ── Mobile Bottom Navigation ── */}
+      <div className="md:hidden print:hidden">
+        <BottomNav onMenuClick={() => setIsMobileMenuOpen(true)} />
+      </div>
       </div>
     </div>
   );
