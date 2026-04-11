@@ -11,7 +11,8 @@ import {
   Package,
   ChevronLeft,
   ShoppingCart,
-  Receipt
+  Receipt,
+  Loader2
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -23,7 +24,9 @@ export function CartMobileView() {
     clearCart, 
     addToCart, 
     calculateSubtotal,
-    toggleCart 
+    toggleCart,
+    completeSale,
+    isProcessing 
   } = useCart();
 
   const handleUpdateQty = (item: any, delta: number) => {

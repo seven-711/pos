@@ -82,7 +82,8 @@ export default function POSPage() {
     getItemTotal,
     getItemProfit,
     clearCart,
-    recordServiceTransaction
+    recordServiceTransaction,
+    isProcessing
   } = useCart();
 
   const [showQtyModal, setShowQtyModal] = useState(false);
@@ -697,9 +698,10 @@ export default function POSPage() {
                 </button>
                 <button 
                   onClick={handleSubmitService}
-                  className="py-3 bg-gradient-to-br from-secondary to-secondary-container text-white font-black text-[9px] uppercase tracking-widest rounded-xl shadow-lg shadow-secondary/10 active:scale-95 transition-all cursor-pointer"
+                  disabled={isProcessing}
+                  className="py-3 bg-gradient-to-br from-secondary to-secondary-container text-white font-black text-[9px] uppercase tracking-widest rounded-xl shadow-lg shadow-secondary/10 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
                 >
-                  Authorize Entry
+                  {isProcessing ? "Processing..." : "Authorize Entry"}
                 </button>
               </div>
             </div>

@@ -43,6 +43,7 @@ interface CartContextType {
     payment_method: string;
     notes?: string;
   }) => Promise<{ success: boolean; message: string }>;
+  completeSale: () => Promise<{ success: boolean; message: string }>;
 }
 
 
