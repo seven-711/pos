@@ -78,9 +78,17 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
     if (isLeftSwipe && startX > window.innerWidth - edgeThreshold && !showCart && !showNotifications) {
       toggleCart(true);
     }
-    // 3. Close Active Overlays
-    if (showNotifications && isLeftSwipe) toggleNotifications(false);
-    if (showCart && isRightSwipe) toggleCart(false);
+    // 3. Switch between overlays
+    if (showCart && isRightSwipe) {
+      toggleNotifications(true);
+    } else if (showNotifications && isLeftSwipe) {
+      toggleCart(true);
+    } 
+    // 4. Close Active Overlays (if not switching)
+    else {
+      if (showNotifications && isLeftSwipe) toggleNotifications(false);
+      if (showCart && isRightSwipe) toggleCart(false);
+    }
 
     setTouchStart(null);
     setTouchEnd(null);
