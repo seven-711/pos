@@ -3,13 +3,9 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Store, Package, BarChart2, Menu } from "lucide-react";
+import { LayoutDashboard, Store, Package, BarChart2, Receipt } from "lucide-react";
 
-interface BottomNavProps {
-  onMenuClick: () => void;
-}
-
-export function BottomNav({ onMenuClick }: BottomNavProps) {
+export function BottomNav() {
   const pathname = usePathname();
 
   const coreLinks = [
@@ -17,7 +13,7 @@ export function BottomNav({ onMenuClick }: BottomNavProps) {
     { href: "/pos", label: "Sell", icon: Store, isButton: false },
     { href: "/inventory", label: "Stock", icon: Package, isButton: false },
     { href: "/analytics", label: "Stats", icon: BarChart2, isButton: false },
-    { href: "#menu", label: "Menu", icon: Menu, isButton: true },
+    { href: "/transactions", label: "Ledger", icon: Receipt, isButton: false },
   ];
 
   return (
@@ -34,7 +30,6 @@ export function BottomNav({ onMenuClick }: BottomNavProps) {
               if (item.isButton) {
                 e.preventDefault();
                 e.stopPropagation();
-                onMenuClick();
               }
             }}
             className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-all active:scale-90 touch-manipulation cursor-pointer select-none ${

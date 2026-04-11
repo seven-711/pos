@@ -43,16 +43,79 @@ import { CartMobileView } from "@/components/cart/CartMobileView";
 export function SidebarLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { showNotifications } = useNotifications();
-  const { showCart } = useCart();
+  const { showNotifications, toggleNotifications } = useNotifications();
+  const { showCart, toggleCart } = useCart();
   const { isLayoutHidden } = useSession();
 
+  // Swipe Gesture Handling
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [startX, setStartX] = useState<number>(0);
+  const swipeThreshold = 50;
+  const edgeThreshold = 60; // Distance from edge to trigger swipe
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setStartX(e.targetTouches[0].clientX);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > swipeThreshold;
+    const isRightSwipe = distance < -swipeThreshold;
+
+    // 1. Reveal Notifications (Right Swipe from Left Edge)
+    if (isRightSwipe && startX < edgeThreshold && !showNotifications && !showCart) {
+      toggleNotifications(true);
+    }
+    // 2. Reveal Cart (Left Swipe from Right Edge)
+    if (isLeftSwipe && startX > window.innerWidth - edgeThreshold && !showCart && !showNotifications) {
+      toggleCart(true);
+    }
+    // 3. Close Active Overlays
+    if (showNotifications && isLeftSwipe) toggleNotifications(false);
+    if (showCart && isRightSwipe) toggleCart(false);
+
+    setTouchStart(null);
+    setTouchEnd(null);
+  };
+
+  // Mutual Exclusion Watcher: Ensure sync between contexts
+  useEffect(() => {
+    if (showNotifications) {
+      toggleCart(false);
+      setIsMobileMenuOpen(false);
+    }
+  }, [showNotifications]);
+
+  useEffect(() => {
+    if (showCart) {
+      toggleNotifications(false);
+      setIsMobileMenuOpen(false);
+    }
+  }, [showCart]);
+
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      toggleCart(false);
+      toggleNotifications(false);
+    }
+  }, [isMobileMenuOpen]);
 
   // Close menu and notifications when pathname changes
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [pathname]);
+
+
+
+
 
   const renderNavLinks = (onClick?: () => void) =>
     navLinks.map((link) => {
@@ -78,19 +141,20 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen w-full bg-[var(--color-surface)] relative overflow-hidden">
 
+
       {/* ── Mobile Drawer Overlay ── */}
       {isMobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-[500] flex">
+        <div className="md:hidden fixed inset-0 z-[500] flex animate-in fade-in duration-300">
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/70 backdrop-blur-md"
             onClick={() => setIsMobileMenuOpen(false)}
           />
           {/* Drawer panel */}
-          <aside className="relative flex flex-col w-72 max-w-[85vw] bg-[var(--color-surface)] p-6 h-full shadow-2xl overflow-y-auto">
+          <aside className="relative flex flex-col w-72 max-w-[85vw] bg-[var(--color-surface)] p-6 h-full shadow-2xl overflow-y-auto animate-in slide-in-from-left duration-500 ease-ios">
             <div className="flex justify-between items-center mb-8">
-              <div className="text-xl font-bold tracking-tight text-[var(--color-primary)] font-heading">
-                POS ni Estela
+              <div className="text-xl font-black tracking-tight text-[var(--color-primary)] font-heading uppercase">
+                ESTELA
               </div>
               <button
                 type="button"
@@ -122,16 +186,21 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
 
 
       <div className="flex flex-col flex-1 min-w-0 min-h-0 relative">
-        {!isLayoutHidden && <TopNav />}
+        {!isLayoutHidden && <TopNav onMenuClick={() => setIsMobileMenuOpen(true)} />}
 
 
         {/* ── Sliding View Container ── */}
-        <div className="flex-1 relative overflow-hidden">
+        <div 
+          className="flex-1 relative overflow-hidden"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
           {/* Primary Content View */}
           <main 
             className={`
               absolute inset-0 overflow-y-auto w-full p-3 md:p-6 pb-48 md:pb-40 z-0 transition-transform duration-500 ease-ios
-              ${(showNotifications || showCart) ? 'translate-x-[-100%] md:translate-x-0' : 'translate-x-0'}
+              ${showNotifications ? 'translate-x-[100%] md:translate-x-0' : showCart ? 'translate-x-[-100%] md:translate-x-0' : 'translate-x-0'}
             `}
           >
             <div className="w-full">
@@ -139,18 +208,18 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
             </div>
           </main>
 
-          {/* Dedicated Notification View (Mobile Slide) */}
+          {/* Dedicated Notification View (Mobile Slide from LEFT) */}
           <div 
             className={`
               absolute inset-0 md:hidden bg-white z-[300] transition-transform duration-500 ease-ios
-              ${showNotifications ? 'translate-x-0 shadow-2xl' : 'translate-x-[100%]'}
+              ${showNotifications ? 'translate-x-0 shadow-2xl' : 'translate-x-[-100%]'}
             `}
           >
             <NotificationMobileView />
           </div>
 
 
-          {/* Dedicated Cart View (Mobile Slide) */}
+          {/* Dedicated Cart View (Mobile Slide from RIGHT) */}
           <div 
             className={`
               absolute inset-0 md:hidden bg-white z-[301] transition-transform duration-500 ease-ios
@@ -166,7 +235,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       {/* ── Mobile Bottom Navigation ── */}
       {!isLayoutHidden && (
         <div className={`md:hidden print:hidden transition-transform duration-500 ${ (showNotifications || showCart) ? 'translate-y-full' : 'translate-y-0' }`}>
-          <BottomNav onMenuClick={() => setIsMobileMenuOpen(true)} />
+          <BottomNav />
         </div>
       )}
 
