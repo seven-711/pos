@@ -15,7 +15,8 @@ import {
   TrendingUp,
   Package,
   Box,
-  ArrowUpRight
+  ArrowUpRight,
+  X
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
