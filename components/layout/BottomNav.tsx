@@ -17,7 +17,7 @@ export function BottomNav() {
   ];
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 w-full h-20 bg-[var(--color-surface-container-highest)] border-t border-[var(--color-outline-variant)]/20 shadow-[0_-8px_24px_rgba(0,0,0,0.12)] flex justify-around items-center z-[200] px-2 pb-safe rounded-t-2xl">
+    <nav className="md:hidden fixed bottom-10 left-4 right-4 h-20 bg-[var(--color-surface-container-highest)]/95 backdrop-blur-xl border border-[var(--color-outline-variant)]/20 shadow-[0_12px_40px_rgba(0,0,0,0.25)] flex justify-around items-center z-[200] px-2 pb-0 rounded-t-3xl">
       {coreLinks.map((item, idx) => {
         const Icon = item.icon;
         const isActive = !item.isButton && pathname === item.href;

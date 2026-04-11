@@ -70,24 +70,27 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
     const isLeftSwipe = distance > swipeThreshold;
     const isRightSwipe = distance < -swipeThreshold;
 
-    // 1. Reveal Notifications (Right Swipe from Left Edge)
-    if (isRightSwipe && startX < edgeThreshold && !showNotifications && !showCart) {
-      toggleNotifications(true);
+    // 1. DASHBOARD GESTURES (When nothing is open)
+    if (!showNotifications && !showCart) {
+      if (isRightSwipe && startX < edgeThreshold) {
+        setIsMobileMenuOpen(true);
+      } else if (isLeftSwipe) {
+        toggleNotifications(true);
+      }
     }
-    // 2. Reveal Cart (Left Swipe from Right Edge)
-    if (isLeftSwipe && startX > window.innerWidth - edgeThreshold && !showCart && !showNotifications) {
-      toggleCart(true);
+    // 2. NOTIFICATION GESTURES
+    else if (showNotifications) {
+      if (isLeftSwipe) {
+        toggleCart(true); // Notifications closes automatically via effect
+      } else if (isRightSwipe) {
+        toggleNotifications(false); // Return to dashboard
+      }
     }
-    // 3. Switch between overlays
-    if (showCart && isRightSwipe) {
-      toggleNotifications(true);
-    } else if (showNotifications && isLeftSwipe) {
-      toggleCart(true);
-    } 
-    // 4. Close Active Overlays (if not switching)
-    else {
-      if (showNotifications && isLeftSwipe) toggleNotifications(false);
-      if (showCart && isRightSwipe) toggleCart(false);
+    // 3. CART GESTURES
+    else if (showCart) {
+      if (isRightSwipe) {
+        toggleNotifications(true); // Return to Notifications, Cart closes via effect
+      }
     }
 
     setTouchStart(null);
@@ -208,7 +211,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
           <main 
             className={`
               absolute inset-0 overflow-y-auto w-full p-3 md:p-6 pb-48 md:pb-40 z-0 transition-transform duration-500 ease-ios
-              ${showNotifications ? 'translate-x-[100%] md:translate-x-0' : showCart ? 'translate-x-[-100%] md:translate-x-0' : 'translate-x-0'}
+              ${(showNotifications || showCart) ? 'translate-x-[-100%] md:translate-x-0' : 'translate-x-0'}
             `}
           >
             <div className="w-full">
@@ -216,11 +219,11 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
             </div>
           </main>
 
-          {/* Dedicated Notification View (Mobile Slide from LEFT) */}
+          {/* Dedicated Notification View (Mobile Slide from RIGHT) */}
           <div 
             className={`
               absolute inset-0 md:hidden bg-white z-[300] transition-transform duration-500 ease-ios
-              ${showNotifications ? 'translate-x-0 shadow-2xl' : 'translate-x-[-100%]'}
+              ${showNotifications ? 'translate-x-0 shadow-2xl' : 'translate-x-[100%]'}
             `}
           >
             <NotificationMobileView />
