@@ -20,6 +20,8 @@ export const metadata: Metadata = {
 };
 
 import { SessionProvider } from "@/lib/contexts/SessionContext";
+import { CartProvider } from "@/lib/contexts/CartContext";
+import { NotificationProvider } from "@/lib/contexts/NotificationContext";
 
 export default function RootLayout({
   children,
@@ -28,21 +30,27 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
+      <body className={`${manrope.variable} ${inter.variable} antialiased surface-base min-h-screen text-[var(--color-on-surface)]`}>
         {process.env.NODE_ENV === "development" && (
           <Script
             src="//unpkg.com/react-grab/dist/index.global.js"
             crossOrigin="anonymous"
-            strategy="beforeInteractive"
+            strategy="afterInteractive"
           />
         )}
-      </head>
-      <body className={`${manrope.variable} ${inter.variable} antialiased surface-base min-h-screen text-[var(--color-on-surface)]`}>
         <SessionProvider>
-          <SidebarLayout>
-            {children}
-          </SidebarLayout>
+
+
+
+          <CartProvider>
+            <NotificationProvider>
+              <SidebarLayout>
+                {children}
+              </SidebarLayout>
+            </NotificationProvider>
+          </CartProvider>
         </SessionProvider>
+
       </body>
     </html>
   );

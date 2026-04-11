@@ -9,7 +9,6 @@ import {
   Archive,
   Calculator,
   CheckCircle2,
-  Sparkles,
   FileText,
   FileSpreadsheet,
   TrendingUp,
@@ -72,8 +71,11 @@ export default function ReportsPage() {
   const [toastMsg, setToastMsg] = useState("");
   const [toastType, setToastType] = useState<"success" | "error">("success");
   const [showAudit, setShowAudit] = useState(false);
-  const [showLowStockModal, setShowLowStockModal] = useState(false);
+
+
+  const [isLiquidityExpanded, setIsLiquidityExpanded] = useState(false);
   const [lowStockItems, setLowStockItems] = useState<LowStockProduct[]>([]);
+
 
   // Analytics State for Cards
   const [stats, setStats] = useState({
@@ -82,7 +84,7 @@ export default function ReportsPage() {
     activeSKUs: 0
   });
 
-  const { setIsLayoutHidden } = useSession();
+
 
   // Filter State
   const [reportType, setReportType] = useState("Sales Summary");
@@ -106,33 +108,48 @@ export default function ReportsPage() {
     }
   }, [showToast]);
 
-  useEffect(() => {
-    setIsLayoutHidden(showAudit || showLowStockModal);
-    return () => setIsLayoutHidden(false);
-  }, [showAudit, showLowStockModal]);
+
 
   const fetchIntelligence = async () => {
-    setLoading(true);
+    // Safety exit: stop loading after 5 seconds no matter what
+    const safetyTimeout = setTimeout(() => {
+      setLoading(false);
+    }, 5000);
 
     try {
+      setLoading(true);
+      
+      if (!supabase) {
+        console.error("Supabase client is not initialized.");
+        return;
+      }
+
       // 1. Fetch real product stock for Liquidity Alert
-      const { data: prods } = await supabase
+      const { data: prods, error: prodsErr } = await supabase
         .from('products')
         .select('id, name, stock, min_stock, categories(name)');
       
-      const filteredLow = (prods as any[])?.filter(p => Number(p.stock) <= Number(p.min_stock)) || [];
-      setLowStockItems(filteredLow as LowStockProduct[]);
+      if (prodsErr) {
+        console.error("Prods Fetch Error:", prodsErr);
+      } else {
+        const filteredLow = (prods as any[])?.filter(p => Number(p.stock) <= Number(p.min_stock)) || [];
+        setLowStockItems(filteredLow as LowStockProduct[]);
+      }
 
       // 2. Fetch Weekly Growth for Projection (Sales Velocity)
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      const { data: recentTX } = await supabase
+      const { data: recentTX, error: txErr } = await supabase
         .from('transactions')
         .select('total_amount, created_at')
         .gte('created_at', sevenDaysAgo.toISOString());
 
-      if (recentTX) {
+      if (txErr) {
+        console.error("Recent TX Fetch Error:", txErr);
+      } else if (recentTX && prods) {
         const growth = recentTX.length > 0 ? (recentTX.length / 50) * 10 : 0;
+        const filteredLow = (prods as any[])?.filter(p => Number(p.stock) <= Number(p.min_stock)) || [];
+        
         setStats({
           liquidityRisk: filteredLow.length,
           forecastedGrowth: Number(growth.toFixed(1)),
@@ -142,6 +159,7 @@ export default function ReportsPage() {
     } catch (err) {
       console.error("Intelligence Sync Error:", err);
     } finally {
+      clearTimeout(safetyTimeout);
       setLoading(false);
     }
   };
@@ -362,27 +380,88 @@ export default function ReportsPage() {
             <TrendingUp className="absolute bottom-[-20px] right-[-20px] text-white opacity-5 w-48 h-48" />
           </div>
 
-          <div className={`px-6 py-6 rounded-3xl flex flex-col justify-between shadow-xl transition-all border ${stats.liquidityRisk > 0 ? 'bg-error text-white shadow-error/10 border-error/5' : 'bg-surface-container-low border-outline-variant/10'}`}>
-            <div>
-              <div className={`flex items-center gap-2 mb-6 ${stats.liquidityRisk > 0 ? 'text-white' : 'text-on-surface-variant'}`}>
-                <AlertTriangle size={18} />
-                <span className="text-[10px] font-black tracking-[0.2em] uppercase opacity-70">Liquidity Alert</span>
+          <div className={`px-6 py-6 rounded-3xl flex flex-col shadow-xl transition-all duration-500 border overflow-hidden ${
+            stats.liquidityRisk > 0 
+              ? 'bg-error text-white shadow-error/10 border-error/5' 
+              : 'bg-surface-container-low border-outline-variant/10'
+          } ${isLiquidityExpanded ? 'md:col-span-2' : ''}`}>
+            
+            <div className="flex flex-col justify-between h-full">
+              <div>
+                <div className={`flex items-center justify-between mb-6 ${stats.liquidityRisk > 0 ? 'text-white' : 'text-on-surface-variant'}`}>
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle size={18} />
+                    <span className="text-[10px] font-black tracking-[0.2em] uppercase opacity-70">Liquidity Alert</span>
+                  </div>
+                  {isLiquidityExpanded && (
+                    <button 
+                      onClick={() => setIsLiquidityExpanded(false)}
+                      className="p-1 hover:bg-white/10 rounded-lg transition-colors"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+                
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <p className={`text-base font-bold leading-relaxed ${stats.liquidityRisk > 0 ? 'text-white/90' : 'text-on-surface-variant'}`}>
+                    {stats.liquidityRisk > 0
+                      ? `${stats.liquidityRisk} items are currently reaching critical low-stock thresholds. Action required for optimal ROI.`
+                      : "All inventory segments report healthy liquidity levels. No immediate risk detected."}
+                  </p>
+                  
+                  {!isLiquidityExpanded && (
+                    <button 
+                      onClick={() => setIsLiquidityExpanded(true)}
+                      disabled={stats.liquidityRisk === 0}
+                      className={`py-4 px-8 text-[10px] font-black uppercase tracking-[0.2em] rounded-xl transition-all flex items-center justify-center gap-2 group cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0 ${stats.liquidityRisk > 0 ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-primary/5 text-primary'}`}
+                    >
+                      VIEW ITEMS
+                      <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                    </button>
+                  )}
+                </div>
               </div>
-              <p className={`text-base font-bold leading-relaxed mb-6 ${stats.liquidityRisk > 0 ? 'text-white/90' : 'text-on-surface-variant'}`}>
-                {stats.liquidityRisk > 0
-                  ? `${stats.liquidityRisk} items are currently reaching critical low-stock thresholds. Action required for optimal ROI.`
-                  : "All inventory segments report healthy liquidity levels. No immediate risk detected."}
-              </p>
+
+              {/* Animated Item List */}
+              <div className={`grid transition-all duration-500 ease-in-out ${isLiquidityExpanded ? 'grid-rows-[1fr] mt-8 opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+                <div className="overflow-hidden">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">
+                    {lowStockItems.map((item) => (
+                      <a 
+                        key={item.id}
+                        href={`/inventory?highlight=${item.id}`}
+                        className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10 flex items-center justify-between group hover:bg-white/20 transition-all cursor-pointer"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-[9px] font-black uppercase tracking-widest opacity-60 truncate">{item.categories?.name || 'Segment'}</p>
+                          <h5 className="text-xs font-black truncate">{item.name}</h5>
+                          <div className="flex items-center gap-2 mt-2">
+                             <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden min-w-[60px]">
+                                <div 
+                                   className={`h-full ${item.stock <= 5 ? 'bg-white' : 'bg-white/60'}`}
+                                   style={{ width: `${Math.min((item.stock / item.min_stock) * 100, 100)}%` }}
+                                />
+                             </div>
+                             <span className="text-[8px] font-black whitespace-nowrap">{item.stock}/{item.min_stock}</span>
+                          </div>
+                        </div>
+                        <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center group-hover:bg-white group-hover:text-primary transition-all">
+                          <ArrowRight size={14} />
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                  
+                  <div className="pt-4 border-t border-white/10 mt-4 flex justify-between items-center text-[9px] font-black uppercase tracking-widest opacity-60">
+                    <span>Targeting Critical Liquidity Segments</span>
+                    <button onClick={() => setIsLiquidityExpanded(false)} className="hover:underline cursor-pointer">COLLAPSE PROTOCOL</button>
+                  </div>
+                </div>
+              </div>
             </div>
-            <button 
-              onClick={() => setShowLowStockModal(true)}
-              disabled={stats.liquidityRisk === 0}
-              className={`w-full py-4 mt-4 text-[10px] font-black uppercase tracking-[0.2em] rounded-xl transition-all flex items-center justify-center gap-2 group cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${stats.liquidityRisk > 0 ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-primary/5 text-primary'}`}
-            >
-              VIEW ITEMS
-              <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-            </button>
           </div>
+
         </div>
       </section>
 
@@ -571,7 +650,6 @@ export default function ReportsPage() {
               {/* Strategic Insights Breakdown */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
-                  <Sparkles size={14} className="text-primary" />
                   <h5 className="text-[10px] font-black text-on-surface uppercase tracking-[0.2em]">Strategic Insights</h5>
                 </div>
                 
@@ -620,55 +698,7 @@ export default function ReportsPage() {
         </div>
       )}
 
-      {/* Low Stock Audit Modal */}
-      {showLowStockModal && (
-        <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4 overflow-hidden">
-          <div className="absolute inset-0 bg-surface/60 backdrop-blur-2xl" onClick={() => setShowLowStockModal(false)} />
-          <div className="relative w-full max-w-xl bg-white rounded-[2.5rem] shadow-2xl border border-outline-variant/10 flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-300 overflow-hidden">
-            <div className="px-8 py-6 border-b border-outline-variant/5 flex items-center justify-between bg-surface-container-low/30">
-               <div>
-                  <h4 className="text-xl font-heading font-black text-primary leading-tight">LIQUIDITY RISK AUDIT</h4>
-                  <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mt-1">{stats.liquidityRisk} Critical Items Identifed</p>
-               </div>
-               <button onClick={() => setShowLowStockModal(false)} className="w-10 h-10 bg-surface-container rounded-2xl flex items-center justify-center text-on-surface-variant hover:bg-error/10 hover:text-error transition-all">
-                  <X size={20} />
-               </button>
-            </div>
 
-            <div className="flex-grow overflow-y-auto p-6 space-y-4 custom-scrollbar">
-               {lowStockItems.map((item) => (
-                 <div key={item.id} className="bg-surface-container-lowest p-5 rounded-3xl border border-outline-variant/10 flex items-center justify-between group hover:border-primary/20 transition-all">
-                    <div className="space-y-1">
-                       <p className="text-[10px] font-black text-primary uppercase tracking-widest opacity-70">{item.categories?.name || 'Inventory Segment'}</p>
-                       <h5 className="text-sm font-black text-on-surface group-hover:text-primary transition-colors">{item.name}</h5>
-                       <div className="flex items-center gap-2 mt-2">
-                          <div className="w-32 h-2 bg-surface-container rounded-full overflow-hidden">
-                             <div 
-                                className={`h-full transition-all duration-1000 ${item.stock <= 5 ? 'bg-error' : 'bg-amber-500'}`}
-                                style={{ width: `${Math.min((item.stock / item.min_stock) * 100, 100)}%` }}
-                             />
-                          </div>
-                          <span className="text-[9px] font-black uppercase text-on-surface-variant">{item.stock} / {item.min_stock}</span>
-                       </div>
-                    </div>
-                    <a 
-                      href="/products" 
-                      className="px-4 py-2.5 bg-primary/5 text-primary text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-primary hover:text-white transition-all whitespace-nowrap"
-                    >
-                      RESTOCK
-                    </a>
-                 </div>
-               ))}
-            </div>
-
-            <div className="p-6 bg-surface-container-low/30 border-t border-outline-variant/5">
-                <p className="text-[10px] font-bold text-on-surface-variant text-center opacity-60 italic">
-                  "Manual inventory verification recommended before reorder protocol execution."
-                </p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {showToast && (
         <div className={`fixed top-4 right-4 md:top-6 md:right-6 z-[1200] ${toastType === 'success' ? 'bg-secondary text-white' : 'bg-error text-white'} px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300 max-w-[280px] md:max-w-xs border border-white/10`}>

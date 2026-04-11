@@ -14,9 +14,12 @@ import {
   History,
   TrendingUp,
   Package,
-  X,
+  Box,
   ArrowUpRight
 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
+
 
 interface Product {
   id: string;
@@ -41,7 +44,20 @@ interface InventoryLog {
 }
 
 export default function InventoryPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <Loader2 className="animate-spin text-primary" size={48} />
+      </div>
+    }>
+      <InventoryContent />
+    </Suspense>
+  );
+}
+
+function InventoryContent() {
   const [products, setProducts] = useState<Product[]>([]);
+
   const [logs, setLogs] = useState<InventoryLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -51,12 +67,38 @@ export default function InventoryPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [adjustQty, setAdjustQty] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  
+  const searchParams = useSearchParams();
+  const highlightParam = searchParams.get('highlight');
 
   useEffect(() => {
     fetchData();
   }, []);
 
+  // Handle URL Highlights
+  useEffect(() => {
+    if (!loading && products.length > 0 && highlightParam) {
+      const targetId = highlightParam;
+      
+      // Small delay to ensure render is complete
+      const timer = setTimeout(() => {
+        const element = document.getElementById(`product-${targetId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          setHighlightedId(targetId);
+          
+          // Clear highlight after 3 seconds
+          setTimeout(() => setHighlightedId(null), 3000);
+        }
+      }, 500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [loading, products, highlightParam]);
+
   const fetchData = async () => {
+
     setLoading(true);
     
     try {
@@ -197,8 +239,14 @@ export default function InventoryPage() {
             filteredProducts.map(p => (
               <div 
                 key={p.id}
-                className={`p-4 rounded-xl flex items-center justify-between group bg-surface-container-low hover:bg-surface-container transition-all border border-outline-variant/10 ${p.stock <= (p.min_stock || 10) ? 'border-l-4 border-l-error' : ''}`}
+                id={`product-${p.id}`}
+                className={`p-4 rounded-xl flex items-center justify-between group bg-surface-container-low hover:bg-surface-container transition-all border-2 ${
+                  highlightedId === p.id 
+                    ? 'border-primary shadow-[0_0_20px_rgba(var(--color-primary-rgb),0.3)] scale-[1.02] ring-2 ring-primary/20' 
+                    : 'border-outline-variant/10'
+                } ${p.stock <= (p.min_stock || 10) ? 'border-l-4 border-l-error' : ''} duration-500`}
               >
+
                 <div className="flex gap-4 items-center">
                   <div className="w-12 h-12 rounded-lg overflow-hidden flex items-center justify-center bg-surface-container-highest">
                     {p.image_url ? (

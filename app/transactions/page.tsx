@@ -131,9 +131,14 @@ export default function TransactionsPage() {
     };
   };
 
-  const getItemsSummary = (items: any[]) => {
+  const getItemsSummary = (tx: Transaction) => {
+    const items = tx.transaction_items || [];
+    if (tx.payment_method === "Balance Adjustment") return "System: Balance Adjustment";
+    if (tx.payment_method === "GCash" && items.length > 0 && !items[0].products) return "GCash Service: Cash Out";
+    if (tx.payment_method === "Cash" && items.length > 0 && !items[0].products) return "GCash Service: Cash In / Load";
+    
     if (!items || items.length === 0) return "No items recorded";
-    const firstName = items[0]?.products?.name || "Item";
+    const firstName = items[0]?.products?.name || "Service Rendered";
     return items.length > 1 ? `${firstName} + ${items.length - 1} others` : firstName;
   };
 
@@ -266,9 +271,11 @@ export default function TransactionsPage() {
                           </div>
                           <div className="flex flex-col">
                             <span className="text-sm font-bold text-on-surface group-hover:text-primary transition-colors leading-tight">
-                              {getItemsSummary(items)}
+                              {getItemsSummary(tx)}
                             </span>
-                            <span className="text-[10px] font-mono font-bold text-on-surface-variant/30 lowercase mt-0.5">ref:{tx.id.split("-")[0]}</span>
+                            <span className="text-[10px] font-mono font-bold text-on-surface-variant/30 lowercase mt-0.5">
+                              {tx.payment_method === "Balance Adjustment" ? "vault_sync" : `ref:${tx.id.split("-")[0]}`}
+                            </span>
                           </div>
                         </div>
                       </td>

@@ -17,11 +17,8 @@ import {
   PieChart,
   Users,
   X,
-  PlayCircle,
-  Clock,
-  AlertTriangle
 } from "lucide-react";
-import { useSession } from "@/lib/contexts/SessionContext";
+
 
 const navLinks = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -36,14 +33,23 @@ const navLinks = [
   { href: "/users", label: "Users", icon: Users },
 ];
 
+import { useNotifications } from "@/lib/contexts/NotificationContext";
+import { useSession } from "@/lib/contexts/SessionContext";
+import { useCart } from "@/lib/contexts/CartContext";
+import { NotificationMobileView } from "@/components/notifications/NotificationMobileView";
+import { CartMobileView } from "@/components/cart/CartMobileView";
+
+
 export function SidebarLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isStatusExpanded, setIsStatusExpanded] = useState(false);
-  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
-  const { activeSession, openSession, closeSession, isLayoutHidden } = useSession();
+  const { showNotifications } = useNotifications();
+  const { showCart } = useCart();
+  const { isLayoutHidden } = useSession();
 
-  // Close menu when pathname changes
+
+
+  // Close menu and notifications when pathname changes
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [pathname]);
@@ -73,7 +79,6 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen w-full bg-[var(--color-surface)] relative overflow-hidden">
 
       {/* ── Mobile Drawer Overlay ── */}
-      {/* Raised z-index to 500 to ensure it's ABOVE the bottom nav and everything else */}
       {isMobileMenuOpen && (
         <div className="md:hidden fixed inset-0 z-[500] flex">
           {/* Backdrop */}
@@ -104,180 +109,68 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       )}
 
       {/* ── Desktop Sidebar ── */}
-      <aside className="hidden md:flex flex-col w-64 shrink-0 surface-low p-6 border-r border-[var(--color-outline-variant)]/10 overflow-y-auto print:hidden">
-        <div className="mb-10 text-2xl font-bold tracking-tight text-[var(--color-primary)] font-heading">
-          POS ni Estela
-        </div>
-        <nav className="flex flex-col gap-1 flex-1 pb-6">
-          {renderNavLinks()}
-        </nav>
-      </aside>
+      {!isLayoutHidden && (
+        <aside className="hidden md:flex flex-col w-64 shrink-0 surface-low p-6 border-r border-[var(--color-outline-variant)]/10 overflow-y-auto print:hidden">
+          <div className="mb-10 text-2xl font-bold tracking-tight text-[var(--color-primary)] font-heading">
+            POS ni Estela
+          </div>
+          <nav className="flex flex-col gap-1 flex-1 pb-6">
+            {renderNavLinks()}
+          </nav>
+        </aside>
+      )}
+
 
       <div className="flex flex-col flex-1 min-w-0 min-h-0 relative">
-        <TopNav />
+        {!isLayoutHidden && <TopNav />}
 
-        {/* Main scrollable area */}
-        <main className="flex-1 overflow-y-auto w-full p-3 md:p-6 pb-48 md:pb-40 relative z-0">
-          <div className={`transition-all duration-700 w-full ${(!activeSession && (pathname === '/pos' || pathname === '/')) ? 'opacity-40 blur-sm grayscale pointer-events-none select-none' : 'opacity-100 blur-0'}`}>
-            {children}
-          </div>
-        </main>
 
-        {/* ── Desktop Terminal Status Footer (Original Structure) ── */}
-        {!isLayoutHidden && (
-          <div className="hidden md:flex fixed bottom-0 left-64 right-0 z-[10] p-4 bg-[var(--color-surface-container-low)] shadow-[0_-4px_24px_rgba(0,0,0,0.05)] border-t border-[var(--color-outline-variant)]/10 print:hidden">
-            <div className="max-w-7xl mx-auto w-full flex justify-between items-center px-4">
-            <div className="flex items-center gap-4">
-              <div className={`w-11 h-11 rounded-xl flex items-center justify-center border transition-all ${activeSession ? 'bg-secondary/10 border-secondary/20 text-secondary' : 'bg-surface-container border-outline-variant/10 text-on-surface-variant opacity-40'}`}>
-                <Clock size={22} className={activeSession ? 'animate-pulse' : ''} />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-0.5">
-                  <div className={`w-2 h-2 rounded-full ${activeSession ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" : "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"}`} />
-                  <h3 className="font-black text-sm font-heading text-[var(--color-primary)] uppercase tracking-tight">
-                    {activeSession ? "System Active" : "Terminal Offline"}
-                  </h3>
-                </div>
-                <p className="text-[10px] font-bold text-[var(--color-on-surface-variant)] uppercase opacity-60">
-                  {activeSession ? "Ready for Transactions" : "Session Required to Enable UI"}
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowCloseConfirm(true)} 
-                disabled={!activeSession}
-                className={`px-10 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${
-                  activeSession 
-                  ? "bg-[var(--color-error)] text-white hover:scale-105 active:scale-95 shadow-lg shadow-error/20 cursor-pointer" 
-                  : "bg-[var(--color-surface-container)] text-[var(--color-on-surface-variant)] opacity-20 cursor-not-allowed"
-                }`}
-              >
-                CLOSE
-              </button>
-              <button
-                onClick={() => openSession()}
-                disabled={!!activeSession}
-                className={`px-10 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${
-                  !activeSession 
-                  ? "bg-[var(--color-primary)] text-white hover:scale-105 active:scale-95 shadow-lg shadow-primary/20 cursor-pointer" 
-                  : "bg-[var(--color-surface-container)] text-[var(--color-on-surface-variant)] opacity-20 cursor-not-allowed"
-                }`}
-              >
-                <PlayCircle size={14} />
-                OPEN
-              </button>
-            </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── Mobile Terminal Status Orb ── */}
-        {!isLayoutHidden && (
-          <div 
-            onClick={() => !isStatusExpanded && setIsStatusExpanded(true)}
+        {/* ── Sliding View Container ── */}
+        <div className="flex-1 relative overflow-hidden">
+          {/* Primary Content View */}
+          <main 
             className={`
-              md:hidden fixed z-[10] transition-all duration-700 ease-in-out cursor-pointer overflow-hidden print:hidden
-              ${isStatusExpanded 
-                ? "bottom-24 left-4 right-4 h-16 rounded-full p-2 bg-[var(--color-surface-container-low)]/95 backdrop-blur-2xl border-[var(--color-outline-variant)]/20 shadow-2xl" 
-                : `bottom-24 left-4 w-14 h-14 rounded-full p-0 flex items-center justify-center shadow-xl border-2 ${activeSession ? "bg-red-500 border-red-400 shadow-red-500/40 text-white" : "bg-green-600 border-green-500 shadow-green-600/40 text-white"}`}
-              border shadow-[0_-4px_24px_rgba(0,0,0,0.05)]
+              absolute inset-0 overflow-y-auto w-full p-3 md:p-6 pb-48 md:pb-40 z-0 transition-transform duration-500 ease-ios
+              ${(showNotifications || showCart) ? 'translate-x-[-100%] md:translate-x-0' : 'translate-x-0'}
             `}
           >
-           <div className={`flex items-center h-full transition-all duration-500 ${isStatusExpanded ? "justify-between px-2 gap-4" : "justify-center"}`}>
-             <div className="flex items-center gap-3 shrink-0">
-               <div className={`
-                 flex items-center justify-center transition-all duration-500 relative
-                 ${isStatusExpanded ? "w-10 h-10 rounded-xl border bg-surface-container" : "w-full h-full rounded-full"}
-                 ${isStatusExpanded ? (activeSession ? 'text-secondary' : 'text-on-surface-variant opacity-40') : 'text-white'}
-               `}>
-                 <Clock size={isStatusExpanded ? 20 : 28} className={activeSession ? 'animate-pulse' : ''} />
-               </div>
-               <div className={`transition-all duration-500 origin-left ${isStatusExpanded ? "scale-100 opacity-100 block" : "hidden"}`}>
-                 <div className="flex items-center gap-2 mb-0.5">
-                   <div className={`w-2 h-2 rounded-full ${activeSession ? "bg-red-500" : "bg-green-500"}`} />
-                   <h3 className="font-black text-[10px] font-heading text-[var(--color-primary)] uppercase tracking-tight leading-none">
-                     {activeSession ? "ACTIVE" : "OFFLINE"}
-                   </h3>
-                 </div>
-               </div>
-             </div>
-             
-             <div className={`
-               flex items-center gap-2 transition-all duration-500
-               ${isStatusExpanded ? "scale-100 opacity-100" : "translate-x-20 scale-0 opacity-0"}
-             `}>
-               <button
-                 onClick={(e) => { e.stopPropagation(); setShowCloseConfirm(true); setIsStatusExpanded(false); }} 
-                 disabled={!activeSession}
-                 className={`px-6 py-2.5 rounded-full font-black text-[9px] uppercase tracking-widest transition-all ${
-                   activeSession ? "bg-[var(--color-error)] text-white" : "bg-surface-container text-on-surface-variant opacity-20"
-                 }`}
-               >
-                 CLOSE
-               </button>
-               <button
-                 onClick={(e) => { e.stopPropagation(); openSession(); setIsStatusExpanded(false); }}
-                 disabled={!!activeSession}
-                 className={`px-6 py-2.5 rounded-full font-black text-[9px] uppercase tracking-widest transition-all ${
-                   !activeSession ? "bg-[var(--color-primary)] text-white" : "bg-surface-container text-on-surface-variant opacity-20"
-                 }`}
-               >
-                 OPEN
-               </button>
-               <button onClick={(e) => { e.stopPropagation(); setIsStatusExpanded(false); }} className="p-2 text-on-surface-variant opacity-40">
-                 <X size={20} />
-               </button>
-             </div>
-           </div>
-        </div>
-      )}
+            <div className="w-full">
+              {children}
+            </div>
+          </main>
 
-      {/* ── Close Confirmation Modal ── */}
-      {showCloseConfirm && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 md:p-6 animate-in fade-in duration-300">
+          {/* Dedicated Notification View (Mobile Slide) */}
           <div 
-            className="absolute inset-0 bg-black/60 backdrop-blur-md" 
-            onClick={() => setShowCloseConfirm(false)}
-          />
-          <div className="relative w-full max-w-sm bg-surface-container-low rounded-3xl p-8 border border-outline-variant/10 shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-4 duration-500">
-            <div className="w-16 h-16 bg-error/10 text-error rounded-2xl flex items-center justify-center mx-auto mb-6 border border-error/20">
-              <AlertTriangle size={32} />
-            </div>
-            
-            <div className="text-center mb-10">
-              <h3 className="text-xl font-black font-heading text-on-surface mb-2 uppercase tracking-tighter">Close Store Session?</h3>
-              <p className="text-sm text-on-surface-variant leading-relaxed px-2">
-                This will finalize the ledger and lock the dashboard into <span className="text-primary font-bold">Summary Mode</span> until your next shift.
-              </p>
-            </div>
-            
-            <div className="flex flex-col gap-3">
-              <button 
-                onClick={() => {
-                  closeSession();
-                  setShowCloseConfirm(false);
-                }}
-                className="w-full py-4 bg-error text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-error/20 active:scale-[0.98] transition-all"
-              >
-                Yes, Close Shop
-              </button>
-              <button 
-                onClick={() => setShowCloseConfirm(false)}
-                className="w-full py-4 bg-surface-container-high text-on-surface-variant rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-surface-highest transition-all"
-              >
-                No, Keep Selling
-              </button>
-            </div>
+            className={`
+              absolute inset-0 md:hidden bg-white z-[300] transition-transform duration-500 ease-ios
+              ${showNotifications ? 'translate-x-0 shadow-2xl' : 'translate-x-[100%]'}
+            `}
+          >
+            <NotificationMobileView />
           </div>
+
+
+          {/* Dedicated Cart View (Mobile Slide) */}
+          <div 
+            className={`
+              absolute inset-0 md:hidden bg-white z-[301] transition-transform duration-500 ease-ios
+              ${showCart ? 'translate-x-0 shadow-2xl' : 'translate-x-[100%]'}
+            `}
+          >
+            <CartMobileView />
+          </div>
+
         </div>
-      )}
+
 
       {/* ── Mobile Bottom Navigation ── */}
-      <div className="md:hidden print:hidden">
-        <BottomNav onMenuClick={() => setIsMobileMenuOpen(true)} />
-      </div>
+      {!isLayoutHidden && (
+        <div className={`md:hidden print:hidden transition-transform duration-500 ${ (showNotifications || showCart) ? 'translate-y-full' : 'translate-y-0' }`}>
+          <BottomNav onMenuClick={() => setIsMobileMenuOpen(true)} />
+        </div>
+      )}
+
+
       </div>
     </div>
   );
