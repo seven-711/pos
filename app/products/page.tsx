@@ -18,8 +18,10 @@ import {
   Calculator,
   Tag,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Library
 } from "lucide-react";
+import { MediaGallery } from "@/components/storage/MediaGallery";
 
 interface Category {
   id: string;
@@ -65,6 +67,7 @@ export default function ProductsPage() {
   const [showPackCalc, setShowPackCalc] = useState(false);
   const [packData, setPackData] = useState({ cost: '', qty: '' });
   const [calcMode, setCalcMode] = useState<'pack' | 'market'>('pack');
+  const [showMediaGallery, setShowMediaGallery] = useState(false);
   
   // Toast State
   const [showToast, setShowToast] = useState(false);
@@ -463,25 +466,48 @@ export default function ProductsPage() {
                     {formData.image_url ? (
                       <>
                         <img src={formData.image_url} alt="Preview" className="w-full h-full object-cover" />
-                        <button 
-                          type="button"
-                          onClick={() => setFormData({...formData, image_url: ''})}
-                          className="absolute top-1 right-1 p-1 bg-black/50 text-white rounded-full hover:bg-black/70 backdrop-blur-md"
-                        >
-                          <XCircle size={12} />
-                        </button>
+                        <div className="absolute top-1 right-1 flex gap-1">
+                          <button 
+                            type="button"
+                            onClick={() => setShowMediaGallery(true)}
+                            className="p-1 bg-primary/80 text-white rounded-full hover:bg-primary backdrop-blur-md"
+                            title="Change from Library"
+                          >
+                            <Library size={12} />
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={() => setFormData({...formData, image_url: ''})}
+                            className="p-1 bg-black/50 text-white rounded-full hover:bg-black/70 backdrop-blur-md"
+                          >
+                            <XCircle size={12} />
+                          </button>
+                        </div>
                       </>
                     ) : (
-                      <>
-                        <div className="w-6 h-6 rounded-full flex items-center justify-center bg-primary/5 mb-0.5">
-                          {isUploading ? <Loader2 size={12} className="animate-spin text-primary" /> : <Upload size={12} className="text-primary" />}
+                      <div className="flex w-full h-full">
+                        <div className="flex-1 relative flex flex-col items-center justify-center group/upload hover:bg-primary/5 transition-colors">
+                          <div className="w-6 h-6 rounded-full flex items-center justify-center bg-primary/5 mb-0.5 group-hover/upload:scale-110 transition-transform">
+                            {isUploading ? <Loader2 size={12} className="animate-spin text-primary" /> : <Upload size={12} className="text-primary" />}
+                          </div>
+                          <p className="text-[8px] font-bold text-on-surface-variant leading-none uppercase tracking-tighter">Upload</p>
+                          <input 
+                            type="file" accept="image/*" onChange={handleImageUpload}
+                            className="absolute inset-0 opacity-0 cursor-pointer" disabled={isUploading}
+                          />
                         </div>
-                        <p className="text-[8px] font-bold text-on-surface-variant leading-none uppercase tracking-tighter">Add Visual</p>
-                        <input 
-                          type="file" accept="image/*" onChange={handleImageUpload}
-                          className="absolute inset-0 opacity-0 cursor-pointer" disabled={isUploading}
-                        />
-                      </>
+                        <div className="w-[1px] h-8 bg-outline-variant/20 self-center" />
+                        <button 
+                          type="button"
+                          onClick={() => setShowMediaGallery(true)}
+                          className="flex-1 flex flex-col items-center justify-center hover:bg-secondary/5 transition-colors"
+                        >
+                          <div className="w-6 h-6 rounded-full flex items-center justify-center bg-secondary/5 mb-0.5">
+                            <Library size={12} className="text-secondary" />
+                          </div>
+                          <p className="text-[8px] font-bold text-on-surface-variant leading-none uppercase tracking-tighter">Library</p>
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -716,6 +742,16 @@ export default function ProductsPage() {
             <X size={14} />
           </button>
         </div>
+      )}
+      {showMediaGallery && (
+        <MediaGallery 
+          currentUrl={formData.image_url}
+          onSelect={(url) => {
+            setFormData(prev => ({ ...prev, image_url: url }));
+            setShowMediaGallery(false);
+          }}
+          onClose={() => setShowMediaGallery(false)}
+        />
       )}
     </div>
   );

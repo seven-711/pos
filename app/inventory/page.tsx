@@ -16,8 +16,10 @@ import {
   Package,
   Box,
   ArrowUpRight,
-  X
+  X,
+  Library
 } from "lucide-react";
+import { MediaGallery } from "@/components/storage/MediaGallery";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
@@ -69,6 +71,7 @@ function InventoryContent() {
   const [adjustQty, setAdjustQty] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const [showMediaLibrary, setShowMediaLibrary] = useState(false);
   
   const searchParams = useSearchParams();
   const highlightParam = searchParams.get('highlight');
@@ -217,7 +220,16 @@ function InventoryContent() {
             <Package size={14} className="text-primary" />
             Product Master
           </h3>
-          <SlidersHorizontal size={18} className="text-on-surface-variant opacity-50" />
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setShowMediaLibrary(true)}
+              className="px-3 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-container-highest transition-colors flex items-center gap-2 text-[10px] font-black uppercase tracking-tighter text-on-surface-variant cursor-pointer"
+            >
+              <Library size={12} className="text-secondary" />
+              Reclaim Photos
+            </button>
+            <SlidersHorizontal size={18} className="text-on-surface-variant opacity-50" />
+          </div>
         </div>
         
         <div className="relative group">
@@ -379,6 +391,11 @@ function InventoryContent() {
         </div>
       </section>
 
+    {showMediaLibrary && (
+      <MediaGallery 
+        onClose={() => setShowMediaLibrary(false)}
+      />
+    )}
     </div>
   );
 }
