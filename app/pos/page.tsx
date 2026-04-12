@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
 import { getLocalTimestamp } from "@/lib/utils/time";
 import {
@@ -95,6 +96,17 @@ export default function POSPage() {
   const [toastMsg, setToastMsg] = useState("");
   const [toastType, setToastType] = useState<"success" | "error">("success");
 
+
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => { setIsMounted(true); }, []);
+
+  // Lock scroll when modals open
+  useEffect(() => {
+    const scroller = document.getElementById('main-scroll');
+    if (!scroller) return;
+    scroller.style.overflow = (showQtyModal || showServiceModal) ? 'hidden' : '';
+    return () => { scroller.style.overflow = ''; };
+  }, [showQtyModal, showServiceModal]);
 
   useEffect(() => {
     fetchData();
@@ -505,10 +517,10 @@ export default function POSPage() {
 
 
       {/* Quantity Selector Modal */}
-      {showQtyModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[1000] flex items-center justify-center p-4">
-          <div className="bg-surface-container-lowest w-full max-w-md rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center mb-8">
+      {showQtyModal && isMounted && createPortal(
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[1000] flex items-center justify-center p-4 overflow-hidden">
+          <div className="bg-surface-container-lowest w-full max-w-md rounded-3xl p-8 shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center mb-8 shrink-0">
               <div>
                 <h3 className="font-heading font-bold text-xl">{qtyTarget?.name}</h3>
                 <p className="text-xs text-on-surface-variant">Set quantity to add to cart</p>
@@ -518,31 +530,34 @@ export default function POSPage() {
               </button>
             </div>
 
-            <div className="flex items-center justify-center gap-6 mb-10">
-              <button
-                onClick={() => setQtyValue(Math.max(1, qtyValue - 1))}
-                className="w-16 h-16 rounded-2xl bg-surface-container-highest hover:bg-surface-variant flex items-center justify-center text-primary active:scale-90 transition-all font-bold text-4xl cursor-pointer"
-              >
-                <Minus size={32} />
-              </button>
-              <div className="w-24 text-center text-5xl font-extrabold text-on-surface">
-                {qtyValue}
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <div className="flex items-center justify-center gap-6 mb-10">
+                <button
+                  onClick={() => setQtyValue(Math.max(1, qtyValue - 1))}
+                  className="w-16 h-16 rounded-2xl bg-surface-container-highest hover:bg-surface-variant flex items-center justify-center text-primary active:scale-90 transition-all font-bold text-4xl cursor-pointer"
+                >
+                  <Minus size={32} />
+                </button>
+                <div className="w-24 text-center text-5xl font-extrabold text-on-surface">
+                  {qtyValue}
+                </div>
+                <button
+                  disabled={qtyValue + (cart.find(i => i.id === qtyTarget?.id)?.quantity || 0) >= (qtyTarget?.stock || 0)}
+                  onClick={() => setQtyValue(qtyValue + 1)}
+                  className="w-16 h-16 rounded-2xl bg-surface-container-highest hover:bg-surface-variant flex items-center justify-center text-primary active:scale-90 disabled:opacity-20 disabled:active:scale-100 transition-all font-bold text-4xl cursor-pointer"
+                >
+                  <Plus size={32} />
+                </button>
               </div>
-              <button
-                disabled={qtyValue + (cart.find(i => i.id === qtyTarget?.id)?.quantity || 0) >= (qtyTarget?.stock || 0)}
-                onClick={() => setQtyValue(qtyValue + 1)}
-                className="w-16 h-16 rounded-2xl bg-surface-container-highest hover:bg-surface-variant flex items-center justify-center text-primary active:scale-90 disabled:opacity-20 disabled:active:scale-100 transition-all font-bold text-4xl cursor-pointer"
-              >
-                <Plus size={32} />
-              </button>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <button onClick={() => setShowQtyModal(false)} className="py-4 bg-surface-container-low hover:bg-surface-container text-on-surface-variant font-bold rounded-xl transition-colors cursor-pointer">Cancel</button>
-              <button onClick={confirmAddToCart} className="py-4 bg-gradient-to-br from-primary to-primary-container text-on-primary font-bold rounded-xl active:scale-95 transition-transform shadow-lg cursor-pointer">Confirm</button>
+              <div className="grid grid-cols-2 gap-4 pb-4">
+                <button onClick={() => setShowQtyModal(false)} className="py-4 bg-surface-container-low hover:bg-surface-container text-on-surface-variant font-bold rounded-xl transition-colors cursor-pointer">Cancel</button>
+                <button onClick={confirmAddToCart} className="py-4 bg-gradient-to-br from-primary to-primary-container text-on-primary font-bold rounded-xl active:scale-95 transition-transform shadow-lg cursor-pointer">Confirm</button>
+              </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {showToast && (
@@ -561,10 +576,10 @@ export default function POSPage() {
       )}
 
       {/* Quick Service Modal */}
-      {showServiceModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[1100] flex items-center justify-center p-4">
-          <div className="bg-surface-container-lowest w-full max-w-md rounded-[2rem] p-5 shadow-2xl border border-secondary/10 animate-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-start mb-5">
+      {showServiceModal && isMounted && createPortal(
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[1100] flex items-center justify-center p-4 overflow-hidden">
+          <div className="bg-surface-container-lowest w-full max-w-md rounded-[2rem] p-5 shadow-2xl border border-secondary/10 flex flex-col max-h-[90dvh] overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-start mb-5 shrink-0">
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
                   serviceMode === 'CASH_IN' ? 'bg-emerald-100 text-emerald-600' : 
@@ -595,9 +610,10 @@ export default function POSPage() {
               </button>
             </div>
 
-            <div className="space-y-4">
-              {/* Amount Input */}
-              <div className="space-y-1.5">
+            <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+              <div className="space-y-4">
+                {/* Amount Input */}
+                <div className="space-y-1.5">
                 <label className="text-[9px] font-black uppercase tracking-[0.2em] text-on-surface-variant opacity-70">
                   {serviceMode === 'ADJUST' ? 'New Target Balance' : 'Principal Amount (₱)'}
                 </label>
@@ -707,8 +723,10 @@ export default function POSPage() {
                 </button>
               </div>
             </div>
+            </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

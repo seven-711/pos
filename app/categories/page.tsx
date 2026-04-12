@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
 import { getLocalTimestamp } from "@/lib/utils/time";
 import { 
@@ -32,6 +33,17 @@ export default function CategoriesPage() {
     totalProducts: 0,
     activeCategories: 0
   });
+
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => { setIsMounted(true); }, []);
+
+  // Lock scroll when modals open
+  useEffect(() => {
+    const scroller = document.getElementById('main-scroll');
+    if (!scroller) return;
+    scroller.style.overflow = (showAddModal) ? 'hidden' : '';
+    return () => { scroller.style.overflow = ''; };
+  }, [showAddModal]);
 
   useEffect(() => {
     fetchData();
@@ -217,11 +229,11 @@ export default function CategoriesPage() {
       </div>
 
       {/* Add Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {showAddModal && isMounted && createPortal(
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 overflow-hidden">
           <div className="absolute inset-0 bg-surface/60 backdrop-blur-md" onClick={() => setShowAddModal(false)} />
-          <div className="relative w-full max-w-md bg-surface-container-lowest rounded-2xl shadow-2xl border border-outline-variant/10 overflow-hidden">
-            <div className="px-6 py-4 bg-surface-container border-b border-outline-variant/10 flex justify-between items-center">
+          <div className="relative w-full max-w-md bg-surface-container-lowest rounded-2xl shadow-2xl border border-outline-variant/10 flex flex-col max-h-[90dvh] overflow-hidden">
+            <div className="px-6 py-4 bg-surface-container border-b border-outline-variant/10 flex justify-between items-center shrink-0">
               <h3 className="font-heading font-bold text-primary">New Category</h3>
               <button 
                 onClick={() => setShowAddModal(false)}
@@ -230,27 +242,30 @@ export default function CategoriesPage() {
                 <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleCreateCategory} className="p-6 space-y-4">
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Name</label>
-                <input 
-                  autoFocus
-                  required
-                  value={newCategoryName}
-                  onChange={(e) => setNewCategoryName(e.target.value)}
-                  placeholder="e.g. Beverages"
-                  className="w-full bg-surface-container border border-outline-variant/10 rounded-lg px-4 py-3 text-sm focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                />
-              </div>
-              <button 
-                disabled={isSaving}
-                className="w-full bg-gradient-to-br from-primary to-primary-container text-white py-4 rounded-xl font-bold shadow-lg shadow-primary/20 active:scale-[0.98] transition-all disabled:opacity-50"
-              >
-                {isSaving ? "Saving..." : "Create Category"}
-              </button>
-            </form>
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <form onSubmit={handleCreateCategory} className="p-6 space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Name</label>
+                  <input 
+                    autoFocus
+                    required
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    placeholder="e.g. Beverages"
+                    className="w-full bg-surface-container border border-outline-variant/10 rounded-lg px-4 py-3 text-sm focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                  />
+                </div>
+                <button 
+                  disabled={isSaving}
+                  className="w-full bg-gradient-to-br from-primary to-primary-container text-white py-4 rounded-xl font-bold shadow-lg shadow-primary/20 active:scale-[0.98] transition-all disabled:opacity-50"
+                >
+                  {isSaving ? "Saving..." : "Create Category"}
+                </button>
+              </form>
+            </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

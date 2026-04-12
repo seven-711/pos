@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
 import {
   BarChart2,
@@ -96,6 +97,17 @@ export default function ReportsPage() {
   const [endDate, setEndDate] = useState(() => {
     return new Date().toISOString().split('T')[0];
   });
+
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => { setIsMounted(true); }, []);
+
+  // Lock scroll when modals open
+  useEffect(() => {
+    const scroller = document.getElementById('main-scroll');
+    if (!scroller) return;
+    scroller.style.overflow = (showAudit) ? 'hidden' : '';
+    return () => { scroller.style.overflow = ''; };
+  }, [showAudit]);
 
   useEffect(() => {
     fetchIntelligence();
@@ -563,7 +575,7 @@ export default function ReportsPage() {
 
 
       {/* Strategic Audit Ledger Modal */}
-      {showAudit && selectedReport && (
+      {showAudit && selectedReport && isMounted && createPortal(
         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-2 md:p-10 overflow-hidden">
           {/* Backdrop */}
           <div 
@@ -572,10 +584,10 @@ export default function ReportsPage() {
           />
           
           {/* Document Content */}
-          <div id="report-canvas" className="relative w-full max-w-2xl bg-white shadow-[0_32px_64px_rgba(0,0,0,0.15)] rounded-3xl md:rounded-[2.5rem] border border-outline-variant/5 flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-300">
+          <div id="report-canvas" className="relative w-full max-w-2xl bg-white shadow-[0_32px_64px_rgba(0,0,0,0.15)] rounded-3xl md:rounded-[2.5rem] border border-outline-variant/5 flex flex-col max-h-[90dvh] overflow-hidden animate-in zoom-in-95 duration-300">
             
             {/* Modal Control Bar (Excluded from Print) */}
-            <div className="px-6 py-4 border-b border-outline-variant/10 flex items-center justify-between bg-white print:hidden">
+            <div className="px-6 py-4 border-b border-outline-variant/10 flex items-center justify-between bg-white print:hidden shrink-0">
               <div className="flex items-center gap-3">
                 <button 
                   onClick={() => setShowAudit(false)}
@@ -585,6 +597,7 @@ export default function ReportsPage() {
                 </button>
                 <span className="text-[7px] font-black text-on-surface-variant uppercase tracking-[0.2em]">Audit Preview</span>
               </div>
+
               <div className="flex items-center gap-2">
                  <button 
                   onClick={() => window.print()}
@@ -695,7 +708,8 @@ export default function ReportsPage() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
 

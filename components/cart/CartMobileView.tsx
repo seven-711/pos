@@ -24,6 +24,7 @@ export function CartMobileView() {
     clearCart, 
     addToCart, 
     calculateSubtotal,
+    getItemTotal,
     toggleCart,
     completeSale,
     isProcessing 
@@ -102,10 +103,12 @@ export function CartMobileView() {
                     <p className="text-base font-black tracking-tight text-on-surface truncate pr-4">
                       {item.name}
                     </p>
-                    <span className="text-sm font-black text-primary italic whitespace-nowrap">{fmt(item.selling_price * item.quantity)}</span>
+                    <span className="text-sm font-black text-primary italic whitespace-nowrap">{fmt(getItemTotal(item))}</span>
                   </div>
                   <p className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest mb-4">
-                    {fmt(item.selling_price)} / unit
+                    {item.bundle_qty && item.bundle_price && item.quantity >= item.bundle_qty
+                      ? `${fmt(item.bundle_price)} / ${item.bundle_qty}pcs bundle`
+                      : `${fmt(item.selling_price)} / unit`}
                   </p>
                   
                   <div className="flex items-center justify-between">

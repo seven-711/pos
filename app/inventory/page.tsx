@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
 import { getLocalTimestamp } from "@/lib/utils/time";
 import { 
@@ -75,6 +76,17 @@ function InventoryContent() {
   
   const searchParams = useSearchParams();
   const highlightParam = searchParams.get('highlight');
+
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => { setIsMounted(true); }, []);
+
+  // Lock scroll when modals open
+  useEffect(() => {
+    const scroller = document.getElementById('main-scroll');
+    if (!scroller) return;
+    scroller.style.overflow = (showAdjustModal || showMediaLibrary) ? 'hidden' : '';
+    return () => { scroller.style.overflow = ''; };
+  }, [showAdjustModal, showMediaLibrary]);
 
   useEffect(() => {
     fetchData();
@@ -326,53 +338,56 @@ function InventoryContent() {
         </div>
       </section>
 
-      {/* Adjustment Modal */}
-      {showAdjustModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Adjustment Modal — portal */}
+      {showAdjustModal && isMounted && createPortal(
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 overflow-hidden">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowAdjustModal(false)} />
-          <div className="relative w-full max-w-md bg-surface-container-lowest rounded-2xl p-8 shadow-2xl border border-outline-variant/10 animate-in zoom-in-95">
-            <div className="flex justify-between items-center mb-6">
+          <div className="relative w-full max-w-md bg-surface-container-lowest rounded-2xl p-8 shadow-2xl border border-outline-variant/10 flex flex-col max-h-[90dvh] overflow-hidden animate-in zoom-in-95">
+            <div className="flex justify-between items-center mb-6 shrink-0">
               <h3 className="font-heading font-bold text-xl text-primary">Adjust Stock</h3>
               <button onClick={() => setShowAdjustModal(false)} className="p-2 rounded-full hover:bg-surface-container transition-colors"><X size={20} /></button>
             </div>
             
-            <div className="mb-8 p-4 bg-surface-container-low rounded-xl flex items-center gap-4">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary font-bold">P</div>
-              <div>
-                <p className="font-bold text-sm">{selectedProduct?.name}</p>
-                <p className="text-xs text-on-surface-variant">Current Stock: <span className="font-bold">{selectedProduct?.stock}</span></p>
-              </div>
-            </div>
-
-            <form onSubmit={handleAdjustStock} className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Adjustment Amount</label>
-                <div className="flex items-center gap-4">
-                  <input 
-                    autoFocus
-                    required
-                    type="number"
-                    className="w-full bg-surface-container-high border-none rounded-xl py-4 px-6 text-center text-2xl font-extrabold focus:ring-2 focus:ring-primary outline-none transition-all"
-                    value={adjustQty}
-                    onChange={(e) => setAdjustQty(parseInt(e.target.value) || 0)}
-                  />
+            <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+              <div className="mb-8 p-4 bg-surface-container-low rounded-xl flex items-center gap-4">
+                <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary font-bold">P</div>
+                <div>
+                  <p className="font-bold text-sm">{selectedProduct?.name}</p>
+                  <p className="text-xs text-on-surface-variant">Current Stock: <span className="font-bold">{selectedProduct?.stock}</span></p>
                 </div>
-                <p className="text-[10px] text-center text-on-surface-variant">Use positive numbers for restock, negative for removals.</p>
               </div>
-              
-              <div className="grid grid-cols-2 gap-4 pt-2">
-                <button type="button" onClick={() => setShowAdjustModal(false)} className="py-4 bg-surface-container-low text-on-surface-variant font-bold rounded-xl active:scale-95 transition-all">Cancel</button>
-                <button 
-                  disabled={isSaving || adjustQty === 0}
-                  className="py-4 bg-gradient-to-br from-primary to-primary-container text-white font-bold rounded-xl shadow-lg active:scale-95 transition-all disabled:opacity-50"
-                  type="submit"
-                >
-                  {isSaving ? 'Saving...' : 'Apply Adjustment'}
-                </button>
-              </div>
-            </form>
+
+              <form onSubmit={handleAdjustStock} className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Adjustment Amount</label>
+                  <div className="flex items-center gap-4">
+                    <input 
+                      autoFocus
+                      required
+                      type="number"
+                      className="w-full bg-surface-container-high border-none rounded-xl py-4 px-6 text-center text-2xl font-extrabold focus:ring-2 focus:ring-primary outline-none transition-all"
+                      value={adjustQty}
+                      onChange={(e) => setAdjustQty(parseInt(e.target.value) || 0)}
+                    />
+                  </div>
+                  <p className="text-[10px] text-center text-on-surface-variant">Use positive numbers for restock, negative for removals.</p>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 pt-2 pb-4">
+                  <button type="button" onClick={() => setShowAdjustModal(false)} className="py-4 bg-surface-container-low text-on-surface-variant font-bold rounded-xl active:scale-95 transition-all">Cancel</button>
+                  <button 
+                    disabled={isSaving || adjustQty === 0}
+                    className="py-4 bg-gradient-to-br from-primary to-primary-container text-white font-bold rounded-xl shadow-lg active:scale-95 transition-all disabled:opacity-50"
+                    type="submit"
+                  >
+                    {isSaving ? 'Saving...' : 'Apply Adjustment'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Settings/Toggle Footer */}
@@ -391,11 +406,13 @@ function InventoryContent() {
         </div>
       </section>
 
-    {showMediaLibrary && (
+    {showMediaLibrary && isMounted && createPortal(
       <MediaGallery 
         onClose={() => setShowMediaLibrary(false)}
-      />
+      />,
+      document.body
     )}
+
     </div>
   );
 }
