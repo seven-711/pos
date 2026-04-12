@@ -382,9 +382,9 @@ export default function ProductsPage() {
                             <Package size={20} className="text-primary/40" />
                           )}
                         </div>
-                        <div>
-                          <div className="font-bold text-on-surface group-hover:text-primary transition-colors">{product.name}</div>
-                          <div className="text-xs text-on-surface-variant">{product.categories?.name || 'Uncategorized'} • ID: {product.id.split('-')[0].toUpperCase()}</div>
+                        <div className="flex flex-col">
+                          <div className="text-[15px] font-bold text-on-surface leading-tight font-heading">{product.name}</div>
+                          <div className="text-xs text-on-surface-variant">{product.categories?.name || 'Gcash services'} • ID: {product.id.split('-')[0].toUpperCase()}</div>
                         </div>
                       </div>
                     </td>
@@ -736,7 +736,7 @@ export default function ProductsPage() {
           </div>
         </div>,
         document.body
-      )}
+        )}
 
       {showToast && (
         <div className={`fixed top-4 right-4 md:top-6 md:right-6 z-[1100] ${toastType === 'success' ? 'bg-secondary text-white' : 'bg-error text-white'} px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300 max-w-[280px] md:max-w-xs border border-white/10`}>

@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Store, Package, BarChart2, Receipt } from "lucide-react";
+import { LayoutDashboard, Store, Package, BarChart2, Tag } from "lucide-react";
 
 export function BottomNav({ hidden = false }: { hidden?: boolean }) {
   const pathname = usePathname();
@@ -13,7 +13,7 @@ export function BottomNav({ hidden = false }: { hidden?: boolean }) {
     { href: "/pos", label: "Sell", icon: Store, isButton: false },
     { href: "/inventory", label: "Stock", icon: Package, isButton: false },
     { href: "/analytics", label: "Stats", icon: BarChart2, isButton: false },
-    { href: "/transactions", label: "Ledger", icon: Receipt, isButton: false },
+    { href: "/products", label: "Products", icon: Tag, isButton: false },
   ];
 
   return (
@@ -32,13 +32,23 @@ export function BottomNav({ hidden = false }: { hidden?: boolean }) {
                 e.stopPropagation();
               }
             }}
-            className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-all active:scale-90 touch-manipulation cursor-pointer select-none ${
-              isActive ? "text-[var(--color-primary)] font-bold" : "text-[var(--color-on-surface-variant)]"
+            className={`flex flex-col items-center justify-center h-full transition-all duration-500 active:scale-90 touch-manipulation cursor-pointer select-none ${
+              isActive ? "flex-[1.35] z-10" : "flex-1 z-0"
             }`}
             style={{ WebkitTapHighlightColor: "transparent" }}
           >
-            <Icon size={isActive ? 24 : 22} className="pointer-events-none" />
-            <span className="text-[10px] font-bold uppercase tracking-widest pointer-events-none">{item.label}</span>
+            <div className={`flex flex-col items-center justify-center gap-[3px] rounded-3xl transition-all duration-500 ${
+              isActive 
+                ? "bg-[var(--color-primary)] text-white shadow-lg shadow-primary/30 py-2 w-[90%] scale-100" 
+                : "text-[var(--color-on-surface-variant)] py-1.5 w-auto scale-90 opacity-70 hover:opacity-100 hover:text-[var(--color-on-surface)]"
+            }`}>
+              <Icon size={isActive ? 18 : 22} className={`pointer-events-none transition-all ${isActive ? 'mb-0' : ''}`} />
+              <span className={`font-bold uppercase tracking-widest pointer-events-none transition-all duration-500 ${
+                isActive ? 'text-[9px] max-w-full truncate px-1' : 'text-[9px]'
+              }`}>
+                {item.label}
+              </span>
+            </div>
           </Link>
         );
       })}

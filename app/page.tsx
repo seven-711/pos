@@ -210,11 +210,7 @@ export default function Dashboard() {
             let catName = item.products?.categories?.name;
             
             if (!catName) {
-              // If it's a null product, it's a service. 
-              // We'll group it as 'Services' but we can check notes if we want 'GCash' specifically
-              const lowNotes = (tx.notes || "").toLowerCase();
-              if (lowNotes.includes("gcash")) catName = "GCash";
-              else catName = "Services";
+              catName = "Gcash services";
             }
 
             const price = item.price || item.products?.selling_price || 0;

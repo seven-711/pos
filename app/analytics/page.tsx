@@ -173,7 +173,7 @@ export default function AnalyticsPage() {
     // 3. Category Split
     const catMap: Record<string, number> = {};
     items.forEach(item => {
-      const catName = item.products?.categories?.name || 'Uncategorized';
+      const catName = item.products?.categories?.name || 'Gcash services';
       const price = item.price || item.products?.selling_price || 0;
       const sub = Number(price) * Number(item.quantity || 0);
       catMap[catName] = (catMap[catName] || 0) + sub;
