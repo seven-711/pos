@@ -245,9 +245,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
 
       {/* ── Mobile Bottom Navigation ── */}
       {!isLayoutHidden && (
-        <div className={`md:hidden print:hidden transition-transform duration-500 ${ (showNotifications || showCart) ? 'translate-y-full' : 'translate-y-0' }`}>
-          <BottomNav />
-        </div>
+        <BottomNav hidden={showNotifications || showCart} />
       )}
 
 

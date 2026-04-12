@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Store, Package, BarChart2, Receipt } from "lucide-react";
 
-export function BottomNav() {
+export function BottomNav({ hidden = false }: { hidden?: boolean }) {
   const pathname = usePathname();
 
   const coreLinks = [
@@ -17,7 +17,7 @@ export function BottomNav() {
   ];
 
   return (
-    <nav className="md:hidden fixed bottom-6 left-4 right-4 h-16 bg-[var(--color-surface-container-highest)]/95 backdrop-blur-xl border border-[var(--color-outline-variant)]/20 shadow-[0_12px_40px_rgba(0,0,0,0.25)] flex justify-around items-center z-[200] px-2 pb-0 rounded-3xl">
+    <nav className={`md:hidden fixed bottom-15 left-4 right-4 h-16 bg-[var(--color-surface-container-highest)]/95 backdrop-blur-xl border border-[var(--color-outline-variant)]/20 shadow-[0_12px_40px_rgba(0,0,0,0.25)] flex justify-around items-center z-[200] px-2 pb-0 rounded-3xl transition-transform duration-500 print:hidden ${hidden ? 'translate-y-[200%]' : 'translate-y-0'}`}>
       {coreLinks.map((item, idx) => {
         const Icon = item.icon;
         const isActive = !item.isButton && pathname === item.href;
