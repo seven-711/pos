@@ -150,7 +150,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
     });
 
   return (
-    <div className="flex h-screen w-full bg-[var(--color-surface)] relative overflow-hidden">
+    <div className="flex h-dvh w-full bg-[var(--color-surface)] relative overflow-hidden">
 
 
       {/* ── Mobile Drawer Overlay ── */}
