@@ -34,6 +34,7 @@ export function MediaGallery({ onSelect, onClose, currentUrl }: MediaGalleryProp
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [inUseUrls, setInUseUrls] = useState<string[]>([]);
 
   useEffect(() => {
     fetchMedia();
@@ -53,16 +54,24 @@ export function MediaGallery({ onSelect, onClose, currentUrl }: MediaGalleryProp
     setLoading(true);
     setError(null);
     try {
-      const { data, error: listError } = await supabase.storage
-        .from('products')
-        .list('product-images', {
-          limit: 100,
-          offset: 0,
-          sortBy: { column: 'created_at', order: 'desc' },
-        });
+      const [storageRes, productsRes] = await Promise.all([
+        supabase.storage
+          .from('products')
+          .list('product-images', {
+            limit: 100,
+            offset: 0,
+            sortBy: { column: 'created_at', order: 'desc' },
+          }),
+        supabase.from('products').select('image_url').not('image_url', 'is', null)
+      ]);
 
-      if (listError) throw listError;
-      if (data) setFiles(data);
+      if (storageRes.error) throw storageRes.error;
+      if (storageRes.data) setFiles(storageRes.data);
+      
+      if (productsRes.data) {
+        setInUseUrls(productsRes.data.map((p: any) => p.image_url));
+      }
+
     } catch (err: any) {
       console.error("Storage Fetch Error:", err);
       setError(err.message || "Failed to load storage files");
@@ -171,20 +180,24 @@ export function MediaGallery({ onSelect, onClose, currentUrl }: MediaGalleryProp
               {filteredFiles.map((file) => {
                 const url = getFullUrl(file.name);
                 const isSelected = currentUrl === url;
+                const isInUse = inUseUrls.includes(url) && !isSelected;
                 
                 return (
                   <div 
                     key={file.id} 
-                    className={`group relative aspect-square rounded-2xl overflow-hidden border-2 transition-all cursor-pointer shadow-sm
-                      ${isSelected ? 'border-[var(--color-primary)] ring-4 ring-[var(--color-primary)]/20' : 'border-transparent hover:border-[var(--color-primary)]/50'}
+                    className={`group relative aspect-square rounded-2xl overflow-hidden border-2 transition-all shadow-sm
+                      ${isSelected ? 'border-[var(--color-primary)] ring-4 ring-[var(--color-primary)]/20' : 'border-transparent'}
+                      ${isInUse ? 'opacity-50 grayscale cursor-not-allowed' : 'cursor-pointer hover:border-[var(--color-primary)]/50'}
                     `}
-                    onClick={() => onSelect && onSelect(url)}
+                    onClick={() => {
+                      if (!isInUse && onSelect) onSelect(url);
+                    }}
                   >
                     {/* Image Preview */}
                     <img 
                       src={url} 
                       alt={file.name} 
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      className={`w-full h-full object-cover transition-transform duration-500 ${!isInUse ? 'group-hover:scale-110' : ''}`}
                       loading="lazy"
                     />
                     
@@ -195,10 +208,13 @@ export function MediaGallery({ onSelect, onClose, currentUrl }: MediaGalleryProp
                         <div className="flex gap-1">
                           {onSelect && (
                             <button 
-                              onClick={(e) => { e.stopPropagation(); onSelect(url); }}
-                              className="flex-1 bg-[var(--color-primary)] text-white text-[9px] py-1.5 rounded-lg font-black uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all"
+                              disabled={isInUse}
+                              onClick={(e) => { e.stopPropagation(); if (!isInUse) onSelect(url); }}
+                              className={`flex-1 text-white text-[9px] py-1.5 rounded-lg font-black uppercase tracking-wider transition-all
+                                ${isInUse ? 'bg-surface-variant text-on-surface-variant opacity-70' : 'bg-[var(--color-primary)] hover:brightness-110 active:scale-95'}
+                              `}
                             >
-                              Choose
+                              {isInUse ? 'In Use' : 'Choose'}
                             </button>
                           )}
                           <button 
