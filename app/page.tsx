@@ -72,6 +72,7 @@ type Transaction = {
   total_amount: number;
   total_profit: number;
   payment_method: string;
+  notes?: string | null;
   transaction_items: TransactionItem[];
 };
 
@@ -180,13 +181,11 @@ export default function Dashboard() {
       if (txErr) throw txErr;
 
       if (txData) {
-        if (isLive) {
-          setTxCount(txData.length);
-          const sales = txData.reduce((acc: number, t: Transaction) => acc + Number(t.total_amount || 0), 0);
-          const profit = txData.reduce((acc: number, t: Transaction) => acc + Number(t.total_profit || 0), 0);
-          setTotalSales(sales);
-          setTotalProfit(profit);
-        }
+        setTxCount(txData.length);
+        const sales = txData.reduce((acc: number, t: Transaction) => acc + Number(t.total_amount || 0), 0);
+        const profit = txData.reduce((acc: number, t: Transaction) => acc + Number(t.total_profit || 0), 0);
+        setTotalSales(sales);
+        setTotalProfit(profit);
         setRecentTX([...txData].reverse().slice(0, 5));
 
         // Hourly aggregation & Peak hours
@@ -207,7 +206,17 @@ export default function Dashboard() {
         const categoryMap: Record<string, number> = {};
         txData.forEach((tx) => {
           tx.transaction_items?.forEach((item) => {
-            const catName = item.products?.categories?.name || 'Uncategorized';
+            // Identify services (where product_id is null) vs physical products
+            let catName = item.products?.categories?.name;
+            
+            if (!catName) {
+              // If it's a null product, it's a service. 
+              // We'll group it as 'Services' but we can check notes if we want 'GCash' specifically
+              const lowNotes = (tx.notes || "").toLowerCase();
+              if (lowNotes.includes("gcash")) catName = "GCash";
+              else catName = "Services";
+            }
+
             const price = item.price || item.products?.selling_price || 0;
             const sub = Number(price) * Number(item.quantity || 0);
             categoryMap[catName] = (categoryMap[catName] || 0) + sub;

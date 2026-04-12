@@ -163,7 +163,9 @@ export default function POSPage() {
       amount: serviceMode === "INITIALIZE" ? 0 : amount,
       fee: serviceMode === "INITIALIZE" ? 0 : fee,
       payment_method: paymentMethod,
-      notes: serviceMode === "INITIALIZE" ? "Initial Vault Configuration" : (serviceMode === "ADJUST" ? serviceForm.reason : undefined)
+      notes: serviceMode === "INITIALIZE" 
+        ? "Initial Vault Configuration [GCash]" 
+        : (serviceMode === "ADJUST" ? `${serviceForm.reason} [GCash]` : `${serviceMode} Transaction [GCash]`)
     });
 
     if (success) {

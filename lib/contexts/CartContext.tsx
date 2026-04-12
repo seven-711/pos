@@ -42,6 +42,7 @@ interface CartContextType {
     fee: number;
     payment_method: string;
     notes?: string;
+    category_name?: string;
   }) => Promise<{ success: boolean; message: string }>;
   completeSale: () => Promise<{ success: boolean; message: string }>;
 }
@@ -196,6 +197,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           total_amount: params.amount + params.fee,
           total_profit: params.fee,
           payment_method: params.payment_method,
+          notes: params.notes || params.type,
           created_at: getLocalTimestamp()
         }])
         .select()

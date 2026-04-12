@@ -428,14 +428,6 @@ export default function ProductsPage() {
         <p className="text-xs text-on-surface-variant">Showing {products.length} products</p>
       </div>
 
-      {/* Mobile FAB */}
-      <button 
-        onClick={() => setShowAddModal(true)}
-        className="md:hidden fixed bottom-24 right-6 w-14 h-14 bg-gradient-to-br from-primary to-primary-container text-white rounded-full shadow-2xl flex items-center justify-center active:scale-95 transition-transform z-40 touch-manipulation cursor-pointer"
-      >
-        <Plus size={28} />
-      </button>
-
       {/* Add Product Modal Overlay */}
       {showAddModal && (
         <div className="fixed inset-0 z-[999] flex items-start justify-center p-2 overflow-y-auto py-8 md:py-20 transition-all sm:items-center">
