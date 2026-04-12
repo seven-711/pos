@@ -39,6 +39,16 @@ export function MediaGallery({ onSelect, onClose, currentUrl }: MediaGalleryProp
     fetchMedia();
   }, []);
 
+  // Lock the actual scroll container while modal is open
+  useEffect(() => {
+    const scroller = document.getElementById('main-scroll');
+    if (!scroller) return;
+    scroller.style.overflow = 'hidden';
+    return () => {
+      scroller.style.overflow = '';
+    };
+  }, []);
+
   const fetchMedia = async () => {
     setLoading(true);
     setError(null);
@@ -91,52 +101,52 @@ export function MediaGallery({ onSelect, onClose, currentUrl }: MediaGalleryProp
       <div className="relative w-full max-w-4xl h-[85vh] bg-[var(--color-surface)] rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
         
         {/* Header */}
-        <div className="p-6 border-b border-[var(--color-outline-variant)]/20 flex items-center justify-between bg-[var(--color-surface-container-low)]">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[var(--color-primary-container)] flex items-center justify-center text-[var(--color-primary)]">
-              <ImageIcon size={22} />
+        <div className="p-3 border-b border-[var(--color-outline-variant)]/20 flex items-center justify-between bg-[var(--color-surface-container-low)]">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-[var(--color-primary-container)] flex items-center justify-center text-[var(--color-primary)]">
+              <ImageIcon size={15} />
             </div>
             <div>
-              <h2 className="text-xl font-bold tracking-tight">Media Library</h2>
-              <p className="text-xs text-[var(--color-on-surface-variant)] uppercase tracking-wider font-semibold opacity-70">
+              <h2 className="text-sm font-black tracking-tight uppercase">Media Library</h2>
+              <p className="text-[9px] text-[var(--color-on-surface-variant)] uppercase tracking-wider font-semibold opacity-70">
                 Supabase Storage • product-images
               </p>
             </div>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <button 
               onClick={fetchMedia}
-              className="p-2 rounded-full hover:bg-[var(--color-surface-container)] text-[var(--color-on-surface-variant)] transition-colors"
+              className="p-1.5 rounded-full hover:bg-[var(--color-surface-container)] text-[var(--color-on-surface-variant)] transition-colors"
               title="Refresh"
             >
-              <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+              <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
             </button>
             <button 
               onClick={onClose}
-              className="p-2 rounded-full hover:bg-error/10 text-error transition-colors"
+              className="p-1.5 rounded-full hover:bg-error/10 text-error transition-colors"
             >
-              <X size={20} />
+              <X size={15} />
             </button>
           </div>
         </div>
 
         {/* Search Bar */}
-        <div className="px-6 py-4 bg-[var(--color-surface-container-lowest)] border-b border-[var(--color-outline-variant)]/10">
+        <div className="px-3 py-2 bg-[var(--color-surface-container-lowest)] border-b border-[var(--color-outline-variant)]/10">
           <div className="relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-outline)] group-focus-within:text-[var(--color-primary)] transition-colors" size={18} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-outline)] group-focus-within:text-[var(--color-primary)] transition-colors" size={14} />
             <input 
               type="text"
               placeholder="Search filename..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[var(--color-surface-container)] border-none rounded-2xl py-3 pl-10 pr-4 text-sm focus:ring-2 focus:ring-[var(--color-primary)] transition-all"
+              className="w-full bg-[var(--color-surface-container)] border-none rounded-xl py-2 pl-9 pr-3 text-xs focus:ring-2 focus:ring-[var(--color-primary)] transition-all"
             />
           </div>
         </div>
 
         {/* Gallery Grid */}
-        <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
+        <div className="flex-1 overflow-y-auto p-3 scrollbar-hide">
           {loading ? (
             <div className="h-full flex flex-col items-center justify-center gap-4 text-[var(--color-on-surface-variant)]">
               <Loader2 className="animate-spin text-[var(--color-primary)]" size={40} />

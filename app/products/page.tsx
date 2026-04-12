@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
 import { getLocalTimestamp } from "@/lib/utils/time";
 import { 
@@ -68,6 +69,9 @@ export default function ProductsPage() {
   const [packData, setPackData] = useState({ cost: '', qty: '' });
   const [calcMode, setCalcMode] = useState<'pack' | 'market'>('pack');
   const [showMediaGallery, setShowMediaGallery] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => { setIsMounted(true); }, []);
   
   // Toast State
   const [showToast, setShowToast] = useState(false);
@@ -84,6 +88,18 @@ export default function ProductsPage() {
       return () => clearTimeout(timer);
     }
   }, [showToast]);
+
+  // Lock the actual scroll container when any modal is open
+  useEffect(() => {
+    const scroller = document.getElementById('main-scroll');
+    if (!scroller) return;
+    if (showAddModal || showMediaGallery) {
+      scroller.style.overflow = 'hidden';
+    } else {
+      scroller.style.overflow = '';
+    }
+    return () => { scroller.style.overflow = ''; };
+  }, [showAddModal, showMediaGallery]);
 
   const fetchData = async () => {
     try {
@@ -428,17 +444,17 @@ export default function ProductsPage() {
         <p className="text-xs text-on-surface-variant">Showing {products.length} products</p>
       </div>
 
-      {/* Add Product Modal Overlay */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-[999] flex items-start justify-center p-2 overflow-y-auto py-8 md:py-20 transition-all sm:items-center">
+      {/* Add Product Modal — rendered via Portal to escape transform stacking context */}
+      {showAddModal && isMounted && createPortal(
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 overflow-hidden">
           {/* Backdrop */}
           <div 
             className="absolute inset-0 bg-surface/60 backdrop-blur-md"
             onClick={() => setShowAddModal(false)}
           />
-          {/* Modal Content - Seamless and Scrollable */}
-          <div className="relative w-full max-w-sm bg-white rounded-[2rem] shadow-[0_24px_48px_rgba(0,0,0,0.15)] border border-outline-variant/5 my-8 overflow-hidden">
-            <div className="px-3 pt-5 pb-3 bg-white flex flex-col items-center gap-0.5 border-b border-outline-variant/5">
+          {/* Modal Content */}
+          <div className="relative w-full max-w-sm bg-white rounded-[2rem] shadow-[0_24px_48px_rgba(0,0,0,0.15)] border border-outline-variant/5 max-h-[90dvh] flex flex-col overflow-hidden">
+            <div className="px-3 pt-5 pb-3 bg-white shrink-0 flex flex-col items-center gap-0.5 border-b border-outline-variant/5">
               <button 
                 onClick={closeModal} 
                 className="absolute top-1 right-2 p-1.5 text-on-surface-variant hover:text-primary transition-colors rounded-full hover:bg-surface-container-high"
@@ -450,11 +466,11 @@ export default function ProductsPage() {
               </h3>
             </div>
             
-            <form className="px-2.5 pb-3 space-y-1 mt-2" onSubmit={handleSaveProduct}>
+            <form className="px-2.5 pb-3 space-y-1 mt-2 flex-1 min-h-0 overflow-y-auto" onSubmit={handleSaveProduct}>
               {/* Image Card (Ultra Tighter) */}
               <div className="p-1 rounded-xl bg-secondary/5 border border-secondary/10">
                 <div className="relative group">
-                  <div className={`w-full h-16 rounded-lg border-1 border-dashed transition-all flex flex-col items-center justify-center overflow-hidden bg-white/50 ${formData.image_url ? 'border-primary/20' : 'border-outline-variant/30'}`}>
+                  <div className={`w-full h-12 rounded-lg border-1 border-dashed transition-all flex flex-col items-center justify-center overflow-hidden bg-white/50 ${formData.image_url ? 'border-primary/20' : 'border-outline-variant/30'}`}>
                     {formData.image_url ? (
                       <>
                         <img src={formData.image_url} alt="Preview" className="w-full h-full object-cover" />
@@ -708,7 +724,7 @@ export default function ProductsPage() {
               </div>
 
               {/* Action Button - Added huge bottom padding for mobile scroll clearance */}
-              <div className="pt-2 pb-20 md:pb-6">
+              <div className="pt-2 pb-4">
                 <button 
                   className="w-full py-3 rounded-xl bg-primary text-white font-black text-[11px] shadow-lg shadow-primary/20 active:scale-95 transition-all cursor-pointer uppercase tracking-[0.2em]" 
                   type="submit"
@@ -718,7 +734,8 @@ export default function ProductsPage() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {showToast && (
@@ -735,7 +752,7 @@ export default function ProductsPage() {
           </button>
         </div>
       )}
-      {showMediaGallery && (
+      {showMediaGallery && isMounted && createPortal(
         <MediaGallery 
           currentUrl={formData.image_url}
           onSelect={(url) => {
@@ -743,7 +760,8 @@ export default function ProductsPage() {
             setShowMediaGallery(false);
           }}
           onClose={() => setShowMediaGallery(false)}
-        />
+        />,
+        document.body
       )}
     </div>
   );
