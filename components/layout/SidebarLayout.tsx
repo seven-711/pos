@@ -141,10 +141,6 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
     setIsMobileMenuOpen(false);
   }, [pathname]);
 
-
-
-
-
   const renderNavLinks = (onClick?: () => void) =>
     navLinks.map((link) => {
       const Icon = link.icon;
@@ -180,9 +176,9 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
           />
           {/* Drawer panel */}
           <aside className="relative flex flex-col w-72 max-w-[85vw] bg-[var(--color-surface)] p-6 h-full shadow-2xl overflow-y-auto animate-in slide-in-from-left duration-500 ease-ios">
-            <div className="flex justify-between items-center mb-8">
-              <div className="text-xl font-black tracking-tight text-[var(--color-primary)] font-heading uppercase">
-                ESTELA
+            <div className="flex justify-between items-start mb-8">
+              <div className="w-11 h-auto shrink-0 relative flex items-center justify-center">
+                <img src="/logo.png" alt="POS ni Estela Logo" className="w-11 h-11 object-contain drop-shadow-md" />
               </div>
               <button
                 type="button"
@@ -203,8 +199,8 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       {/* ── Desktop Sidebar ── */}
       {!isLayoutHidden && (
         <aside className="hidden md:flex flex-col w-64 shrink-0 surface-low p-6 border-r border-[var(--color-outline-variant)]/10 overflow-y-auto print:hidden">
-          <div className="mb-10 text-2xl font-bold tracking-tight text-[var(--color-primary)] font-heading">
-            POS ni Estela
+          <div className="mb-8 w-16 h-auto shrink-0 relative flex items-center justify-start">
+            <img src="/logo.png" alt="POS ni Estela Logo" className="w-16 h-16 object-contain drop-shadow-md" />
           </div>
           <nav className="flex flex-col gap-1 flex-1 pb-6">
             {renderNavLinks()}

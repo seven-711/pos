@@ -17,6 +17,14 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "POS ni Estela",
   description: "Advanced AI CRM and Point of Sale System",
+  icons: {
+    icon: [
+      { url: '/logo.png', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/logo.png', type: 'image/png' },
+    ],
+  },
 };
 
 import { SessionProvider } from "@/lib/contexts/SessionContext";
