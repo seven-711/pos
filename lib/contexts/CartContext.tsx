@@ -44,7 +44,7 @@ interface CartContextType {
     notes?: string;
     category_name?: string;
   }) => Promise<{ success: boolean; message: string }>;
-  completeSale: () => Promise<{ success: boolean; message: string }>;
+  completeSale: () => Promise<{ success: boolean; message: string; subtotal?: number }>;
 }
 
 
@@ -106,7 +106,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setShowCart(prev => force !== undefined ? force : !prev);
   };
 
-  const completeSale = async (): Promise<{ success: boolean; message: string }> => {
+  const completeSale = async (): Promise<{ success: boolean; message: string; subtotal?: number }> => {
     if (cart.length === 0) return { success: false, message: "Cart is empty" };
     setIsProcessing(true);
 
@@ -167,12 +167,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
 
       clearCart();
-      setShowCart(false);
       
       // Emit a global event for pages to refresh their local stock/data
       window.dispatchEvent(new Event('transaction-completed'));
       
-      return { success: true, message: "Sale completed successfully!" };
+      return { success: true, message: "Sale completed successfully!", subtotal };
     } catch (err: any) {
       console.error("Sale Processing Error:", err);
       return { success: false, message: err.message || "Unknown transaction error" };

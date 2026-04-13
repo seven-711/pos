@@ -71,12 +71,14 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
             }`}
             style={{ WebkitTapHighlightColor: "transparent" }}
           >
-            <Bell size={22} className={unreadCount > 0 ? 'animate-bounce-slow' : ''} />
-            {unreadCount > 0 && (
-              <span className="absolute top-2.5 right-2.5 bg-error text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-surface-base shadow-sm">
-                {unreadCount}
-              </span>
-            )}
+            <div className="relative">
+              <Bell size={22} className={unreadCount > 0 ? 'animate-bounce-slow' : ''} />
+              {unreadCount > 0 && (
+                <span className="absolute -top-2.5 -right-2.5 bg-error text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full shadow-lg shadow-error/20 border-2 border-surface-container animate-in zoom-in-50 duration-300">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
+            </div>
           </button>
 
           {/* Desktop Dropdown */}

@@ -1,6 +1,7 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
+import { useNotifications } from "@/lib/contexts/NotificationContext";
 import { useCart } from "@/lib/contexts/CartContext";
 import { 
   ShoppingCart, 
@@ -10,10 +11,12 @@ import {
   Minus, 
   ArrowRight,
   Package,
-  Loader2
+  Loader2,
+  CheckCircle2
 } from "lucide-react";
 
 export function CartQuickView({ onClose }: { onClose: () => void }) {
+  const { addNotification } = useNotifications();
   const { 
     cart, 
     removeFromCart, 
@@ -42,6 +45,20 @@ export function CartQuickView({ onClose }: { onClose: () => void }) {
   const handleCheckout = async () => {
     const result = await completeSale();
     if (result.success) {
+      if (result.subtotal !== undefined) {
+        addNotification({
+          title: 'Sale Completed',
+          message: `A transaction of ₱${result.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })} was ledgered.`,
+          type: 'success',
+          action: { label: 'Details', href: '/transactions' }
+        });
+        window.dispatchEvent(new CustomEvent('global-toast', { 
+          detail: { 
+            msg: `Sale complete! ₱${result.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })} ledgered.`, 
+            type: 'success' 
+          } 
+        }));
+      }
       onClose();
     } else {
       alert(result.message);

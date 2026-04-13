@@ -1,6 +1,7 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
+import { useNotifications } from "@/lib/contexts/NotificationContext";
 import { useCart } from "@/lib/contexts/CartContext";
 import { 
   X, 
@@ -18,6 +19,7 @@ import { useRouter } from "next/navigation";
 
 export function CartMobileView() {
   const router = useRouter();
+  const { addNotification } = useNotifications();
   const { 
     cart, 
     removeFromCart, 
@@ -48,7 +50,21 @@ export function CartMobileView() {
   const handleCheckout = async () => {
     const result = await completeSale();
     if (result.success) {
-      // Logic for success can go here if needed
+      if (result.subtotal !== undefined) {
+        addNotification({
+          title: 'Sale Completed',
+          message: `A transaction of ₱${result.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })} was ledgered.`,
+          type: 'success',
+          action: { label: 'Details', href: '/transactions' }
+        });
+        window.dispatchEvent(new CustomEvent('global-toast', { 
+          detail: { 
+            msg: `Sale complete! ₱${result.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })} ledgered.`, 
+            type: 'success' 
+          } 
+        }));
+      }
+      toggleCart(false);
     } else {
       alert(result.message); // Fallback for error if no toast context yet
     }

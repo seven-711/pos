@@ -17,6 +17,8 @@ import {
   PieChart,
   Users,
   X,
+  CheckCircle2,
+  AlertCircle
 } from "lucide-react";
 
 
@@ -46,6 +48,21 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
   const { showNotifications, toggleNotifications } = useNotifications();
   const { showCart, toggleCart } = useCart();
   const { isLayoutHidden } = useSession();
+
+  // Global Toast State
+  const [toast, setToast] = useState<{show: boolean, msg: string, type: 'success' | 'error'}>({show: false, msg: '', type: 'success'});
+
+  useEffect(() => {
+    const handleToast = (e: any) => {
+      // Defer state update to avoid 'component hasn't mounted yet' sync collisions during context re-renders
+      setTimeout(() => {
+        setToast({ show: true, msg: e.detail.msg, type: e.detail.type });
+        setTimeout(() => setToast({ show: false, msg: '', type: 'success' }), 3000);
+      }, 10);
+    };
+    window.addEventListener('global-toast', handleToast);
+    return () => window.removeEventListener('global-toast', handleToast);
+  }, []);
 
   // Swipe Gesture Handling
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -249,8 +266,24 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
         <BottomNav hidden={showNotifications || showCart} />
       )}
 
-
       </div>
+
+      {/* ── Global Toast ── */}
+      {toast.show && (
+        <div className={`fixed top-4 right-4 md:top-6 md:right-6 z-[600] ${toast.type === 'success' ? 'bg-secondary' : 'bg-error'} text-on-secondary px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300 max-w-[280px] md:max-w-xs border border-white/10`}>
+          <div className="w-7 h-7 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
+            {toast.type === 'success' ? <CheckCircle2 size={16} strokeWidth={3} /> : <AlertCircle size={16} />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-black text-[11px] tracking-tight uppercase opacity-80">{toast.type === 'success' ? 'Success' : 'Error'}</p>
+            <p className="text-[12px] font-bold leading-tight truncate">{toast.msg}</p>
+          </div>
+          <button onClick={() => setToast(prev => ({...prev, show: false}))} className="opacity-40 hover:opacity-100 transition-opacity p-1 ml-1 cursor-pointer touch-manipulation">
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
     </div>
   );
 }
