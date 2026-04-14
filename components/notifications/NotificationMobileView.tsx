@@ -71,7 +71,7 @@ export function NotificationMobileView() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="flex flex-col h-full bg-[var(--color-surface-container-lowest)]">
       {/* Header - Fixed-like within the view */}
       <div className="px-6 py-5 border-b border-outline-variant/10 flex items-center justify-between bg-surface-base sticky top-0 z-10">
         <div className="flex items-center gap-3">
@@ -193,7 +193,7 @@ export function NotificationMobileView() {
                           toggleNotifications(false);
                           router.push(item.action.href);
                         }}
-                        className="px-6 py-5 pl-16 border-b border-outline-variant/5 last:border-0 flex items-center justify-between active:bg-white/40 transition-colors cursor-pointer group/sub"
+                        className="px-6 py-5 pl-16 border-b border-outline-variant/5 last:border-0 flex items-center justify-between active:bg-[var(--color-surface-container)] transition-colors cursor-pointer group/sub"
                       >
                         <div className="min-w-0">
                           <p className="text-sm font-black text-on-surface tracking-tight truncate">{item.title}</p>
@@ -215,7 +215,7 @@ export function NotificationMobileView() {
 
       {/* Floating Bottom Action for history */}
       {notifications.length > 0 && (hasHiddenHistory || showHistory) && (
-         <div className="p-6 pt-10 bg-gradient-to-t from-white via-white/90 to-transparent fixed bottom-0 left-0 right-0 z-20 pointer-events-none">
+         <div className="p-6 pt-10 bg-gradient-to-t from-[var(--color-surface-container-lowest)] via-[var(--color-surface-container-lowest)]/90 to-transparent fixed bottom-0 left-0 right-0 z-20 pointer-events-none">
             <button 
               onClick={() => setShowHistory(!showHistory)}
               className="w-full py-4 bg-surface-container-high text-on-surface-variant rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl pointer-events-auto active:scale-[0.98] transition-all hover:bg-surface-container-highest"

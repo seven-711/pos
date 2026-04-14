@@ -71,7 +71,7 @@ export function CartMobileView() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white relative overflow-hidden">
+    <div className="flex flex-col h-full bg-[var(--color-surface-container-lowest)] relative overflow-hidden">
       {/* Header */}
       <div className="px-6 py-5 border-b border-outline-variant/10 flex items-center justify-between bg-surface-base sticky top-0 z-10">
         <div className="flex items-center gap-3">
@@ -132,7 +132,7 @@ export function CartMobileView() {
                         <button 
                           disabled={isProcessing}
                           onClick={() => handleUpdateQty(item, -1)}
-                          className="w-8 h-8 flex items-center justify-center bg-white rounded-lg shadow-sm active:scale-90 transition-all text-on-surface-variant disabled:opacity-50"
+                          className="w-8 h-8 flex items-center justify-center bg-[var(--color-surface-container-lowest)] rounded-lg shadow-sm active:scale-90 transition-all text-on-surface-variant disabled:opacity-50"
                         >
                           <Minus size={14} />
                         </button>
@@ -162,7 +162,7 @@ export function CartMobileView() {
 
       {/* Floating Checkout Section */}
       {cart.length > 0 && (
-        <div className="absolute bottom-0 left-0 right-0 p-6 pb-12 bg-white border-t border-outline-variant/10 shadow-[0_-20px_40px_rgba(0,0,0,0.05)] z-20 space-y-4">
+        <div className="absolute bottom-0 left-0 right-0 p-6 pb-12 bg-[var(--color-surface-container-lowest)] border-t border-outline-variant/10 shadow-[0_-20px_40px_rgba(0,0,0,0.05)] z-20 space-y-4">
            <div className="flex items-center justify-between px-2">
               <div className="flex flex-col">
                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-on-surface-variant opacity-60">Total Billable</span>
