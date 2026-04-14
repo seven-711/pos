@@ -1,9 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
-import { Bell, UserCircle, ShoppingCart, Menu } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { Bell, UserCircle, ShoppingCart, Menu, Moon, Sun } from "lucide-react";
 import { useCart } from "@/lib/contexts/CartContext";
 import { useNotifications } from "@/lib/contexts/NotificationContext";
+import { useAuth } from "@/lib/contexts/AuthContext";
+import { useTheme } from "@/lib/contexts/ThemeContext";
 import { NotificationDropdown } from "@/components/notifications/NotificationDropdown";
 import { CartQuickView } from "@/components/cart/CartQuickView";
 
@@ -11,12 +14,20 @@ import { CartQuickView } from "@/components/cart/CartQuickView";
 export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
   const { totalQuantity, toggleCart, showCart } = useCart();
   const { unreadCount, toggleNotifications, showNotifications } = useNotifications();
+  const { signOut } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [isDesktopDropdownOpen, setIsDesktopDropdownOpen] = useState(false);
   const [isCartDesktopOpen, setIsCartDesktopOpen] = useState(false);
+  const [isProfileDesktopOpen, setIsProfileDesktopOpen] = useState(false);
+  const [showSignOutModal, setShowSignOutModal] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  
+  useEffect(() => { setIsMounted(true); }, []);
 
 
   const handleNotificationClick = () => {
     setIsCartDesktopOpen(false); // Close other dropdowns
+    setIsProfileDesktopOpen(false);
     toggleCart(false); // Close mobile cart if moving to notifications
     
     if (window.innerWidth < 768) {
@@ -28,6 +39,7 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
 
   const handleCartClick = () => {
     setIsDesktopDropdownOpen(false); // Close other dropdowns
+    setIsProfileDesktopOpen(false);
     toggleNotifications(false); // Close mobile notifications if moving to cart
     
     if (window.innerWidth < 768) {
@@ -43,7 +55,7 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
       {/* Brand — Mobile & Desktop trigger */}
       <button 
         onClick={onMenuClick}
-        className="flex items-center gap-3 text-[var(--color-primary)] relative group cursor-pointer touch-manipulation active:scale-95 transition-transform"
+        className="flex items-center gap-3 text-[var(--color-primary)] relative group cursor-pointer touch-manipulation active:scale-95 transition-transform md:hidden"
       >
         <div className="w-10 h-10 rounded-xl bg-[var(--color-primary)] text-white flex items-center justify-center shadow-md shadow-primary/20 group-hover:bg-[var(--color-primary-container)] group-hover:text-[var(--color-primary)] transition-colors">
           <Menu size={20} strokeWidth={3} />
@@ -60,6 +72,15 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
 
       {/* Right-side actions */}
       <div className="flex items-center gap-3 text-[var(--color-on-surface-variant)] relative">
+        <button
+          aria-label="Toggle Theme"
+          onClick={toggleTheme}
+          className="p-3 rounded-full transition-colors cursor-pointer touch-manipulation hover:bg-[var(--color-surface-container)] hover:text-[var(--color-primary)]"
+          style={{ WebkitTapHighlightColor: "transparent" }}
+        >
+          {theme === "dark" ? <Sun size={22} /> : <Moon size={22} />}
+        </button>
+
         <div className="relative">
           <button
             aria-label="Notifications"
@@ -114,14 +135,54 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
           )}
         </div>
 
-        <button
-          aria-label="Profile"
-          className="h-10 w-10 rounded-full surface-highest flex items-center justify-center hover:bg-[var(--color-surface-container)] transition-colors cursor-pointer touch-manipulation"
-          style={{ WebkitTapHighlightColor: "transparent" }}
-        >
-          <UserCircle size={24} />
-        </button>
+        <div className="relative">
+          <button
+            aria-label="Profile Menu"
+            onClick={() => {
+              setIsDesktopDropdownOpen(false);
+              setIsCartDesktopOpen(false);
+              setIsProfileDesktopOpen(!isProfileDesktopOpen);
+            }}
+            className={`h-10 w-10 rounded-full flex items-center justify-center transition-colors cursor-pointer touch-manipulation ${
+              isProfileDesktopOpen ? 'bg-[var(--color-surface-container)] text-[var(--color-primary)]' : 'surface-highest hover:bg-[var(--color-surface-container)]'
+            }`}
+            style={{ WebkitTapHighlightColor: "transparent" }}
+          >
+            <UserCircle size={24} />
+          </button>
+          
+          {isProfileDesktopOpen && (
+            <div className="absolute right-0 top-full mt-2 w-48 bg-surface-container-lowest rounded-2xl shadow-xl border border-outline-variant/10 overflow-hidden z-50 animate-in slide-in-from-top-2 duration-200">
+              <div className="p-2">
+                <button
+                  onClick={() => {
+                    setIsProfileDesktopOpen(false);
+                    setShowSignOutModal(true);
+                  }}
+                  className="w-full text-left px-4 py-3 rounded-xl text-sm font-semibold text-error hover:bg-error/10 transition-colors flex items-center gap-2 cursor-pointer"
+                >
+                  <UserCircle size={18} />
+                  Sign Out
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
+      {showSignOutModal && isMounted && createPortal(
+        <div className="fixed inset-0 z-[2000] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 overflow-hidden">
+          <div className="bg-[var(--color-surface-container-lowest)] w-full max-w-sm rounded-[2rem] p-6 shadow-2xl border border-[var(--color-error)]/10 animate-in zoom-in-95 duration-200">
+            <h3 className="font-heading font-black text-xl text-[var(--color-error)] mb-2 uppercase tracking-tight">System Sign Out</h3>
+            <p className="text-xs font-bold text-[var(--color-on-surface-variant)] opacity-80 mb-8 leading-relaxed">Are you sure you want to terminate the active session and log out securely?</p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowSignOutModal(false)} className="flex-1 py-3.5 bg-[var(--color-surface-container)] hover:bg-[var(--color-surface-container-high)] text-[var(--color-on-surface-variant)] font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all cursor-pointer">Cancel</button>
+              <button onClick={() => { setShowSignOutModal(false); signOut(); }} className="flex-1 py-3.5 bg-[var(--color-error)] text-[var(--color-on-error)] font-black text-[10px] uppercase tracking-[0.2em] rounded-xl shadow-lg shadow-error/20 active:scale-95 transition-all cursor-pointer hover:bg-error/90">Sign Out</button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
     </header>
   );
 }

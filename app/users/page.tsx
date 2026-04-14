@@ -1,15 +1,53 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { 
   ShieldCheck, 
   Filter, 
   ChevronRight, 
   Info, 
-  UserPlus 
+  UserPlus,
+  Loader2
 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  full_name: string | null;
+  role: string;
+  is_active: boolean;
+  avatar_url?: string;
+}
 
 export default function UsersPage() {
+  const [profiles, setProfiles] = useState<UserProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchProfiles();
+  }, []);
+
+  const fetchProfiles = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('is_active', { ascending: false });
+        
+      if (error) {
+        console.error("Error fetching profiles:", error);
+      } else {
+        setProfiles(data || []);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="max-w-md mx-auto w-full pt-4 pb-24">
       
@@ -23,7 +61,9 @@ export default function UsersPage() {
       <section className="grid grid-cols-2 gap-3 mb-8">
         <div className="bg-surface-container-low p-4 rounded-xl shadow-[0_4px_12px_rgba(0,40,162,0.03)] border border-outline-variant/10">
           <span className="text-[10px] font-bold uppercase tracking-wider text-secondary">Active Nodes</span>
-          <div className="text-3xl font-bold font-heading mt-1 text-on-surface">12</div>
+          <div className="text-3xl font-bold font-heading mt-1 text-on-surface">
+            {loading ? <Loader2 size={24} className="animate-spin text-primary mt-1" /> : profiles.filter(p => p.is_active).length}
+          </div>
         </div>
         <div className="bg-surface-container-highest p-4 rounded-xl flex flex-col justify-between shadow-[0_4px_12px_rgba(0,40,162,0.03)] border border-outline-variant/10">
           <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Security Level</span>
@@ -40,60 +80,41 @@ export default function UsersPage() {
           <h3 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Active Personnel</h3>
           <Filter size={20} className="text-primary cursor-pointer active:scale-95 transition-transform" />
         </div>
-        
-        {/* Staff Item 1 */}
-        <div className="bg-surface-container-low p-4 rounded-xl mb-3 flex items-center justify-between hover:bg-surface-container transition-colors cursor-pointer group border border-outline-variant/5">
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <img className="w-12 h-12 rounded-lg object-cover" alt="Elena Vance" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB4CCIUaoAAab9Pg7BhAGnhf2ZBUQaMpI09SDyU2VzuCwGsKmQDJWgNhjDBEuk7G0wlDa-o4-ej-V1RidOd3UjdYHBCb51m6CiwNESEzVhm5c1eVzExSzie6zBjSRGm2cASpMvm-xcpoAoiVhqpzCbisjf6l2k4uWtDjpPe5-HvyctgDaSc4mBC2fH-tDz0lwpwoKn4_Hco8AZornl93jjOM9T1SPmx_XQ8hZADnqkC21BOfPz_myeNrsf7PSPOr_Y15Narimer7hUk" />
-              <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-secondary border-2 border-surface rounded-full"></span>
-            </div>
-            <div>
-              <div className="font-bold text-on-surface text-sm group-hover:text-primary transition-colors font-heading">Elena Vance</div>
-              <div className="text-xs font-medium text-on-surface-variant">System Admin</div>
-            </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-10 opacity-60">
+            <Loader2 className="animate-spin text-primary" size={32} />
           </div>
-          <div className="text-right">
-            <div className="text-[10px] font-bold text-secondary uppercase tracking-tighter">Active</div>
-            <ChevronRight size={18} className="text-on-surface-variant mt-1 ml-auto group-hover:text-primary transition-colors" />
+        ) : profiles.length === 0 ? (
+          <div className="bg-surface-container-low p-6 rounded-xl text-center border border-outline-variant/10">
+            <UserPlus className="mx-auto text-outline/40 mb-2" size={32} />
+            <p className="text-on-surface-variant text-sm font-medium">No personnel found in ledger</p>
           </div>
-        </div>
-        
-        {/* Staff Item 2 */}
-        <div className="bg-surface p-4 rounded-xl mb-3 flex items-center justify-between hover:bg-surface-container transition-colors cursor-pointer group border border-outline-variant/5">
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <img className="w-12 h-12 rounded-lg object-cover" alt="Marcus Chen" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAkuUOG62pKl6PDPheKNvxzah3sK-0xQfz-zTY0amDQj-jovGy-0l8nIlK1IjJp9T7O8G5vH3LKLaYi3Q-_7F8UnoTqprkmh9yBIYE9h3MdKc-epbfjgsmpiSk_rXPsMkpa_MFnmY0PU0ULQJe_FSl4heN2I1UsZn--ftPv97Tp9jbHp45N_lq2vqfrs1dCgUwHk6GovD31p3t2cEGTGZnbuVKKaZhbK6wsODw3ncoN8fhYB4vz0I8h3nFJiGxiHWPi1uaVB7gZ9NrO" />
-              <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-secondary border-2 border-surface rounded-full"></span>
+        ) : (
+          profiles.map((profile) => (
+            <div key={profile.id} className={`p-4 rounded-xl mb-3 flex items-center justify-between hover:bg-surface-container transition-colors cursor-pointer group border border-outline-variant/5 ${profile.is_active ? 'bg-surface-container-low' : 'bg-surface-container-low opacity-60 group-hover:opacity-100'}`}>
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <img 
+                    className={`w-12 h-12 rounded-lg object-cover ${!profile.is_active ? 'grayscale' : ''}`} 
+                    alt={profile.full_name || profile.email} 
+                    src={profile.avatar_url || "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"} 
+                  />
+                  <span className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 border-2 border-surface rounded-full ${profile.is_active ? 'bg-secondary' : 'bg-outline-variant'}`}></span>
+                </div>
+                <div>
+                  <div className="font-bold text-on-surface text-sm group-hover:text-primary transition-colors font-heading">{profile.full_name || "Unknown Staff"}</div>
+                  <div className="text-xs font-medium text-on-surface-variant truncate block max-w-[140px] mini:max-w-full">{profile.role || "Pending Role"} • {profile.email}</div>
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <div className={`text-[10px] font-bold uppercase tracking-tighter ${profile.is_active ? 'text-secondary' : 'text-outline'}`}>
+                  {profile.is_active ? 'Active' : 'Offline'}
+                </div>
+                <ChevronRight size={18} className="text-on-surface-variant mt-1 ml-auto group-hover:text-primary transition-colors" />
+              </div>
             </div>
-            <div>
-              <div className="font-bold text-on-surface text-sm group-hover:text-primary transition-colors font-heading">Marcus Chen</div>
-              <div className="text-xs font-medium text-on-surface-variant">Head Cashier</div>
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-[10px] font-bold text-secondary uppercase tracking-tighter">Active</div>
-            <ChevronRight size={18} className="text-on-surface-variant mt-1 ml-auto group-hover:text-primary transition-colors" />
-          </div>
-        </div>
-        
-        {/* Staff Item 3 */}
-        <div className="bg-surface-container-low p-4 rounded-xl mb-3 flex items-center justify-between hover:bg-surface-container transition-colors cursor-pointer group border border-outline-variant/5">
-          <div className="flex items-center gap-4 opacity-60 group-hover:opacity-100 transition-opacity">
-            <div className="relative">
-              <img className="w-12 h-12 rounded-lg object-cover grayscale" alt="Sarah Miller" src="https://lh3.googleusercontent.com/aida-public/AB6AXuABRMI8sT65geqfSAQwd2b9lEVNtXUpeOFh2q2TykWVRIuBWzn5Zvv9ONGFQFdquBR7pwcuqOEPmXfK2O7vQ4Iz1a5YklXdtiFyzPjgROOe6rWzlJbdR6iP6evDmT_SUCvGJbtIcWb5-hRQFhawFLiedAubFYO33q7oLT-IgQed7pB92IeTI6i1QCYPt7AqI5-ODq78v4i3UE5flq9DHidNUpTT7q8YZtIVzbyWRhdwmJ_B0qvamoiBSLbYX5WHitp6W5DhIOfe_qpH" />
-              <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-outline-variant border-2 border-surface rounded-full"></span>
-            </div>
-            <div>
-              <div className="font-bold text-on-surface text-sm group-hover:text-primary transition-colors font-heading">Sarah Miller</div>
-              <div className="text-xs font-medium text-on-surface-variant">Trainee</div>
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-[10px] font-bold text-outline uppercase tracking-tighter">Offline</div>
-            <ChevronRight size={18} className="text-on-surface-variant mt-1 ml-auto group-hover:text-primary transition-colors" />
-          </div>
-        </div>
+          ))
+        )}
       </div>
 
       {/* Permission Configuration Section (Glassmorphism inspired card) */}

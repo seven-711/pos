@@ -18,6 +18,7 @@ import {
   EyeOff
 } from "lucide-react";
 import { useSession, type Session } from "@/lib/contexts/SessionContext";
+import { useTheme } from "@/lib/contexts/ThemeContext";
 import { getLocalTimestamp } from "@/lib/utils/time";
 import {
   Chart as ChartJS,
@@ -89,6 +90,7 @@ export default function Dashboard() {
 
   const [showPreview, setShowPreview] = useState(false);
   const { activeSession, refreshSession, isLayoutHidden, setIsLayoutHidden } = useSession();
+  const { theme } = useTheme();
   const [sessionDuration, setSessionDuration] = useState("");
 
   // Feed & Alerts
@@ -298,20 +300,25 @@ export default function Dashboard() {
     datasets: [{
       label: "Profit",
       data: hourlyProfitData.length > 0 ? hourlyProfitData : [0],
-      borderColor: "#00286d",
+      borderColor: theme === 'dark' ? "#8aaaff" : "#00286d",
       borderWidth: 4,
       fill: true,
       backgroundColor: (context: any) => {
         const ctx = context.chart.ctx;
         const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-        gradient.addColorStop(0, 'rgba(0, 40, 109, 0.15)');
-        gradient.addColorStop(1, 'rgba(0, 40, 109, 0)');
+        if (theme === 'dark') {
+          gradient.addColorStop(0, 'rgba(138, 170, 255, 0.25)');
+          gradient.addColorStop(1, 'rgba(138, 170, 255, 0)');
+        } else {
+          gradient.addColorStop(0, 'rgba(0, 40, 109, 0.15)');
+          gradient.addColorStop(1, 'rgba(0, 40, 109, 0)');
+        }
         return gradient;
       },
       tension: 0.5,
       pointRadius: 0,
       pointHoverRadius: 8,
-      pointHoverBackgroundColor: "#00286d",
+      pointHoverBackgroundColor: theme === 'dark' ? "#8aaaff" : "#00286d",
       pointHoverBorderColor: "#fff",
       pointHoverBorderWidth: 3,
     }],
@@ -342,7 +349,9 @@ export default function Dashboard() {
     tooltip: {
       backgroundColor: 'rgba(0, 12, 32, 0.85)',
       titleFont: { size: 12, family: 'Inter', weight: 'bold' as const },
+      titleColor: '#ffffff',
       bodyFont: { size: 11, family: 'Inter' },
+      bodyColor: '#ffffff',
       padding: 12,
       cornerRadius: 12,
       displayColors: false,
@@ -363,7 +372,7 @@ export default function Dashboard() {
         grid: { display: false }, 
         ticks: { 
           font: { size: 9, family: "Inter", weight: 'bold' as const },
-          color: 'rgba(0,0,0,0.3)'
+          color: theme === 'dark' ? '#ffffff' : 'rgba(0,0,0,0.4)'
         } 
       },
     },
@@ -488,7 +497,7 @@ export default function Dashboard() {
 
         <div className="col-span-2 md:col-span-1 bg-surface-container-highest p-3 rounded-xl relative overflow-hidden group border border-outline-variant/10">
           <span className="text-on-surface-variant text-[8px] font-bold uppercase tracking-widest block mb-1">Efficiency</span>
-          <div className="flex items-center gap-1 bg-white/60 w-fit px-1.5 py-0.5 rounded-full text-[8px] font-black text-primary border border-primary/5 uppercase tracking-tighter mb-2">ROI {roi}%</div>
+          <div className="flex items-center gap-1 bg-[var(--color-surface-container-highest)]/60 w-fit px-1.5 py-0.5 rounded-full text-[8px] font-black text-primary border border-primary/5 uppercase tracking-tighter mb-2">ROI {roi}%</div>
           <div className="text-lg font-extrabold text-on-surface font-heading">{txCount}</div>
         </div>
       </section>
@@ -565,7 +574,7 @@ export default function Dashboard() {
       <section className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
         {/* Live Activity Stream */}
         <div className="md:col-span-2 bg-surface-container-low rounded-xl border border-outline-variant/10 shadow-sm overflow-hidden">
-          <div className="p-3 border-b border-outline-variant/10 flex justify-between items-center bg-white/50">
+          <div className="p-3 border-b border-outline-variant/10 flex justify-between items-center bg-[var(--color-surface-container)]/50">
             <h3 className="font-extrabold text-xs text-primary font-heading uppercase tracking-tight">Intelligence Feed</h3>
             <span className="px-1.5 py-0.5 bg-surface-container text-on-surface-variant text-[7px] font-bold uppercase tracking-widest rounded-full">Auditor Sync</span>
           </div>
@@ -574,7 +583,7 @@ export default function Dashboard() {
               <div className="p-20 text-center text-on-surface-variant opacity-30 italic">No activity ledgered today.</div>
             ) : (
               recentTX.map(tx => (
-                <div key={tx.id} className="p-3 hover:bg-white transition-colors flex justify-between items-center group cursor-pointer">
+                <div key={tx.id} className="p-3 hover:bg-[var(--color-surface-container-highest)] transition-colors flex justify-between items-center group cursor-pointer">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary">
                       <Receipt size={16} className="opacity-40" />

@@ -268,7 +268,7 @@ export default function POSPage() {
             type="text"
           />
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
+        <div className="flex gap-2 overflow-x-auto pb-3 md:pb-0 custom-scrollbar">
           <button
             onClick={() => setSelectedCategory(null)}
             className={`px-6 py-4 rounded-xl font-bold text-sm whitespace-nowrap transition-all active:scale-95 ${!selectedCategory ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface-variant'}`}
@@ -305,9 +305,9 @@ export default function POSPage() {
                   <div
                     key={product.id}
                     onClick={() => !isOutOfStock && addToCart(product)}
-                    className={`recessed-card rounded-[1.5rem] sm:rounded-3xl p-1.5 sm:p-2 transition-all duration-300 ${isOutOfStock ? 'opacity-40 cursor-not-allowed' : 'active:scale-95 cursor-pointer group'}`}
+                    className={`recessed-card dark:!bg-[var(--color-surface-container-lowest)] dark:![box-shadow:inset_0_2px_8px_rgba(0,0,0,0.4),0_4px_12px_rgba(0,0,0,0.2),0_1px_2px_rgba(0,0,0,0.1)] dark:!border-white/5 rounded-[1.5rem] sm:rounded-3xl p-1.5 sm:p-2 transition-all duration-300 ${isOutOfStock ? 'opacity-40 cursor-not-allowed' : 'active:scale-95 cursor-pointer group'}`}
                   >
-                  <div className="frosted-inner rounded-xl sm:rounded-2xl overflow-hidden flex flex-col h-full shadow-lg">
+                  <div className="frosted-inner dark:!bg-[#141228]/40 dark:!backdrop-blur-[16px] dark:!border-white/10 rounded-xl sm:rounded-2xl overflow-hidden flex flex-col h-full shadow-lg">
                     {/* Product Image Area */}
                     <div className="p-1.5 sm:p-2">
                       <div className="w-full aspect-[4/5] rounded-xl sm:rounded-2xl overflow-hidden bg-gradient-to-br from-surface-container-highest to-surface-dim relative">
@@ -332,7 +332,7 @@ export default function POSPage() {
                             relative flex flex-col items-center min-w-[34px] sm:min-w-[42px] p-1 sm:p-1.5 rounded-xl border backdrop-blur-2xl shadow-xl
                             ${product.stock <= (product.min_stock || 10) ? 'bg-error text-on-error border-error-container/20' : 
                               product.stock <= (product.min_stock || 10) + 5 ? 'bg-amber-500/90 text-white border-white/20' : 
-                              'bg-black/80 text-white border-white/10'}
+                              'bg-black/80 dark:bg-black text-white border-white/10'}
                           `}>
                             {/* Status Dot */}
                             <div className={`
@@ -354,7 +354,7 @@ export default function POSPage() {
                         {/* Sold Out Overlay */}
                         {isOutOfStock && (
                           <div className="absolute inset-0 bg-black/50 backdrop-blur-[4px] flex items-center justify-center z-20">
-                            <span className="bg-white/95 text-error px-3 py-1 sm:px-5 sm:py-2 rounded-full font-black text-[8px] sm:text-[10px] uppercase tracking-[0.2em] shadow-2xl border border-error/20">
+                            <span className="bg-white/95 dark:bg-black/95 text-error px-3 py-1 sm:px-5 sm:py-2 rounded-full font-black text-[8px] sm:text-[10px] uppercase tracking-[0.2em] shadow-2xl border border-error/20">
                               Sold Out
                             </span>
                           </div>
@@ -435,7 +435,7 @@ export default function POSPage() {
                       placeholder="0.00"
                       value={serviceForm.amount}
                       onChange={(e) => setServiceForm({ ...serviceForm, amount: e.target.value })}
-                      className="w-full py-3.5 pl-12 pr-5 bg-white border border-secondary/10 rounded-xl font-black text-lg text-primary outline-none focus:ring-2 focus:ring-secondary transition-all"
+                      className="w-full py-3.5 pl-12 pr-5 bg-white dark:bg-surface-container border border-secondary/10 rounded-xl font-black text-lg text-primary outline-none focus:ring-2 focus:ring-secondary transition-all"
                     />
                   </div>
                   <button 
@@ -464,7 +464,7 @@ export default function POSPage() {
                   </div>
 
                   {/* Balance HUD */}
-                  <div className="bg-white/60 backdrop-blur-md px-5 py-2.5 rounded-2xl border border-secondary/5 shadow-sm flex items-center gap-4">
+                  <div className="bg-white/60 dark:bg-black/40 backdrop-blur-md px-5 py-2.5 rounded-2xl border border-secondary/5 shadow-sm flex items-center gap-4">
                     <div className="text-right">
                       <span className="text-[8px] font-black text-on-surface-variant uppercase tracking-widest block opacity-50">Current Balance</span>
                       <span className="text-xl font-black text-secondary font-heading">
@@ -486,10 +486,10 @@ export default function POSPage() {
 
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                   {[
-                    { label: "Cash In", icon: <ArrowUpCircle size={18} />, mode: "CASH_IN" as const, color: "bg-emerald-50 text-emerald-600 border-emerald-100" },
-                    { label: "Cash Out", icon: <ArrowDownCircle size={18} />, mode: "CASH_OUT" as const, color: "bg-amber-50 text-amber-600 border-amber-100" },
-                    { label: "Phone Load", icon: <Smartphone size={18} />, mode: "LOAD" as const, color: "bg-blue-50 text-blue-600 border-blue-100" },
-                    { label: "History", icon: <HistoryIcon size={18} />, mode: null, color: "bg-surface-container text-on-surface-variant border-outline-variant/10" }
+                    { label: "Cash In", icon: <ArrowUpCircle size={18} />, mode: "CASH_IN" as const, color: "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900/50" },
+                    { label: "Cash Out", icon: <ArrowDownCircle size={18} />, mode: "CASH_OUT" as const, color: "bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-900/50" },
+                    { label: "Phone Load", icon: <Smartphone size={18} />, mode: "LOAD" as const, color: "bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900/50" },
+                    { label: "History", icon: <HistoryIcon size={18} />, mode: null, color: "bg-surface-container text-on-surface-variant border-outline-variant/10 dark:bg-surface-container-high dark:border-outline-variant/5" }
                   ].map((btn, i) => (
                     <button
                       key={i}
@@ -659,13 +659,13 @@ export default function POSPage() {
                   <div className="flex gap-2">
                     <button 
                       onClick={() => setServiceForm({ ...serviceForm, isFeeDigital: false })}
-                      className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all ${!serviceForm.isFeeDigital ? 'bg-secondary text-white border-secondary shadow-md shadow-secondary/10' : 'bg-white text-on-surface-variant border-outline-variant/10'}`}
+                      className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all ${!serviceForm.isFeeDigital ? 'bg-secondary text-white border-secondary shadow-md shadow-secondary/10' : 'bg-white dark:bg-black/50 text-on-surface-variant border-outline-variant/10'}`}
                     >
                       Physical Cash
                     </button>
                     <button 
                       onClick={() => setServiceForm({ ...serviceForm, isFeeDigital: true })}
-                      className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all ${serviceForm.isFeeDigital ? 'bg-secondary text-white border-secondary shadow-md shadow-secondary/10' : 'bg-white text-on-surface-variant border-outline-variant/10'}`}
+                      className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all ${serviceForm.isFeeDigital ? 'bg-secondary text-white border-secondary shadow-md shadow-secondary/10' : 'bg-white dark:bg-black/50 text-on-surface-variant border-outline-variant/10'}`}
                     >
                       Digital (GCash)
                     </button>

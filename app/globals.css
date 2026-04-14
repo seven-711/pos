@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-tertiary-container: #693527;
   --color-outline: #707975;
@@ -71,4 +73,62 @@
     backdrop-filter: blur(12px) saturate(180%);
     border: 1px solid rgba(255, 255, 255, 0.3);
   }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--color-outline-variant);
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--color-outline);
+  }
 }
+
+:root.dark {
+    --color-background: #080616;
+    --color-surface: #080616;
+    --color-surface-bright: #121021;
+    --color-surface-dim: #03020b;
+    --color-surface-container-lowest: #03020b;
+    --color-surface-container-low: rgba(255, 255, 255, 0.02);
+    --color-surface-container: rgba(255, 255, 255, 0.05);
+    --color-surface-container-high: rgba(255, 255, 255, 0.08);
+    --color-surface-container-highest: rgba(255, 255, 255, 0.12);
+    --color-surface-variant: rgba(255, 255, 255, 0.1);
+    
+    --color-on-surface: #fcf9f8;
+    --color-on-background: #fcf9f8;
+    --color-on-surface-variant: #b0afb5;
+    
+    --color-outline: #3b3a4a;
+    --color-outline-variant: #242230;
+
+    /* Adjust primaries for better dark mode visibility */
+    --color-primary: #8aaaff;
+    --color-on-primary: #001848;
+    --color-primary-container: #00286d;
+    --color-on-primary-container: #dae2ff;
+  }
+
+  /* Glassmorphism updates for Dark Mode */
+  :root.dark .frosted-inner {
+    background: rgba(20, 18, 40, 0.4);
+    backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  :root.dark .recessed-card {
+    background: var(--color-surface-container-low);
+    box-shadow: 
+      inset 0 2px 8px rgba(0,0,0,0.4), 
+      0 4px 12px rgba(0,0,0,0.2),
+      0 1px 2px rgba(0,0,0,0.1);
+    border: 4px solid rgba(255, 255, 255, 0.03);
+  }
+

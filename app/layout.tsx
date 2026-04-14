@@ -30,6 +30,8 @@ export const metadata: Metadata = {
 import { SessionProvider } from "@/lib/contexts/SessionContext";
 import { CartProvider } from "@/lib/contexts/CartContext";
 import { NotificationProvider } from "@/lib/contexts/NotificationContext";
+import { AuthProvider } from "@/lib/contexts/AuthContext";
+import { ThemeProvider } from "@/lib/contexts/ThemeContext";
 
 export default function RootLayout({
   children,
@@ -37,7 +39,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${manrope.variable} ${inter.variable} antialiased surface-base min-h-screen text-[var(--color-on-surface)]`}>
         {process.env.NODE_ENV === "development" && (
           <Script
@@ -46,19 +48,19 @@ export default function RootLayout({
             strategy="afterInteractive"
           />
         )}
-        <SessionProvider>
-
-
-
-          <CartProvider>
-            <NotificationProvider>
-              <SidebarLayout>
-                {children}
-              </SidebarLayout>
-            </NotificationProvider>
-          </CartProvider>
-        </SessionProvider>
-
+        <ThemeProvider>
+          <AuthProvider>
+            <SessionProvider>
+              <CartProvider>
+                <NotificationProvider>
+                  <SidebarLayout>
+                    {children}
+                  </SidebarLayout>
+                </NotificationProvider>
+              </CartProvider>
+            </SessionProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
