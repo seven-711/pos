@@ -66,7 +66,7 @@ export function CartQuickView({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="absolute top-14 right-0 w-[400px] bg-white rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.15)] border border-outline-variant/10 overflow-hidden animate-in fade-in zoom-in-95 duration-200 z-[1000] hidden md:block">
+    <div className="absolute top-14 right-0 w-[400px] bg-[var(--color-surface-container-lowest)] rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.15)] border border-outline-variant/10 overflow-hidden animate-in fade-in zoom-in-95 duration-200 z-[1000] hidden md:block">
       {/* Header */}
       <div className="px-5 py-4 border-b border-outline-variant/5 bg-surface-container-low/30 flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -126,7 +126,7 @@ export function CartQuickView({ onClose }: { onClose: () => void }) {
                       <button 
                         disabled={isProcessing}
                         onClick={() => handleUpdateQty(item, -1)}
-                        className="p-1 hover:bg-white rounded flex items-center justify-center text-on-surface/60 transition-colors disabled:opacity-30"
+                        className="p-1 hover:bg-[var(--color-surface-container-lowest)] rounded flex items-center justify-center text-on-surface/60 transition-colors disabled:opacity-30"
                       >
                         <Minus size={12} />
                       </button>
@@ -134,7 +134,7 @@ export function CartQuickView({ onClose }: { onClose: () => void }) {
                       <button 
                         disabled={isProcessing}
                         onClick={() => handleUpdateQty(item, 1)}
-                        className="p-1 hover:bg-white rounded flex items-center justify-center text-primary transition-colors disabled:opacity-30"
+                        className="p-1 hover:bg-[var(--color-surface-container-lowest)] rounded flex items-center justify-center text-primary transition-colors disabled:opacity-30"
                       >
                         <Plus size={12} />
                       </button>

@@ -73,7 +73,7 @@ export function NotificationDropdown({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="absolute top-14 right-0 w-[380px] bg-white rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.15)] border border-outline-variant/10 overflow-hidden animate-in fade-in zoom-in-95 duration-200 z-[1000] hidden md:block">
+    <div className="absolute top-14 right-0 w-[380px] bg-[var(--color-surface-container-lowest)] rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.15)] border border-outline-variant/10 overflow-hidden animate-in fade-in zoom-in-95 duration-200 z-[1000] hidden md:block">
       {/* Header */}
       <div className="px-5 py-4 border-b border-outline-variant/5 bg-surface-container-low/30 flex items-center justify-between">
         <h3 className="text-lg font-black font-heading text-primary uppercase tracking-tight">Notifications</h3>
@@ -198,7 +198,7 @@ export function NotificationDropdown({ onClose }: { onClose: () => void }) {
                           markAsRead(item.id);
                           onClose();
                         }}
-                        className="p-4 pl-14 border-b border-outline-variant/5 last:border-0 flex items-center justify-between group/sub transition-colors hover:bg-white/50 cursor-pointer"
+                        className="p-4 pl-14 border-b border-outline-variant/5 last:border-0 flex items-center justify-between group/sub transition-colors hover:bg-[var(--color-surface-container)] cursor-pointer"
                       >
                         <div className="min-w-0">
                           <p className="text-[11px] font-black text-on-surface tracking-tight truncate">{item.title}</p>
