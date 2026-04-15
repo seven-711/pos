@@ -453,8 +453,8 @@ export default function ProductsPage() {
             onClick={() => setShowAddModal(false)}
           />
           {/* Modal Content */}
-          <div className="relative w-full max-w-sm bg-white rounded-[2rem] shadow-[0_24px_48px_rgba(0,0,0,0.15)] border border-outline-variant/5 max-h-[90dvh] flex flex-col overflow-hidden">
-            <div className="px-3 pt-5 pb-3 bg-white shrink-0 flex flex-col items-center gap-0.5 border-b border-outline-variant/5">
+          <div className="relative w-full max-w-sm bg-surface-container-lowest rounded-[2rem] shadow-[0_24px_48px_rgba(0,0,0,0.15)] border border-outline-variant/5 max-h-[90dvh] flex flex-col overflow-hidden">
+            <div className="px-3 pt-5 pb-3 bg-surface-container-lowest shrink-0 flex flex-col items-center gap-0.5 border-b border-outline-variant/5">
               <button 
                 onClick={closeModal} 
                 className="absolute top-1 right-2 p-1.5 text-on-surface-variant hover:text-primary transition-colors rounded-full hover:bg-surface-container-high"
@@ -470,7 +470,7 @@ export default function ProductsPage() {
               {/* Image Card (Ultra Tighter) */}
               <div className="p-1 rounded-xl bg-secondary/5 border border-secondary/10">
                 <div className="relative group">
-                  <div className={`w-full h-12 rounded-lg border-1 border-dashed transition-all flex flex-col items-center justify-center overflow-hidden bg-white/50 ${formData.image_url ? 'border-primary/20' : 'border-outline-variant/30'}`}>
+                  <div className={`w-full h-12 rounded-lg border-1 border-dashed transition-all flex flex-col items-center justify-center overflow-hidden bg-surface-container-lowest/50 ${formData.image_url ? 'border-primary/20' : 'border-outline-variant/30'}`}>
                     {formData.image_url ? (
                       <>
                         <img src={formData.image_url} alt="Preview" className="w-full h-full object-cover" />
@@ -593,14 +593,14 @@ export default function ProductsPage() {
                       <button 
                         type="button"
                         onClick={() => setCalcMode('pack')}
-                        className={`flex-1 py-1 text-[8px] font-black uppercase tracking-widest rounded-md transition-all ${calcMode === 'pack' ? 'bg-white shadow-sm text-primary' : 'text-on-surface-variant opacity-40'}`}
+                        className={`flex-1 py-1 text-[8px] font-black uppercase tracking-widest rounded-md transition-all ${calcMode === 'pack' ? 'bg-surface-container-lowest shadow-sm text-primary' : 'text-on-surface-variant opacity-40'}`}
                       >
                         Fixed Pack
                       </button>
                       <button 
                         type="button"
                         onClick={() => setCalcMode('market')}
-                        className={`flex-1 py-1 text-[8px] font-black uppercase tracking-widest rounded-md transition-all ${calcMode === 'market' ? 'bg-white shadow-sm text-secondary' : 'text-on-surface-variant opacity-40'}`}
+                        className={`flex-1 py-1 text-[8px] font-black uppercase tracking-widest rounded-md transition-all ${calcMode === 'market' ? 'bg-surface-container-lowest shadow-sm text-secondary' : 'text-on-surface-variant opacity-40'}`}
                       >
                         Market Bulk
                       </button>
@@ -644,7 +644,7 @@ export default function ProductsPage() {
                               setFormData(f => ({ ...f, cost_price: unitCost.toFixed(2) }));
                             }
                           }}
-                          className={`w-full bg-white/50 border-b text-[11px] font-bold px-1 py-1 focus:outline-none transition-colors ${calcMode === 'market' ? 'border-secondary/20 focus:border-secondary' : 'border-primary/20 focus:border-primary'}`}
+                          className={`w-full bg-surface-container-lowest/50 border-b text-[11px] font-bold px-1 py-1 focus:outline-none transition-colors ${calcMode === 'market' ? 'border-secondary/20 focus:border-secondary' : 'border-primary/20 focus:border-primary'}`}
                         />
                       </div>
                       <div className="space-y-1">
@@ -666,7 +666,7 @@ export default function ProductsPage() {
                               }
                             }
                           }}
-                          className={`w-full bg-white/50 border-b text-[11px] font-bold px-1 py-1 focus:outline-none transition-colors ${calcMode === 'market' ? 'border-secondary/20 focus:border-secondary' : 'border-primary/20 focus:border-primary'}`}
+                          className={`w-full bg-surface-container-lowest/50 border-b text-[11px] font-bold px-1 py-1 focus:outline-none transition-colors ${calcMode === 'market' ? 'border-secondary/20 focus:border-secondary' : 'border-primary/20 focus:border-primary'}`}
                         />
                       </div>
                     </div>
@@ -707,7 +707,7 @@ export default function ProductsPage() {
                         type="number" placeholder="4"
                         value={formData.bundle_qty}
                         onChange={(e) => setFormData({...formData, bundle_qty: e.target.value})}
-                        className="w-full bg-white/40 border-b border-secondary/10 text-[10px] font-bold px-1 outline-none"
+                        className="w-full bg-surface-container-lowest/40 border-b border-secondary/10 text-[10px] font-bold px-1 outline-none"
                       />
                     </div>
                     <div className="flex items-center gap-1">
@@ -716,7 +716,7 @@ export default function ProductsPage() {
                         type="number" step="0.01" placeholder="5.00"
                         value={formData.bundle_price}
                         onChange={(e) => setFormData({...formData, bundle_price: e.target.value})}
-                        className="w-full bg-white/40 border-b border-secondary/10 text-[10px] font-bold px-1 outline-none"
+                        className="w-full bg-surface-container-lowest/40 border-b border-secondary/10 text-[10px] font-bold px-1 outline-none"
                       />
                     </div>
                   </div>

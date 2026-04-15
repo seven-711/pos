@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
-import { getLocalTimestamp } from "@/lib/utils/time";
+import Image from "next/image";
 import {
   Search,
   Coffee,
@@ -311,11 +311,13 @@ export default function POSPage() {
                     {/* Product Image Area */}
                     <div className="p-1.5 sm:p-2">
                       <div className="w-full aspect-[4/5] rounded-xl sm:rounded-2xl overflow-hidden bg-gradient-to-br from-surface-container-highest to-surface-dim relative">
-                        {product.image_url ? (
-                          <img 
-                            src={product.image_url} 
+                        {product.image_url && product.image_url !== "null" && product.image_url.trim() !== "" ? (
+                          <Image 
+                            src={encodeURI(product.image_url.trim())} 
                             alt={product.name} 
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out" 
+                            fill
+                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                            className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out" 
                           />
                         ) : (
                           <div className="w-full h-full flex flex-col items-center justify-center bg-primary/5 group-hover:bg-primary/10 transition-colors">

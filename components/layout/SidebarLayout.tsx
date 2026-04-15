@@ -224,7 +224,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
           <main 
             id="main-scroll"
             className={`
-              absolute inset-0 overflow-y-auto w-full p-3 md:p-6 pb-48 md:pb-40 z-0 transition-transform duration-500 ease-ios
+              absolute inset-0 overflow-y-auto custom-scrollbar w-full p-3 md:p-6 pb-48 md:pb-40 z-0 transition-transform duration-500 ease-ios
               ${(showNotifications || showCart) ? 'translate-x-[-100%] md:translate-x-0' : 'translate-x-0'}
             `}
           >

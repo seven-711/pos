@@ -425,10 +425,7 @@ export default function Dashboard() {
               </div>
               <h1 className="text-4xl font-black text-primary tracking-tighter mb-2 font-heading">POS NI ESTELA</h1>
               <div className="h-[2px] w-12 bg-primary mx-auto mb-6"></div>
-              <div className="flex items-center justify-center gap-3 text-secondary font-bold text-xs uppercase tracking-widest">
-                <Loader2 className="animate-spin" size={16} />
-                <span>Syncing Operational Matrix</span>
-              </div>
+              {/* Placeholder to keep layout spacing if needed, but removing text as requested */}
             </>
           )}
         </div>

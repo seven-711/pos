@@ -114,6 +114,12 @@
     --color-on-primary: #001848;
     --color-primary-container: #00286d;
     --color-on-primary-container: #dae2ff;
+
+    /* Secondary and Tertiary adjustments for dark mode */
+    --color-secondary: #84d5c5;
+    --color-on-secondary: #003730;
+    --color-tertiary: #ffb5a1;
+    --color-on-tertiary: #5d1908;
   }
 
   /* Glassmorphism updates for Dark Mode */
@@ -130,5 +136,13 @@
       0 4px 12px rgba(0,0,0,0.2),
       0 1px 2px rgba(0,0,0,0.1);
     border: 4px solid rgba(255, 255, 255, 0.03);
+  }
+
+  /* Custom Scrollbar Dark Mode */
+  :root.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--color-outline-variant);
+  }
+  :root.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--color-outline);
   }
 
