@@ -3,6 +3,11 @@ import Script from "next/script";
 import { Manrope, Inter } from "next/font/google";
 import "./globals.css";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
+import { SessionProvider } from "@/lib/contexts/SessionContext";
+import { CartProvider } from "@/lib/contexts/CartContext";
+import { NotificationProvider } from "@/lib/contexts/NotificationContext";
+import { AuthProvider } from "@/lib/contexts/AuthContext";
+import { ThemeProvider } from "@/lib/contexts/ThemeContext";
 
 const manrope = Manrope({ 
   subsets: ["latin"],
@@ -26,12 +31,6 @@ export const metadata: Metadata = {
     ],
   },
 };
-
-import { SessionProvider } from "@/lib/contexts/SessionContext";
-import { CartProvider } from "@/lib/contexts/CartContext";
-import { NotificationProvider } from "@/lib/contexts/NotificationContext";
-import { AuthProvider } from "@/lib/contexts/AuthContext";
-import { ThemeProvider } from "@/lib/contexts/ThemeContext";
 
 export default function RootLayout({
   children,

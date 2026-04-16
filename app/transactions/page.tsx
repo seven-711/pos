@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { useSession } from "@/lib/contexts/SessionContext";
 import {
   Search,
   Calendar,
@@ -39,7 +40,8 @@ const PAGE_SIZE = 10;
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { hasSystemBooted, setHasSystemBooted } = useSession();
+  const [loading, setLoading] = useState(!hasSystemBooted);
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
@@ -59,6 +61,14 @@ export default function TransactionsPage() {
 
   useEffect(() => {
     fetchGlobalStats();
+
+    // Global Sync Listener
+    const handleSync = () => {
+      fetchGlobalStats();
+      fetchTransactions(true);
+    };
+    window.addEventListener('global-sync', handleSync);
+    return () => window.removeEventListener('global-sync', handleSync);
   }, []);
 
   const fetchGlobalStats = async () => {
@@ -84,8 +94,8 @@ export default function TransactionsPage() {
     }
   };
 
-  const fetchTransactions = async () => {
-    setLoading(true);
+  const fetchTransactions = async (silent = false) => {
+    if (!silent) setLoading(true);
     const from = page * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
 
@@ -114,6 +124,7 @@ export default function TransactionsPage() {
       setTotalCount(count || 0);
     }
     setLoading(false);
+    setHasSystemBooted(true);
   };
 
   const fmt = (n: number) =>
@@ -160,9 +171,9 @@ export default function TransactionsPage() {
             <span className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest block mb-1">Global Revenue</span>
             <span className="text-xl font-bold font-heading text-primary group-hover:scale-105 transition-transform block">{fmt(globalStats.totalRevenue)}</span>
           </div>
-          <div className="bg-secondary-container px-5 py-4 rounded-2xl border border-secondary/10 shadow-sm group hover:border-secondary transition-all">
-            <span className="text-[9px] font-bold text-on-secondary-container uppercase tracking-widest block mb-1">Net Earnings</span>
-            <span className="text-xl font-bold font-heading text-secondary group-hover:scale-105 transition-transform block">{fmt(globalStats.totalProfit)}</span>
+          <div className="bg-emerald-500/10 px-5 py-4 rounded-2xl border border-emerald-500/20 shadow-sm group hover:border-emerald-500/40 transition-all">
+            <span className="text-[9px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest block mb-1">Net Earnings</span>
+            <span className="text-xl font-bold font-heading text-emerald-600 dark:text-emerald-300 group-hover:scale-105 transition-transform block">{fmt(globalStats.totalProfit)}</span>
           </div>
           <div className="bg-surface-container-low px-5 py-4 rounded-2xl border border-outline-variant/10 shadow-sm">
             <span className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest block mb-1">Total Sales</span>
@@ -182,28 +193,28 @@ export default function TransactionsPage() {
       </div>
 
       {/* Global Intelligence Bar */}
-      <div className="bg-primary p-2 md:p-1.5 rounded-2xl mb-8 shadow-xl shadow-primary/10 flex flex-col md:flex-row items-center gap-2 md:gap-1">
+      <div className="bg-surface-container-lowest border border-outline-variant/10 p-2 md:p-1.5 rounded-3xl mb-8 shadow-sm flex flex-col md:flex-row items-center gap-2 md:gap-1">
          {/* Search Input Integrated */}
-         <div className="relative flex-1 w-full h-14 md:h-12 bg-white/10 rounded-xl flex items-center px-2 md:px-4 overflow-hidden group">
-            <Search className="text-white/40 group-hover:text-white/60 transition-colors" size={20} />
+         <div className="relative flex-1 w-full h-14 md:h-12 bg-surface-container-low rounded-2xl flex items-center px-2 md:px-4 overflow-hidden group border border-transparent focus-within:border-primary/20 transition-all">
+            <Search className="text-on-surface-variant/40 group-hover:text-primary transition-colors" size={20} />
             <input 
               value={searchQuery}
               onChange={e => { setSearchQuery(e.target.value); setPage(0); }}
               placeholder="Search Global Ledger by Receipt ID or Amount..."
-              className="bg-transparent border-none w-full h-full text-white placeholder:text-white/30 text-sm font-medium outline-none p-3 md:px-4"
+              className="bg-transparent border-none w-full h-full text-on-surface placeholder:text-on-surface-variant/40 text-sm font-medium outline-none p-3 md:px-4"
             />
          </div>
          
          <div className="flex items-center gap-1 w-full md:w-auto">
-            <div className="flex bg-white/10 p-1 rounded-xl w-full">
+            <div className="flex bg-surface-container-low p-1 rounded-2xl w-full border border-outline-variant/5">
               {['All', 'Cash', 'Digital'].map(item => (
                 <button 
                   key={item}
                   onClick={() => { setPaymentFilter(item === 'All' ? null : item); setPage(0); }}
-                  className={`flex-1 px-2 md:px-6 py-2.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${
+                  className={`flex-1 px-2 md:px-6 py-2.5 rounded-xl text-[10px] font-extrabold uppercase tracking-widest transition-all ${
                     (item === 'All' && !paymentFilter) || paymentFilter === item 
-                    ? 'bg-white text-primary shadow-lg' 
-                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                    ? 'bg-primary text-on-primary shadow-md shadow-primary/20 scale-[1.02]' 
+                    : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high'
                   }`}
                 >
                   {item}
@@ -211,7 +222,7 @@ export default function TransactionsPage() {
               ))}
             </div>
             
-            <button className="bg-white/20 hover:bg-white/30 p-3.5 rounded-xl text-white transition-all cursor-pointer active:scale-95">
+            <button className="bg-surface-container-low hover:bg-primary/10 hover:text-primary p-3.5 rounded-2xl text-on-surface-variant transition-all cursor-pointer active:scale-95 border border-outline-variant/5 hover:border-primary/20">
                <Download size={20} />
             </button>
          </div>
@@ -219,7 +230,7 @@ export default function TransactionsPage() {
 
       {/* Audit Manifest Table */}
       <div className="bg-surface-container-lowest rounded-3xl overflow-hidden shadow-sm border border-outline-variant/10">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-collapse min-w-[1000px]">
             <thead>
               <tr className="bg-surface-container text-on-surface-variant border-b border-outline-variant/15">
@@ -256,7 +267,7 @@ export default function TransactionsPage() {
                   return (
                     <tr
                       key={tx.id}
-                      className={`hover:bg-primary/5 transition-all group cursor-pointer ${idx % 2 === 0 ? 'bg-white' : 'bg-surface/20'}`}
+                      className={`transition-all ${idx % 2 === 0 ? 'bg-surface-container-lowest' : 'bg-surface/20'}`}
                     >
                       <td className="px-8 py-7">
                         <div className="flex flex-col">
@@ -266,11 +277,11 @@ export default function TransactionsPage() {
                       </td>
                       <td className="px-8 py-7">
                         <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-2xl bg-surface-container flex items-center justify-center flex-shrink-0 group-hover:bg-primary/10 group-hover:text-primary transition-all">
-                            <Receipt size={22} className="opacity-40 group-hover:opacity-100 transition-opacity" />
+                          <div className="w-12 h-12 rounded-2xl bg-surface-container flex items-center justify-center flex-shrink-0 transition-all">
+                            <Receipt size={22} className="opacity-40 transition-opacity" />
                           </div>
                           <div className="flex flex-col">
-                            <span className="text-sm font-bold text-on-surface group-hover:text-primary transition-colors leading-tight">
+                            <span className="text-sm font-bold text-on-surface transition-colors leading-tight">
                               {getItemsSummary(tx)}
                             </span>
                             <span className="text-[10px] font-mono font-bold text-on-surface-variant/30 lowercase mt-0.5">
@@ -316,7 +327,7 @@ export default function TransactionsPage() {
             <button
               disabled={page === 0}
               onClick={() => setPage(p => Math.max(0, p - 1))}
-              className="w-11 h-11 rounded-2xl bg-white border border-outline-variant/15 text-on-surface-variant hover:bg-primary hover:text-on-primary transition-all flex items-center justify-center disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer shadow-sm active:scale-90"
+              className="w-11 h-11 rounded-2xl bg-surface-container-lowest border border-outline-variant/15 text-on-surface-variant hover:bg-primary hover:text-on-primary transition-all flex items-center justify-center disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer shadow-sm active:scale-90"
             >
               <ChevronLeft size={20} strokeWidth={2.5} />
             </button>
@@ -330,7 +341,7 @@ export default function TransactionsPage() {
                   <button
                     key={p}
                     onClick={() => setPage(p)}
-                    className={`w-11 h-11 rounded-2xl text-xs font-black transition-all active:scale-90 cursor-pointer ${p === page ? "bg-primary text-on-primary shadow-xl shadow-primary/20 scale-105" : "bg-white text-on-surface-variant hover:bg-surface-container-high border border-outline-variant/15"}`}
+                    className={`w-11 h-11 rounded-2xl text-xs font-black transition-all active:scale-90 cursor-pointer ${p === page ? "bg-primary text-on-primary shadow-xl shadow-primary/20 scale-105" : "bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-high border border-outline-variant/15"}`}
                   >
                     {p + 1}
                   </button>
@@ -341,7 +352,7 @@ export default function TransactionsPage() {
             <button
               disabled={page >= totalPages - 1}
               onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-              className="w-11 h-11 rounded-2xl bg-white border border-outline-variant/15 text-on-surface-variant hover:bg-primary hover:text-on-primary transition-all flex items-center justify-center disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer shadow-sm active:scale-90"
+              className="w-11 h-11 rounded-2xl bg-surface-container-lowest border border-outline-variant/15 text-on-surface-variant hover:bg-primary hover:text-on-primary transition-all flex items-center justify-center disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer shadow-sm active:scale-90"
             >
               <ChevronRight size={20} strokeWidth={2.5} />
             </button>

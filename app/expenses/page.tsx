@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
+import { useSession } from "@/lib/contexts/SessionContext";
 import { getLocalTimestamp } from "@/lib/utils/time";
 import {
   TrendingUp,
@@ -39,8 +41,13 @@ interface Expense {
 
 export default function ExpensesPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { hasSystemBooted, setHasSystemBooted } = useSession();
+  const [loading, setLoading] = useState(!hasSystemBooted);
   const [submitting, setSubmitting] = useState(false);
+  
+  // Modal states
+  const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Form state
   const [form, setForm] = useState({
@@ -67,10 +74,14 @@ export default function ExpensesPage() {
 
   useEffect(() => {
     fetchExpenses();
+
+    const handleSync = () => fetchExpenses(true);
+    window.addEventListener('global-sync', handleSync);
+    return () => window.removeEventListener('global-sync', handleSync);
   }, []);
 
-  const fetchExpenses = async () => {
-    setLoading(true);
+  const fetchExpenses = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const { data, error } = await supabase
         .from("expenses")
@@ -83,6 +94,7 @@ export default function ExpensesPage() {
       console.error("Expenses Sync Error:", err);
     } finally {
       setLoading(false);
+      setHasSystemBooted(true);
     }
   };
 
@@ -116,10 +128,25 @@ export default function ExpensesPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this expense record?")) return;
-    const { error } = await supabase.from("expenses").delete().eq("id", id);
-    if (!error) setExpenses(expenses.filter(e => e.id !== id));
+  const initiateDelete = (expense: Expense) => {
+    setExpenseToDelete(expense);
+  };
+
+  const confirmDelete = async () => {
+    if (!expenseToDelete) return;
+    setIsDeleting(true);
+    
+    try {
+      const { error } = await supabase.from("expenses").delete().eq("id", expenseToDelete.id);
+      if (!error) {
+        setExpenses(expenses.filter(e => e.id !== expenseToDelete.id));
+        setExpenseToDelete(null);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const fmt = (n: number) =>
@@ -144,7 +171,7 @@ export default function ExpensesPage() {
           <h1 className="text-4xl font-extrabold font-heading tracking-tight text-primary">Expenses</h1>
         </div>
         <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-6 py-3 bg-surface-container-low border border-outline-variant/10 rounded-xl text-xs font-bold text-on-surface-variant hover:bg-white transition-all cursor-pointer shadow-sm">
+          <button className="flex items-center gap-2 px-6 py-3 bg-surface-container-low border border-outline-variant/10 rounded-xl text-xs font-bold text-on-surface-variant hover:bg-surface-container transition-all cursor-pointer shadow-sm">
             <Download size={16} />
             Export Audit
           </button>
@@ -214,7 +241,7 @@ export default function ExpensesPage() {
                   required
                   value={form.title}
                   onChange={e => setForm({ ...form, title: e.target.value })}
-                  className="w-full bg-white border border-outline-variant/10 rounded-xl p-4 text-sm focus:ring-2 focus:ring-primary/20 text-on-surface outline-none transition-all shadow-sm"
+                  className="w-full bg-surface-container-lowest border border-outline-variant/10 rounded-xl p-4 text-sm focus:ring-2 focus:ring-primary/20 text-on-surface outline-none transition-all shadow-sm"
                   placeholder="e.g. Raw Milk Supply"
                   type="text"
                 />
@@ -224,9 +251,9 @@ export default function ExpensesPage() {
                 <select
                   value={form.category}
                   onChange={e => setForm({ ...form, category: e.target.value })}
-                  className="w-full bg-white border border-outline-variant/10 rounded-xl p-4 text-sm focus:ring-2 focus:ring-primary/20 text-on-surface outline-none transition-all shadow-sm appearance-none"
+                  className="w-full bg-surface-container-lowest border border-outline-variant/10 rounded-xl p-4 text-sm focus:ring-2 focus:ring-primary/20 text-on-surface outline-none transition-all shadow-sm appearance-none"
                 >
-                  {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  {EXPENSE_CATEGORIES.map(c => <option key={c} value={c} className="bg-surface-container-lowest">{c}</option>)}
                 </select>
               </div>
               <div className="space-y-1">
@@ -237,7 +264,7 @@ export default function ExpensesPage() {
                     required
                     value={form.amount}
                     onChange={e => setForm({ ...form, amount: e.target.value })}
-                    className="w-full bg-white border border-outline-variant/10 rounded-xl p-4 pl-10 text-2xl font-extrabold focus:ring-2 focus:ring-primary/20 text-on-surface outline-none transition-all shadow-sm"
+                    className="w-full bg-surface-container-lowest border border-outline-variant/10 rounded-xl p-4 pl-10 text-2xl font-extrabold focus:ring-2 focus:ring-primary/20 text-on-surface outline-none transition-all shadow-sm"
                     placeholder="0.00"
                     type="number"
                     step="0.01"
@@ -297,7 +324,7 @@ export default function ExpensesPage() {
               <div className="bg-surface-container text-primary font-bold text-[10px] px-2 py-1 rounded shadow-sm">LIVE FEED</div>
             </div>
 
-            <div className="rounded-3xl border border-outline-variant/10 bg-white shadow-sm overflow-hidden divide-y divide-outline-variant/5">
+            <div className="rounded-3xl border border-outline-variant/10 bg-surface-container-lowest shadow-sm overflow-hidden divide-y divide-outline-variant/5">
               {loading ? (
                 <div className="py-24 flex flex-col items-center justify-center text-primary gap-4">
                   <Loader2 className="animate-spin" size={40} />
@@ -313,7 +340,7 @@ export default function ExpensesPage() {
                 expenses.map((expense, idx) => (
                   <div
                     key={expense.id}
-                    className={`flex items-center justify-between p-6 hover:bg-surface-container-low transition-colors group cursor-pointer ${idx % 2 === 0 ? "bg-white" : "bg-surface/10"}`}
+                    className={`flex items-center justify-between p-6 hover:bg-surface-container-low transition-colors group cursor-pointer ${idx % 2 === 0 ? "bg-surface-container-lowest" : "bg-surface/10"}`}
                   >
                     <div className="flex items-center gap-5">
                       <div className="w-12 h-12 rounded-2xl bg-surface-container flex items-center justify-center text-primary shrink-0 group-hover:bg-primary/10 group-hover:text-primary transition-all duration-300">
@@ -331,8 +358,8 @@ export default function ExpensesPage() {
                     <div className="flex items-center gap-6">
                       <p className="font-heading font-extrabold text-lg text-primary">{fmt(Number(expense.amount))}</p>
                       <button
-                        onClick={() => handleDelete(expense.id)}
-                        className="opacity-0 group-hover:opacity-100 p-2.5 rounded-xl hover:bg-error-container/20 text-error transition-all cursor-pointer active:scale-90"
+                        onClick={() => initiateDelete(expense)}
+                        className="opacity-100 p-2.5 rounded-xl hover:bg-error-container/20 text-error transition-all cursor-pointer active:scale-90"
                       >
                         <Trash2 size={20} />
                       </button>
@@ -350,6 +377,40 @@ export default function ExpensesPage() {
           </section>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {expenseToDelete && createPortal(
+        <div className="fixed inset-0 z-[2000] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-surface-container-lowest w-full max-w-sm rounded-[2rem] p-8 shadow-2xl border border-error/10 animate-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 bg-error/10 text-error rounded-2xl flex items-center justify-center mb-6 mx-auto">
+              <Trash2 size={32} />
+            </div>
+            
+            <h3 className="font-heading font-black text-xl text-on-surface mb-2 uppercase tracking-tight text-center">Terminate Record?</h3>
+            <p className="text-xs font-bold text-on-surface-variant/70 mb-8 leading-relaxed text-center">
+              Are you sure you want to permanently delete the entry <span className="text-on-surface font-black">"{expenseToDelete.title}"</span>? This action cannot be reversed.
+            </p>
+
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setExpenseToDelete(null)} 
+                disabled={isDeleting}
+                className="flex-1 py-4 bg-surface-container hover:bg-surface-container-high text-on-surface-variant font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmDelete}
+                disabled={isDeleting}
+                className="flex-1 py-4 bg-error text-on-error font-black text-[10px] uppercase tracking-[0.2em] rounded-xl shadow-lg shadow-error/20 active:scale-95 transition-all cursor-pointer hover:bg-error/90 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isDeleting ? <Loader2 size={14} className="animate-spin" /> : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

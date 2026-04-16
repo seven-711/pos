@@ -80,7 +80,8 @@ type Transaction = {
 
 
 export default function Dashboard() {
-  const [loading, setLoading] = useState(true);
+  const { activeSession, refreshSession, isLayoutHidden, setIsLayoutHidden, hasSystemBooted, setHasSystemBooted } = useSession();
+  const [loading, setLoading] = useState(!hasSystemBooted);
 
   // KPIs
   const [totalSales, setTotalSales] = useState(0);
@@ -89,7 +90,6 @@ export default function Dashboard() {
   const [txCount, setTxCount] = useState(0);
 
   const [showPreview, setShowPreview] = useState(false);
-  const { activeSession, refreshSession, isLayoutHidden, setIsLayoutHidden } = useSession();
   const { theme } = useTheme();
   const [sessionDuration, setSessionDuration] = useState("");
 
@@ -119,7 +119,21 @@ export default function Dashboard() {
     }, 10000); // 10s timeout fallback
     
     fetchDashboardData();
-    return () => clearTimeout(timer);
+
+    // Periodic Refresh (every 60s) for live intelligence
+    const refreshInterval = setInterval(() => fetchDashboardData(true), 60000);
+
+    // Listen for global ecosystem sync
+    const handleGlobalSync = () => {
+      fetchDashboardData(true);
+    };
+    window.addEventListener('global-sync', handleGlobalSync);
+    
+    return () => {
+      clearTimeout(timer);
+      clearInterval(refreshInterval);
+      window.removeEventListener('global-sync', handleGlobalSync);
+    };
   }, [activeSession]);
 
   useEffect(() => {
@@ -143,10 +157,10 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [activeSession]);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (silent = false) => {
     setError(null);
     setIsTimeout(false);
-    setLoading(true);
+    if (!silent) setLoading(true);
 
     try {
       // We use the activeSession from context instead of local state
@@ -287,6 +301,7 @@ export default function Dashboard() {
       setError(msg);
     } finally {
       setLoading(false);
+      setHasSystemBooted(true);
     }
   };
 
@@ -489,12 +504,14 @@ export default function Dashboard() {
         <div className="bg-surface-container p-3 rounded-xl border border-primary/10 shadow-sm">
           <span className="text-on-surface-variant text-[8px] font-bold uppercase tracking-widest block mb-2">Net Earnings</span>
           <div className={`text-lg font-extrabold font-heading mb-0.5 ${netProfit >= 0 ? "text-primary" : "text-error"}`}>{fmt(netProfit)}</div>
-          <div className="text-[8px] text-tertiary font-bold uppercase tracking-widest">Exp: -{fmt(totalExpenses)}</div>
+          <div className="text-[8px] text-tertiary font-bold uppercase tracking-widest">EXP: -{fmt(totalExpenses)}</div>
         </div>
 
         <div className="col-span-2 md:col-span-1 bg-surface-container-highest p-3 rounded-xl relative overflow-hidden group border border-outline-variant/10">
           <span className="text-on-surface-variant text-[8px] font-bold uppercase tracking-widest block mb-1">Efficiency</span>
-          <div className="flex items-center gap-1 bg-[var(--color-surface-container-highest)]/60 w-fit px-1.5 py-0.5 rounded-full text-[8px] font-black text-primary border border-primary/5 uppercase tracking-tighter mb-2">ROI {roi}%</div>
+          <div className="flex items-center gap-1 bg-[var(--color-surface-container-highest)]/60 w-fit px-1.5 py-0.5 rounded-full text-[8px] font-black text-primary border border-primary/5 uppercase tracking-tighter mb-2">
+            Net ROI {totalSales > 0 ? ((netProfit / totalSales) * 100).toFixed(0) : 0}%
+          </div>
           <div className="text-lg font-extrabold text-on-surface font-heading">{txCount}</div>
         </div>
       </section>

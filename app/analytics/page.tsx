@@ -49,7 +49,8 @@ interface Expense {
 }
 
 export default function AnalyticsPage() {
-  const [loading, setLoading] = useState(true);
+  const { hasSystemBooted, setHasSystemBooted } = useSession();
+  const [loading, setLoading] = useState(!hasSystemBooted);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -83,6 +84,11 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     fetchData(selectedDate);
+
+    // Global Sync Listener
+    const handleSync = () => fetchData(selectedDate, true);
+    window.addEventListener('global-sync', handleSync);
+    return () => window.removeEventListener('global-sync', handleSync);
   }, [selectedDate]);
 
   useEffect(() => {
@@ -91,8 +97,8 @@ export default function AnalyticsPage() {
     return () => setIsLayoutHidden(false);
   }, [showPreview]);
 
-  const fetchData = async (dateStr: string) => {
-    setLoading(true);
+  const fetchData = async (dateStr: string, silent = false) => {
+    if (!silent) setLoading(true);
 
     try {
       const startOfDay = `${dateStr}T00:00:00+08:00`;
@@ -140,6 +146,7 @@ export default function AnalyticsPage() {
       console.error("Analytics Sync Error:", err.message || err.details || err);
     } finally {
       setLoading(false);
+      setHasSystemBooted(true);
     }
   };
 
@@ -161,7 +168,7 @@ export default function AnalyticsPage() {
     // 2. Top Products (By Quantity Sold)
     const prodMap: Record<string, number> = {};
     items.forEach(item => {
-      const name = item.products?.name || 'Unknown';
+      const name = item.products?.name || 'GCash';
       prodMap[name] = (prodMap[name] || 0) + item.quantity;
     });
     const sortedProds = Object.entries(prodMap)
@@ -410,7 +417,7 @@ export default function AnalyticsPage() {
           </div>
 
           {/* Dynamic Sales Chart - Added Horizontal Scroll for Mobile */}
-          <div className="flex-grow overflow-x-auto pt-16 pb-8 -mx-2 hide-scrollbar scroll-smooth">
+          <div className="flex-grow overflow-x-auto custom-scrollbar pt-16 pb-8 -mx-2 hide-scrollbar scroll-smooth">
             <div className="flex items-end gap-1 md:gap-3 px-2 h-64 min-w-[700px] md:min-w-full min-h-[250px]">
               {hourlyTrend.length === 0 ? (
                 <div className="w-full flex flex-col items-center justify-center opacity-30 gap-2">
@@ -547,7 +554,7 @@ export default function AnalyticsPage() {
           </div>
         </div>
         
-        <div className="overflow-x-auto hide-scrollbar pt-16 pb-8 -mx-2">
+        <div className="overflow-x-auto custom-scrollbar hide-scrollbar pt-16 pb-8 -mx-2">
           <div className="flex items-end gap-1 md:gap-2 h-24 md:h-40 mb-10 min-w-[700px] md:min-w-full px-2">
             {peakHours.map((count, h) => {
               const maxCount = Math.max(...peakHours);

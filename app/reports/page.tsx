@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
+import { showToast } from "@/lib/utils/toast";
 import {
   BarChart2,
   LineChart,
@@ -55,22 +56,20 @@ const getReportColor = (cat: string) => {
   switch (cat) {
     case "Sales Summary": return "text-primary bg-primary/10";
     case "Profit Summary": return "text-on-surface bg-surface-container-highest";
-    case "Inventory Status": return "text-amber-600 bg-amber-50";
-    case "ROI Analysis": return "text-emerald-600 bg-emerald-50";
+    case "Inventory Status": return "text-amber-600 bg-amber-500/10";
+    case "ROI Analysis": return "text-emerald-600 bg-emerald-500/10";
     default: return "text-on-surface-variant bg-surface-container-highest";
   }
 };
 
 export default function ReportsPage() {
-  const [loading, setLoading] = useState(true);
+  const { hasSystemBooted, setHasSystemBooted } = useSession();
+  const [loading, setLoading] = useState(!hasSystemBooted);
   const [generating, setGenerating] = useState(false);
   const [reports, setReports] = useState<any[]>([]);
   const [selectedReport, setSelectedReport] = useState<any | null>(null);
   
-  // Toast State
-  const [showToast, setShowToast] = useState(false);
-  const [toastMsg, setToastMsg] = useState("");
-  const [toastType, setToastType] = useState<"success" | "error">("success");
+  // Modal State
   const [showAudit, setShowAudit] = useState(false);
 
 
@@ -111,25 +110,25 @@ export default function ReportsPage() {
 
   useEffect(() => {
     fetchIntelligence();
+
+    // Global Sync Listener
+    const handleSync = () => fetchIntelligence(true);
+    window.addEventListener('global-sync', handleSync);
+    return () => window.removeEventListener('global-sync', handleSync);
   }, []);
 
-  useEffect(() => {
-    if (showToast) {
-      const timer = setTimeout(() => setShowToast(false), 2500);
-      return () => clearTimeout(timer);
-    }
-  }, [showToast]);
 
 
 
-  const fetchIntelligence = async () => {
+
+  const fetchIntelligence = async (silent = false) => {
+    if (!silent) setLoading(true);
     // Safety exit: stop loading after 5 seconds no matter what
     const safetyTimeout = setTimeout(() => {
       setLoading(false);
     }, 5000);
 
     try {
-      setLoading(true);
       
       if (!supabase) {
         console.error("Supabase client is not initialized.");
@@ -173,6 +172,7 @@ export default function ReportsPage() {
     } finally {
       clearTimeout(safetyTimeout);
       setLoading(false);
+      setHasSystemBooted(true);
     }
   };
 
@@ -245,14 +245,10 @@ export default function ReportsPage() {
       };
 
       setReports(prev => [newReport, ...prev]);
-      setToastMsg(`${reportType} Analysis ledgered successfully!`);
-      setToastType("success");
-      setShowToast(true);
+      showToast(`${reportType} Analysis ledgered successfully!`);
     } catch (err: any) {
       console.error("Analysis Failure:", err);
-      setToastMsg("Analysis calibration failed.");
-      setToastType("error");
-      setShowToast(true);
+      showToast("Analysis calibration failed.", "error");
     } finally {
       setGenerating(false);
     }
@@ -322,7 +318,7 @@ export default function ReportsPage() {
                 ].map(type => (
                   <label
                     key={type.name}
-                    className={`flex items-center p-4 rounded-2xl cursor-pointer border-2 transition-all group ${reportType === type.name ? type.color : 'border-transparent bg-white hover:border-outline-variant/50'}`}
+                    className={`flex items-center p-4 rounded-2xl cursor-pointer border-2 transition-all group ${reportType === type.name ? type.color : 'border-transparent bg-surface-container-lowest hover:border-outline-variant/50'}`}
                   >
                     <input
                       checked={reportType === type.name}
@@ -345,7 +341,7 @@ export default function ReportsPage() {
               <div className="space-y-6">
                 <label className="block text-[10px] font-black uppercase tracking-[0.25em] text-on-surface-variant mb-4">Timeframe Range</label>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-white px-2 py-1.5 rounded-2xl border border-outline-variant/10 focus-within:border-primary transition-all shadow-sm">
+                  <div className="bg-surface-container-lowest px-2 py-1.5 rounded-2xl border border-outline-variant/10 focus-within:border-primary transition-all shadow-sm">
                     <span className="block text-[9px] text-on-surface-variant font-black mb-1 uppercase tracking-widest">START DATE</span>
                     <input
                       className="w-full bg-transparent border-none p-0 text-xs font-extrabold focus:ring-0 outline-none text-primary" type="date"
@@ -353,7 +349,7 @@ export default function ReportsPage() {
                       onChange={e => setStartDate(e.target.value)}
                     />
                   </div>
-                  <div className="bg-white px-2 py-1.5 rounded-2xl border border-outline-variant/10 focus-within:border-primary transition-all shadow-sm">
+                  <div className="bg-surface-container-lowest px-2 py-1.5 rounded-2xl border border-outline-variant/10 focus-within:border-primary transition-all shadow-sm">
                     <span className="block text-[9px] text-on-surface-variant font-black mb-1 uppercase tracking-widest">END DATE</span>
                     <input
                       className="w-full bg-transparent border-none p-0 text-xs font-extrabold focus:ring-0 outline-none text-primary"
@@ -458,7 +454,7 @@ export default function ReportsPage() {
                              <span className="text-[8px] font-black whitespace-nowrap">{item.stock}/{item.min_stock}</span>
                           </div>
                         </div>
-                        <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center group-hover:bg-white group-hover:text-primary transition-all">
+                        <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center group-hover:bg-primary group-hover:text-on-primary transition-all">
                           <ArrowRight size={14} />
                         </div>
                       </a>
@@ -479,7 +475,7 @@ export default function ReportsPage() {
 
       {/* Recent Reports Activity - Report Repository */}
       <section className="bg-surface-container-low rounded-3xl overflow-hidden border border-outline-variant/10 shadow-sm relative">
-        <div className="px-6 py-6 flex flex-col md:flex-row items-center justify-between border-b border-outline-variant/10 bg-white/50 gap-4">
+        <div className="px-6 py-6 flex flex-col md:flex-row items-center justify-between border-b border-outline-variant/10 bg-surface-container shadow-sm gap-4">
           <div>
             <h3 className="font-heading text-xl font-black uppercase tracking-tight text-primary">Report Repository</h3>
             <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mt-1">Archive of generated transactional archives.</p>
@@ -490,7 +486,7 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left min-w-[900px]">
             <thead className="bg-surface-container text-on-surface-variant">
               <tr>
@@ -518,7 +514,7 @@ export default function ReportsPage() {
                 </tr>
               ) : (
                 reports.map(report => (
-                  <tr key={report.id} className="hover:bg-primary/5 transition-all group bg-white">
+                  <tr key={report.id} className="hover:bg-primary/5 transition-all group bg-surface-container-lowest">
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-4">
                         <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${getReportColor(report.category).split(' ')[1]} ${getReportColor(report.category).split(' ')[0]} group-hover:scale-110 transition-transform`}>
@@ -584,10 +580,10 @@ export default function ReportsPage() {
           />
           
           {/* Document Content */}
-          <div id="report-canvas" className="relative w-full max-w-2xl bg-white shadow-[0_32px_64px_rgba(0,0,0,0.15)] rounded-3xl md:rounded-[2.5rem] border border-outline-variant/5 flex flex-col max-h-[90dvh] overflow-hidden animate-in zoom-in-95 duration-300">
+          <div id="report-canvas" className="relative w-full max-w-2xl bg-surface-container-lowest shadow-[0_32px_64px_rgba(0,0,0,0.15)] rounded-3xl md:rounded-[2.5rem] border border-outline-variant/5 flex flex-col max-h-[90dvh] overflow-hidden animate-in zoom-in-95 duration-300">
             
             {/* Modal Control Bar (Excluded from Print) */}
-            <div className="px-6 py-4 border-b border-outline-variant/10 flex items-center justify-between bg-white print:hidden shrink-0">
+            <div className="px-6 py-4 border-b border-outline-variant/10 flex items-center justify-between bg-surface-container-lowest print:hidden shrink-0">
               <div className="flex items-center gap-3">
                 <button 
                   onClick={() => setShowAudit(false)}
@@ -666,7 +662,7 @@ export default function ReportsPage() {
                   <h5 className="text-[10px] font-black text-on-surface uppercase tracking-[0.2em]">Strategic Insights</h5>
                 </div>
                 
-                <div className="bg-white rounded-[1.5rem] border border-primary/10 overflow-hidden shadow-sm">
+                <div className="bg-surface-container-lowest rounded-[1.5rem] border border-primary/10 overflow-hidden shadow-sm">
                   <div className="px-5 py-3 bg-primary/5 border-b border-primary/10 flex justify-between items-center">
                     <span className="text-[9px] font-black text-primary uppercase tracking-widest">Transaction Intelligence</span>
                     <span className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">{selectedReport.details.itemCount} Items Handled</span>
@@ -714,20 +710,7 @@ export default function ReportsPage() {
 
 
 
-      {showToast && (
-        <div className={`fixed top-4 right-4 md:top-6 md:right-6 z-[1200] ${toastType === 'success' ? 'bg-secondary text-white' : 'bg-error text-white'} px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300 max-w-[280px] md:max-w-xs border border-white/10`}>
-          <div className="w-7 h-7 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
-            {toastType === 'success' ? <CheckCircle2 size={16} strokeWidth={3} /> : <AlertCircle size={16} />}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-black text-[11px] tracking-tight uppercase opacity-80">{toastType === 'success' ? 'Intelligence Sync' : 'System Error'}</p>
-            <p className="text-[12px] font-bold leading-tight truncate">{toastMsg}</p>
-          </div>
-          <button onClick={() => setShowToast(false)} className="opacity-40 hover:opacity-100 transition-opacity p-1 ml-1">
-            <X size={14} />
-          </button>
-        </div>
-      )}
+
     </div>
   );
 }

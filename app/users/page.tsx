@@ -1,15 +1,16 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { 
-  ShieldCheck, 
-  Filter, 
-  ChevronRight, 
-  Info, 
+import {
+  ShieldCheck,
+  Filter,
+  ChevronRight,
+  Info,
   UserPlus,
   Loader2
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { useSession } from "@/lib/contexts/SessionContext";
 
 export interface UserProfile {
   id: string;
@@ -21,21 +22,26 @@ export interface UserProfile {
 }
 
 export default function UsersPage() {
+  const { hasSystemBooted, setHasSystemBooted } = useSession();
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!hasSystemBooted);
 
   useEffect(() => {
     fetchProfiles();
+
+    const handleSync = () => fetchProfiles(true);
+    window.addEventListener('global-sync', handleSync);
+    return () => window.removeEventListener('global-sync', handleSync);
   }, []);
 
-  const fetchProfiles = async () => {
-    setLoading(true);
+  const fetchProfiles = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .order('is_active', { ascending: false });
-        
+
       if (error) {
         console.error("Error fetching profiles:", error);
       } else {
@@ -45,12 +51,13 @@ export default function UsersPage() {
       console.error(err);
     } finally {
       setLoading(false);
+      setHasSystemBooted(true);
     }
   };
 
   return (
     <div className="max-w-md mx-auto w-full pt-4 pb-24">
-      
+
       {/* Dashboard Header */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold font-heading text-primary tracking-tight">Personnel Management</h2>
@@ -94,10 +101,10 @@ export default function UsersPage() {
             <div key={profile.id} className={`p-4 rounded-xl mb-3 flex items-center justify-between hover:bg-surface-container transition-colors cursor-pointer group border border-outline-variant/5 ${profile.is_active ? 'bg-surface-container-low' : 'bg-surface-container-low opacity-60 group-hover:opacity-100'}`}>
               <div className="flex items-center gap-4">
                 <div className="relative">
-                  <img 
-                    className={`w-12 h-12 rounded-lg object-cover ${!profile.is_active ? 'grayscale' : ''}`} 
-                    alt={profile.full_name || profile.email} 
-                    src={profile.avatar_url || "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"} 
+                  <img
+                    className={`w-12 h-12 rounded-lg object-cover ${!profile.is_active ? 'grayscale' : ''}`}
+                    alt={profile.full_name || profile.email}
+                    src={profile.avatar_url || "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
                   />
                   <span className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 border-2 border-surface rounded-full ${profile.is_active ? 'bg-secondary' : 'bg-outline-variant'}`}></span>
                 </div>
@@ -123,9 +130,9 @@ export default function UsersPage() {
           <h3 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Global Privileges</h3>
           <Info size={18} className="text-on-surface-variant cursor-pointer active:scale-95 transition-transform" />
         </div>
-        
+
         <div className="bg-surface-container rounded-2xl p-6 space-y-6 shadow-sm border border-outline-variant/10">
-          
+
           {/* Toggle 1 */}
           <div className="flex items-center justify-between">
             <div>
@@ -136,7 +143,7 @@ export default function UsersPage() {
               <div className="w-4 h-4 bg-white rounded-full translate-x-6 shadow-sm transition-transform"></div>
             </div>
           </div>
-          
+
           {/* Toggle 2 */}
           <div className="flex items-center justify-between">
             <div>
@@ -147,7 +154,7 @@ export default function UsersPage() {
               <div className="w-4 h-4 bg-white rounded-full shadow-sm transition-transform"></div>
             </div>
           </div>
-          
+
           {/* Toggle 3 */}
           <div className="flex items-center justify-between">
             <div>
@@ -158,14 +165,14 @@ export default function UsersPage() {
               <div className="w-4 h-4 bg-white rounded-full translate-x-6 shadow-sm transition-transform"></div>
             </div>
           </div>
-          
+
         </div>
       </section>
 
       {/* History/Activity Log */}
       <section className="mt-8">
         <h3 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-4">Security Logs</h3>
-        
+
         <div className="border-l-2 border-surface-container-high ml-2 space-y-6 pl-6">
           <div className="relative">
             <span className="absolute -left-[31px] top-1 w-3 h-3 rounded-full bg-secondary"></span>

@@ -17,6 +17,8 @@ interface SessionContextType {
   isLayoutHidden: boolean;
   setIsLayoutHidden: (hidden: boolean) => void;
   refreshSession: () => Promise<void>;
+  hasSystemBooted: boolean;
+  setHasSystemBooted: (val: boolean) => void;
 }
 
 
@@ -25,6 +27,7 @@ const SessionContext = createContext<SessionContextType | undefined>(undefined);
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [activeSession, setActiveSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasSystemBooted, setHasSystemBooted] = useState(false);
 
   const refreshSession = async () => {
     setLoading(true);
@@ -116,7 +119,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       loading, 
       isLayoutHidden,
       setIsLayoutHidden,
-      refreshSession
+      refreshSession,
+      hasSystemBooted,
+      setHasSystemBooted
     }}>
       {children}
     </SessionContext.Provider>

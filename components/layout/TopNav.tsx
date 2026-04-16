@@ -21,15 +21,29 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
   const [isProfileDesktopOpen, setIsProfileDesktopOpen] = useState(false);
   const [showSignOutModal, setShowSignOutModal] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  
-  useEffect(() => { setIsMounted(true); }, []);
+  const [countdown, setCountdown] = useState(15);
+
+  useEffect(() => { 
+    setIsMounted(true); 
+    const interval = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          // Defer dispatch to avoid "setState during render" error
+          setTimeout(() => window.dispatchEvent(new CustomEvent('global-sync')), 0);
+          return 15;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
 
   const handleNotificationClick = () => {
     setIsCartDesktopOpen(false); // Close other dropdowns
     setIsProfileDesktopOpen(false);
     toggleCart(false); // Close mobile cart if moving to notifications
-    
+
     if (window.innerWidth < 768) {
       toggleNotifications(true);
     } else {
@@ -41,7 +55,7 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
     setIsDesktopDropdownOpen(false); // Close other dropdowns
     setIsProfileDesktopOpen(false);
     toggleNotifications(false); // Close mobile notifications if moving to cart
-    
+
     if (window.innerWidth < 768) {
       toggleCart(true);
     } else {
@@ -53,7 +67,7 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
   return (
     <header className="w-full h-16 shrink-0 bg-[var(--color-surface)]/90 backdrop-blur-md flex items-center justify-between px-4 md:px-8 z-[110] border-b border-[var(--color-outline-variant)]/10 shadow-sm pointer-events-auto print:hidden">
       {/* Brand — Mobile & Desktop trigger */}
-      <button 
+      <button
         onClick={onMenuClick}
         className="flex items-center gap-3 text-[var(--color-primary)] relative group cursor-pointer touch-manipulation active:scale-95 transition-transform md:hidden"
       >
@@ -65,13 +79,36 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
         </span>
       </button>
 
-      {/* Desktop greeting */}
-      <div className="hidden md:block text-sm text-[var(--color-on-surface-variant)]">
-        Welcome back, Admin
+      {/* Ecosystem Sync Indicator & Greeting */}
+      <div className="flex items-center gap-4">
+        {/* Desktop Greeting */}
+        <div className="hidden lg:block text-sm text-[var(--color-on-surface-variant)] font-medium">
+          Welcome back, Admin
+        </div>
+
+        {/* Global Sync Timer */}
+        <div className="flex items-center gap-2 bg-surface-container-low px-2 md:px-3 py-1.5 rounded-full border border-outline-variant/10 shadow-sm group">
+          <div className="relative w-4 h-4 flex items-center justify-center">
+            <svg className="w-full h-full -rotate-90">
+              <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="2" fill="transparent" className="text-outline-variant/10" />
+              <circle 
+                cx="8" cy="8" r="7" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                fill="transparent" 
+                className={`text-primary transition-all ${countdown === 15 ? 'duration-0' : 'duration-1000'} ease-linear`} 
+                strokeDasharray="44" 
+                strokeDashoffset={44 * (1 - countdown / 15)} 
+              />
+            </svg>
+            <span className={`absolute text-[7px] font-black text-primary ${countdown <= 3 ? 'animate-pulse text-error' : ''}`}>{countdown}</span>
+          </div>
+          <span className="text-[8px] font-black uppercase tracking-widest text-on-surface-variant opacity-60 hidden sm:block">Syncing Data</span>
+        </div>
       </div>
 
       {/* Right-side actions */}
-      <div className="flex items-center gap-3 text-[var(--color-on-surface-variant)] relative">
+      <div className="flex items-center gap-1 md:gap-3 text-[var(--color-on-surface-variant)] relative">
         <button
           aria-label="Toggle Theme"
           onClick={toggleTheme}
@@ -85,17 +122,16 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
           <button
             aria-label="Notifications"
             onClick={handleNotificationClick}
-            className={`p-3 rounded-full transition-colors cursor-pointer touch-manipulation relative ${
-              isDesktopDropdownOpen || showNotifications 
-                ? 'bg-[var(--color-surface-container)] text-[var(--color-primary)]' 
+            className={`p-3 rounded-full transition-colors cursor-pointer touch-manipulation relative ${isDesktopDropdownOpen || showNotifications
+                ? 'bg-[var(--color-surface-container)] text-[var(--color-primary)]'
                 : 'hover:bg-[var(--color-surface-container)] hover:text-[var(--color-primary)]'
-            }`}
+              }`}
             style={{ WebkitTapHighlightColor: "transparent" }}
           >
             <div className="relative">
               <Bell size={22} className={unreadCount > 0 ? 'animate-bounce-slow' : ''} />
               {unreadCount > 0 && (
-                <span className="absolute -top-2.5 -right-2.5 bg-error text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full shadow-lg shadow-error/20 border-2 border-surface-container animate-in zoom-in-50 duration-300">
+                <span className="absolute -top-2.5 -right-2.5 bg-error text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full shadow-lg shadow-error/20 border-2 border-[var(--color-surface)] animate-in zoom-in-50 duration-300">
                   {unreadCount > 99 ? "99+" : unreadCount}
                 </span>
               )}
@@ -112,17 +148,16 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
           <button
             aria-label="Shopping Cart"
             onClick={handleCartClick}
-            className={`p-3 rounded-full transition-colors cursor-pointer touch-manipulation relative ${
-              isCartDesktopOpen || showCart 
-                ? 'bg-[var(--color-surface-container)] text-[var(--color-primary)]' 
+            className={`p-3 rounded-full transition-colors cursor-pointer touch-manipulation relative ${isCartDesktopOpen || showCart
+                ? 'bg-[var(--color-surface-container)] text-[var(--color-primary)]'
                 : 'hover:bg-[var(--color-surface-container)] hover:text-[var(--color-primary)]'
-            }`}
+              }`}
             style={{ WebkitTapHighlightColor: "transparent" }}
           >
             <div className="relative">
               <ShoppingCart size={20} />
               {totalQuantity > 0 && (
-                <span className="absolute -top-2.5 -right-2.5 bg-error text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full shadow-lg shadow-error/20 border-2 border-surface-container animate-in zoom-in-50 duration-300">
+                <span className="absolute -top-2.5 -right-2.5 bg-error text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full shadow-lg shadow-error/20 border-2 border-[var(--color-surface)] animate-in zoom-in-50 duration-300">
                   {totalQuantity > 99 ? "99+" : totalQuantity}
                 </span>
               )}
@@ -143,14 +178,13 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
               setIsCartDesktopOpen(false);
               setIsProfileDesktopOpen(!isProfileDesktopOpen);
             }}
-            className={`h-10 w-10 rounded-full flex items-center justify-center transition-colors cursor-pointer touch-manipulation ${
-              isProfileDesktopOpen ? 'bg-[var(--color-surface-container)] text-[var(--color-primary)]' : 'surface-highest hover:bg-[var(--color-surface-container)]'
-            }`}
+            className={`h-10 w-10 rounded-full flex items-center justify-center transition-colors cursor-pointer touch-manipulation ${isProfileDesktopOpen ? 'bg-[var(--color-surface-container)] text-[var(--color-primary)]' : 'surface-highest hover:bg-[var(--color-surface-container)]'
+              }`}
             style={{ WebkitTapHighlightColor: "transparent" }}
           >
             <UserCircle size={24} />
           </button>
-          
+
           {isProfileDesktopOpen && (
             <div className="absolute right-0 top-full mt-2 w-48 bg-surface-container-lowest rounded-2xl shadow-xl border border-outline-variant/10 overflow-hidden z-50 animate-in slide-in-from-top-2 duration-200">
               <div className="p-2">

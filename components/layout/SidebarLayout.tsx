@@ -175,7 +175,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
             onClick={() => setIsMobileMenuOpen(false)}
           />
           {/* Drawer panel */}
-          <aside className="relative flex flex-col w-72 max-w-[85vw] bg-[var(--color-surface)] p-6 h-full shadow-2xl overflow-y-auto animate-in slide-in-from-left duration-500 ease-ios">
+          <aside className="relative flex flex-col w-72 max-w-[85vw] bg-[var(--color-surface)] p-6 h-full shadow-2xl overflow-y-auto custom-scrollbar animate-in slide-in-from-left duration-500 ease-ios">
             <div className="flex justify-between items-start mb-8">
               <div className="w-11 h-auto shrink-0 relative flex items-center justify-center dark:hidden mb-8">
                 <img src="/logo.png" alt="POS ni Estela Logo" className="w-11 h-11 object-contain drop-shadow-md" />
@@ -266,7 +266,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
 
       {/* ── Global Toast ── */}
       {toast.show && (
-        <div className={`fixed top-4 right-4 md:top-6 md:right-6 z-[600] ${toast.type === 'success' ? 'bg-secondary' : 'bg-error'} text-on-secondary px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300 max-w-[280px] md:max-w-xs border border-white/10`}>
+        <div className={`fixed bottom-24 left-1/2 -translate-x-1/2 md:bottom-auto md:top-6 md:right-6 md:left-auto md:translate-x-0 z-[600] ${toast.type === 'success' ? 'bg-secondary' : 'bg-error'} text-on-secondary px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 md:slide-in-from-top-2 duration-300 w-full max-w-[280px] md:max-w-xs border border-white/10`}>
           <div className="w-7 h-7 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
             {toast.type === 'success' ? <CheckCircle2 size={16} strokeWidth={3} /> : <AlertCircle size={16} />}
           </div>

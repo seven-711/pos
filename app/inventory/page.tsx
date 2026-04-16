@@ -3,7 +3,9 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
+import { useSession } from "@/lib/contexts/SessionContext";
 import { getLocalTimestamp } from "@/lib/utils/time";
+import { showToast } from "@/lib/utils/toast";
 import { 
   BellRing, 
   SlidersHorizontal, 
@@ -63,7 +65,8 @@ function InventoryContent() {
   const [products, setProducts] = useState<Product[]>([]);
 
   const [logs, setLogs] = useState<InventoryLog[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { hasSystemBooted, setHasSystemBooted } = useSession();
+  const [loading, setLoading] = useState(!hasSystemBooted);
   const [searchQuery, setSearchQuery] = useState("");
   
   // Modals
@@ -90,6 +93,11 @@ function InventoryContent() {
 
   useEffect(() => {
     fetchData();
+
+    // Global Sync Listener
+    const handleSync = () => fetchData(true);
+    window.addEventListener('global-sync', handleSync);
+    return () => window.removeEventListener('global-sync', handleSync);
   }, []);
 
   // Handle URL Highlights
@@ -113,9 +121,8 @@ function InventoryContent() {
     }
   }, [loading, products, highlightParam]);
 
-  const fetchData = async () => {
-
-    setLoading(true);
+  const fetchData = async (silent = false) => {
+    if (!silent) setLoading(true);
     
     try {
       // Fetch Products
@@ -139,8 +146,10 @@ function InventoryContent() {
       if (logData) setLogs(logData);
     } catch (err: any) {
       console.error("Inventory Sync Error:", err);
+      showToast("Inventory synchronization failed.", "error");
     } finally {
       setLoading(false);
+      setHasSystemBooted(true);
     }
   };
 
@@ -187,10 +196,11 @@ function InventoryContent() {
       setShowAdjustModal(false);
       setSelectedProduct(null);
       setAdjustQty(0);
+      showToast(`Stock ${adjustQty > 0 ? "increased" : "adjusted"} successfully!`);
       fetchData();
     } catch (error) {
       console.error("Adjustment error:", error);
-      alert("Failed to update stock.");
+      showToast("Failed to update stock protocol.", "error");
     } finally {
       setIsSaving(false);
     }

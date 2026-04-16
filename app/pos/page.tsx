@@ -3,7 +3,9 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
+import { useSession } from "@/lib/contexts/SessionContext";
 import Image from "next/image";
+import { showToast } from "@/lib/utils/toast";
 import {
   Search,
   Coffee,
@@ -57,7 +59,8 @@ interface Product {
 export default function POSPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { hasSystemBooted, setHasSystemBooted } = useSession();
+  const [loading, setLoading] = useState(!hasSystemBooted);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
@@ -91,12 +94,6 @@ export default function POSPage() {
   const [qtyTarget, setQtyTarget] = useState<Product | null>(null);
   const [qtyValue, setQtyValue] = useState(1);
 
-  // Checkout State
-  const [showToast, setShowToast] = useState(false);
-  const [toastMsg, setToastMsg] = useState("");
-  const [toastType, setToastType] = useState<"success" | "error">("success");
-
-
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => { setIsMounted(true); }, []);
 
@@ -110,14 +107,13 @@ export default function POSPage() {
 
   useEffect(() => {
     fetchData();
+
+    const handleSync = () => fetchData(true);
+    window.addEventListener('global-sync', handleSync);
+    return () => window.removeEventListener('global-sync', handleSync);
   }, []);
 
-  useEffect(() => {
-    if (showToast) {
-      const timer = setTimeout(() => setShowToast(false), 2500);
-      return () => clearTimeout(timer);
-    }
-  }, [showToast]);
+
 
   useEffect(() => {
     fetchBalance();
@@ -147,9 +143,7 @@ export default function POSPage() {
     const fee = parseFloat(serviceForm.fee) || 0;
     
     if (amount <= 0 && serviceMode !== "ADJUST" && serviceMode !== "INITIALIZE") {
-      setToastMsg("Please enter a valid amount");
-      setToastType("error");
-      setShowToast(true);
+      showToast("Please enter a valid amount", "error");
       return;
     }
 
@@ -185,19 +179,15 @@ export default function POSPage() {
       setGcashBalance(newBalance);
       setVaultInitialized(true);
       setShowServiceModal(false);
-      setToastMsg(message);
-      setToastType("success");
-      setShowToast(true);
+      showToast(message);
     } else {
-      setToastMsg(message);
-      setToastType("error");
-      setShowToast(true);
+      showToast(message, "error");
     }
   };
 
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const { data: prodData, error: prodErr } = await supabase.from('products').select('*, categories(name)').order('name');
       const { data: catData, error: catErr } = await supabase.from('categories').select('*').order('name');
@@ -212,6 +202,7 @@ export default function POSPage() {
       // Optional: Set an error state if needed
     } finally {
       setLoading(false);
+      setHasSystemBooted(true);
     }
   };
 
@@ -235,18 +226,12 @@ export default function POSPage() {
     const totalRequested = (existing?.quantity || 0) + qtyValue;
 
     if (totalRequested > qtyTarget.stock) {
-      setToastMsg(`Insufficient stock! Only ${qtyTarget.stock} available.`);
-      setToastType("error");
-      setShowToast(true);
+      showToast(`Insufficient stock! Only ${qtyTarget.stock} available.`, "error");
       return;
     }
 
     addItemsToCart(qtyTarget, qtyValue);
-
-    setToastMsg(`${qtyValue}x ${qtyTarget.name} added to cart`);
-    setToastType("success");
-    setShowToast(true);
-
+    showToast(`${qtyValue}x ${qtyTarget.name} added to cart`);
     setShowQtyModal(false);
     setQtyTarget(null);
   };
@@ -562,20 +547,7 @@ export default function POSPage() {
         document.body
       )}
 
-      {showToast && (
-        <div className={`fixed top-4 right-4 md:top-6 md:right-6 z-[600] ${toastType === 'success' ? 'bg-secondary' : 'bg-error'} text-on-secondary px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300 max-w-[280px] md:max-w-xs border border-white/10`}>
-          <div className="w-7 h-7 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
-            {toastType === 'success' ? <CheckCircle2 size={16} strokeWidth={3} /> : <AlertCircle size={16} />}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-black text-[11px] tracking-tight uppercase opacity-80">{toastType === 'success' ? 'Success' : 'Error'}</p>
-            <p className="text-[12px] font-bold leading-tight truncate">{toastMsg}</p>
-          </div>
-          <button onClick={() => setShowToast(false)} className="opacity-40 hover:opacity-100 transition-opacity p-1 ml-1">
-            <X size={14} />
-          </button>
-        </div>
-      )}
+
 
       {/* Quick Service Modal */}
       {showServiceModal && isMounted && createPortal(

@@ -3,7 +3,9 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
+import { useSession } from "@/lib/contexts/SessionContext";
 import { getLocalTimestamp } from "@/lib/utils/time";
+import { showToast } from "@/lib/utils/toast";
 import { 
   Search, 
   Plus, 
@@ -48,7 +50,8 @@ export default function ProductsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { hasSystemBooted, setHasSystemBooted } = useSession();
+  const [loading, setLoading] = useState(!hasSystemBooted);
   const [searchQuery, setSearchQuery] = useState("");
   
   // Form State
@@ -73,21 +76,16 @@ export default function ProductsPage() {
 
   useEffect(() => { setIsMounted(true); }, []);
   
-  // Toast State
-  const [showToast, setShowToast] = useState(false);
-  const [toastMsg, setToastMsg] = useState("");
-  const [toastType, setToastType] = useState<"success" | "error">("success");
-
   useEffect(() => {
     fetchData();
+
+    // Global Sync Listener
+    const handleSync = () => fetchData(true);
+    window.addEventListener('global-sync', handleSync);
+    return () => window.removeEventListener('global-sync', handleSync);
   }, []);
 
-  useEffect(() => {
-    if (showToast) {
-      const timer = setTimeout(() => setShowToast(false), 2500);
-      return () => clearTimeout(timer);
-    }
-  }, [showToast]);
+
 
   // Lock the actual scroll container when any modal is open
   useEffect(() => {
@@ -101,7 +99,8 @@ export default function ProductsPage() {
     return () => { scroller.style.overflow = ''; };
   }, [showAddModal, showMediaGallery]);
 
-  const fetchData = async () => {
+  const fetchData = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       // Fetch Products with joined Category Name
       const { data: prodData, error: prodErr } = await supabase
@@ -124,6 +123,7 @@ export default function ProductsPage() {
       console.error("Products Sync Error:", err);
     } finally {
       setLoading(false);
+      setHasSystemBooted(true);
     }
   };
 
@@ -193,9 +193,7 @@ export default function ProductsPage() {
         errorMsg = "Permission denied. Check your Supabase RLS policies for storage.";
       }
       
-      setToastMsg(`Failed to upload image: ${errorMsg}`);
-      setToastType("error");
-      setShowToast(true);
+      showToast(`Failed to upload image: ${errorMsg}`, "error");
     } finally {
       setIsUploading(false);
     }
@@ -241,15 +239,11 @@ export default function ProductsPage() {
         }
       }
       
-      setToastMsg(editingProduct ? "Product updated successfully!" : "Product added to inventory!");
-      setToastType("success");
-      setShowToast(true);
+      showToast(editingProduct ? "Product updated successfully!" : "Product added to inventory!");
       closeModal();
     } catch (error) {
       console.error("Error saving product:", error);
-      setToastMsg("Failed to save product. Check constraints.");
-      setToastType("error");
-      setShowToast(true);
+      showToast("Failed to save product. Check constraints.", "error");
     }
   };
 
@@ -258,13 +252,9 @@ export default function ProductsPage() {
     const { error } = await supabase.from('products').delete().eq('id', id);
     if (!error) {
       setProducts(products.filter(p => p.id !== id));
-      setToastMsg("Product removed from index.");
-      setToastType("success");
-      setShowToast(true);
+      showToast("Product removed from index.");
     } else {
-      setToastMsg("Deletion failed: Reference integrity check.");
-      setToastType("error");
-      setShowToast(true);
+      showToast("Deletion failed: Reference integrity check.", "error");
     }
   };
 
@@ -334,7 +324,7 @@ export default function ProductsPage() {
       </div>
 
       {/* Product Table Canvas */}
-      <div className="bg-surface-container-low rounded-2xl overflow-hidden overflow-x-auto shadow-sm border border-outline-variant/10">
+      <div className="bg-surface-container-low rounded-2xl overflow-hidden overflow-x-auto custom-scrollbar shadow-sm border border-outline-variant/10">
         <table className="w-full text-left border-collapse min-w-[800px]">
           <thead>
             <tr className="bg-surface-container-highest border-b border-outline-variant/15">
@@ -738,20 +728,7 @@ export default function ProductsPage() {
         document.body
         )}
 
-      {showToast && (
-        <div className={`fixed top-4 right-4 md:top-6 md:right-6 z-[1100] ${toastType === 'success' ? 'bg-secondary text-white' : 'bg-error text-white'} px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300 max-w-[280px] md:max-w-xs border border-white/10`}>
-          <div className="w-7 h-7 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
-            {toastType === 'success' ? <CheckCircle2 size={16} strokeWidth={3} /> : <AlertCircle size={16} />}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-black text-[11px] tracking-tight uppercase opacity-80">{toastType === 'success' ? 'Ledger Update' : 'System Alert'}</p>
-            <p className="text-[12px] font-bold leading-tight truncate">{toastMsg}</p>
-          </div>
-          <button onClick={() => setShowToast(false)} className="opacity-40 hover:opacity-100 transition-opacity p-1 ml-1">
-            <X size={14} />
-          </button>
-        </div>
-      )}
+
       {showMediaGallery && isMounted && createPortal(
         <MediaGallery 
           currentUrl={formData.image_url}

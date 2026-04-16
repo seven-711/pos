@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
+import { useSession } from "@/lib/contexts/SessionContext";
 import { getLocalTimestamp } from "@/lib/utils/time";
 import { 
   Plus, 
@@ -22,7 +23,8 @@ import {
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { hasSystemBooted, setHasSystemBooted } = useSession();
+  const [loading, setLoading] = useState(!hasSystemBooted);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -47,10 +49,14 @@ export default function CategoriesPage() {
 
   useEffect(() => {
     fetchData();
+
+    const handleSync = () => fetchData(true);
+    window.addEventListener('global-sync', handleSync);
+    return () => window.removeEventListener('global-sync', handleSync);
   }, []);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (silent = false) => {
+    if (!silent) setLoading(true);
     
     // Fetch Categories
     const { data: catData, error: catError } = await supabase
@@ -71,6 +77,7 @@ export default function CategoriesPage() {
     }
     
     setLoading(false);
+    setHasSystemBooted(true);
   };
 
   const handleCreateCategory = async (e: React.FormEvent) => {
@@ -174,7 +181,7 @@ export default function CategoriesPage() {
       </div>
 
       {/* Category Ledger List */}
-      <div className="bg-surface-container rounded-2xl overflow-hidden overflow-x-auto shadow-sm border border-outline-variant/10">
+      <div className="bg-surface-container rounded-2xl overflow-hidden overflow-x-auto custom-scrollbar shadow-sm border border-outline-variant/10">
         <div className="min-w-[800px]">
           <div className="grid grid-cols-12 gap-4 px-8 py-4 border-b border-outline-variant/15 text-on-surface-variant font-label text-[10px] font-bold uppercase tracking-widest bg-surface-container-low">
             <div className="col-span-12 md:col-span-6">Category Identity</div>
