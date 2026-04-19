@@ -290,110 +290,99 @@ export default function POSPage() {
                   <div
                     key={product.id}
                     onClick={() => !isOutOfStock && addToCart(product)}
-                    className={`recessed-card dark:!bg-[var(--color-surface-container-lowest)] dark:![box-shadow:inset_0_2px_8px_rgba(0,0,0,0.4),0_4px_12px_rgba(0,0,0,0.2),0_1px_2px_rgba(0,0,0,0.1)] dark:!border-white/5 rounded-[1.5rem] sm:rounded-3xl p-1.5 sm:p-2 transition-all duration-300 ${isOutOfStock ? 'opacity-40 cursor-not-allowed' : 'active:scale-95 cursor-pointer group'}`}
+                    className={`rounded-2xl sm:rounded-3xl overflow-hidden transition-all duration-300 shadow-lg hover:shadow-xl ${
+                      isOutOfStock 
+                        ? 'opacity-40 cursor-not-allowed' 
+                        : 'active:scale-[0.97] cursor-pointer group'
+                    } bg-surface-container-lowest dark:bg-[#1a1a2e]`}
                   >
-                  <div className="frosted-inner dark:!bg-[#141228]/40 dark:!backdrop-blur-[16px] dark:!border-white/10 rounded-xl sm:rounded-2xl overflow-hidden flex flex-col h-full shadow-lg">
-                    {/* Product Image Area */}
-                    <div className="p-1.5 sm:p-2">
-                      <div className="w-full aspect-[4/5] rounded-xl sm:rounded-2xl overflow-hidden bg-gradient-to-br from-surface-container-highest to-surface-dim relative">
-                        {product.image_url && product.image_url !== "null" && product.image_url.trim() !== "" ? (
-                          <Image 
-                            src={encodeURI(product.image_url.trim())} 
-                            alt={product.name} 
-                            fill
-                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-                            className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out" 
-                            unoptimized={true} // Fallback for remote storage images
-                          />
-                        ) : (
-                          <div className="w-full h-full flex flex-col items-center justify-center bg-primary/5 group-hover:bg-primary/10 transition-colors">
-                            {product.categories?.name?.toLowerCase().includes('coffee') ? 
-                              <Coffee className="text-primary/20 w-10 h-10 sm:w-12 sm:h-12 group-hover:scale-110 transition-transform" /> : 
-                              <Package className="text-primary/20 w-10 h-10 sm:w-12 sm:h-12 group-hover:scale-110 transition-transform" />
-                            }
-                          </div>
-                        )}
-                        
-                        {/* Stock Badge - Compact Premium Tag */}
-                        <div className="absolute top-2.5 right-2.5 z-10 group-hover:scale-110 group-hover:translate-y-[-1px] transition-all duration-300">
-                          <div className={`
-                            relative flex flex-col items-center min-w-[34px] sm:min-w-[42px] p-1 sm:p-1.5 rounded-xl border backdrop-blur-2xl shadow-xl
-                            ${product.stock <= (product.min_stock || 10) ? 'bg-error text-on-error border-error-container/20' : 
-                              product.stock <= (product.min_stock || 10) + 5 ? 'bg-amber-500/90 text-white border-white/20' : 
-                              'bg-black/80 dark:bg-black text-white border-white/10'}
-                          `}>
-                            {/* Status Dot */}
-                            <div className={`
-                              absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-white
-                              ${product.stock <= (product.min_stock || 10) ? 'bg-white animate-pulse' : 
-                                product.stock <= (product.min_stock || 10) + 5 ? 'bg-white' : 
-                                'bg-secondary'}
-                            `} />
-                            
-                            <span className="text-[5px] sm:text-[6px] font-black uppercase tracking-[0.15em] opacity-60 leading-none mb-0.5">
-                              Stock
-                            </span>
-                            <span className="text-[10px] sm:text-[12px] font-black leading-none font-heading">
-                              {product.stock}
-                            </span>
-                          </div>
+                    {/* Image Area */}
+                    <div className="relative w-full aspect-square bg-surface-container-high dark:bg-[#0d0d1a] overflow-hidden">
+                      {product.image_url && product.image_url !== "null" && product.image_url.trim() !== "" ? (
+                        <Image 
+                          src={encodeURI(product.image_url.trim())} 
+                          alt={product.name} 
+                          fill
+                          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                          className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out" 
+                          unoptimized={true}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-primary/5 group-hover:bg-primary/10 transition-colors">
+                          {product.categories?.name?.toLowerCase().includes('coffee') ? 
+                            <Coffee className="text-primary/20 w-10 h-10 sm:w-12 sm:h-12 group-hover:scale-110 transition-transform" /> : 
+                            <Package className="text-primary/20 w-10 h-10 sm:w-12 sm:h-12 group-hover:scale-110 transition-transform" />
+                          }
                         </div>
+                      )}
 
-                        {/* Sold Out Overlay */}
-                        {isOutOfStock && (
-                          <div className="absolute inset-0 bg-black/50 backdrop-blur-[4px] flex items-center justify-center z-20">
-                            <span className="bg-white/95 dark:bg-black/95 text-error px-3 py-1 sm:px-5 sm:py-2 rounded-full font-black text-[8px] sm:text-[10px] uppercase tracking-[0.2em] shadow-2xl border border-error/20">
-                              Sold Out
-                            </span>
-                          </div>
-                        )}
-                      </div>
+
+                      {/* Sold Out Overlay */}
+                      {isOutOfStock && (
+                        <div className="absolute inset-0 bg-black/60 backdrop-blur-[3px] flex items-center justify-center z-20">
+                          <span className="bg-white/95 dark:bg-black/90 text-error px-4 py-1.5 rounded-full font-black text-[8px] sm:text-[9px] uppercase tracking-[0.2em] shadow-2xl border border-error/20">
+                            Sold Out
+                          </span>
+                        </div>
+                      )}
                     </div>
 
-                    {/* Content Area */}
-                    <div className="px-3 sm:px-5 pb-4 sm:pb-5 pt-1">
-                      <div className="flex items-center gap-1.5 mb-0.5 sm:mb-1">
-                        <h3 className="font-heading font-extrabold text-[11px] sm:text-sm text-on-surface line-clamp-1 flex-1 uppercase tracking-tight group-hover:text-primary transition-colors">{product.name}</h3>
-                        {product.stock > 0 && (
-                          <div className="w-1.5 h-1.5 rounded-full bg-secondary shadow-[0_0_8px_rgba(4,107,94,0.4)] animate-pulse" />
-                        )}
+                    {/* Content Body */}
+                    <div className="p-3 sm:p-4">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <h3 className="font-heading font-extrabold text-[11px] sm:text-[13px] text-on-surface line-clamp-1 uppercase tracking-tight group-hover:text-primary transition-colors flex-1 min-w-0">{product.name}</h3>
+                        {(() => {
+                          const maxStock = 100;
+                          const pct = Math.min(product.stock / maxStock, 1);
+                          const r = 12;
+                          const circ = 2 * Math.PI * r;
+                          const offset = circ * (1 - pct);
+                          const isLow = product.stock <= (product.min_stock || 10);
+                          const color = isLow ? 'var(--color-error)' : 'var(--color-secondary)';
+                          return (
+                            <div className="relative ml-2 flex-shrink-0 w-[30px] h-[30px] sm:w-[34px] sm:h-[34px]">
+                              <svg className="w-full h-full -rotate-90" viewBox="0 0 30 30">
+                                <circle cx="15" cy="15" r={r} fill="none" stroke="currentColor" strokeWidth="2.5" className="text-on-surface/5" />
+                                <circle cx="15" cy="15" r={r} fill="none" stroke={color} strokeWidth="2.5"
+                                  strokeDasharray={circ} strokeDashoffset={offset}
+                                  strokeLinecap="round" className="transition-all duration-700"
+                                />
+                              </svg>
+                              <span className={`absolute inset-0 flex items-center justify-center text-[8px] sm:text-[9px] font-black leading-none ${isLow ? 'text-error' : 'text-on-surface-variant/60'}`}>
+                                {product.stock}
+                              </span>
+                            </div>
+                          );
+                        })()}
                       </div>
-                      
-                      <div className="flex items-baseline gap-1 mb-2 sm:mb-3">
-                        <span className="text-[10px] sm:text-xs font-bold text-primary opacity-50">₱</span>
-                        <p className="text-base sm:text-xl font-black text-primary tracking-tighter">
-                          {Number(product.selling_price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </p>
-                      </div>
+                      <p className="text-[8px] sm:text-[9px] font-bold text-on-surface-variant/40 uppercase tracking-widest mb-2 sm:mb-3">
+                        {product.categories?.name || 'General'}
+                      </p>
 
-                      {/* Bundle Indicator - Pill Style */}
+                      {/* Bundle Indicator */}
                       {product.bundle_qty && product.bundle_qty > 0 && (
-                        <div className="flex items-center gap-1 mb-2.5 bg-primary/5 border border-primary/10 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full w-fit">
+                        <div className="flex items-center gap-1 mb-2 bg-primary/5 border border-primary/10 px-1.5 py-0.5 rounded-full w-fit">
                           <Tag size={8} className="text-primary" />
-                          <span className="text-[8px] sm:text-[9px] font-bold text-primary uppercase tracking-tight">
-
-                            Save ₱{( (product.selling_price * product.bundle_qty) - product.bundle_price! ).toFixed(2)} on {product.bundle_qty}
+                          <span className="text-[7px] sm:text-[8px] font-bold text-primary uppercase tracking-tight">
+                            Save ₱{((product.selling_price * product.bundle_qty) - product.bundle_price!).toFixed(2)} on {product.bundle_qty}
                           </span>
                         </div>
                       )}
 
-                      {/* Premium Stats Grid */}
-                      <div className="grid grid-cols-2 gap-1.5 sm:gap-2 pt-2.5 sm:pt-3 border-t border-on-surface/5">
-                        <div className="bg-secondary/5 px-1.5 py-1 rounded-lg border border-secondary/5">
-                          <span className="text-[6px] sm:text-[7px] font-black uppercase tracking-[0.15em] text-secondary/40 block mb-0.5">Yield</span>
-                          <p className="text-[9px] sm:text-[10px] font-black text-secondary leading-none">
-                            +₱{yieldAmt.toFixed(2)}
-                          </p>
+                      <div className="flex items-end justify-between">
+                        <div className="flex items-baseline gap-0.5">
+                          <span className="text-[10px] sm:text-xs font-bold text-primary/40">₱</span>
+                          <span className="text-lg sm:text-xl font-black text-primary tracking-tighter leading-none">
+                            {Number(product.selling_price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
                         </div>
-                        <div className="bg-primary/5 px-1.5 py-1 rounded-lg border border-primary/5 text-right">
-                          <span className="text-[6px] sm:text-[7px] font-black uppercase tracking-[0.15em] text-primary/40 block mb-0.5">ROI</span>
-                          <p className="text-[9px] sm:text-[10px] font-black text-primary leading-none">
-                            {roi.toFixed(0)}%
-                          </p>
-                        </div>
+                        {!isOutOfStock && (
+                          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-on-surface dark:bg-white/10 flex items-center justify-center group-hover:bg-primary transition-colors shadow-md">
+                            <ShoppingCart size={14} className="text-surface dark:text-white" />
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
                 </div>
                 );
               })}

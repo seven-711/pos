@@ -273,7 +273,7 @@ export default function Dashboard() {
             new Date(t.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) === yestStr
           ).length;
 
-          if (yestCount > 0) {
+          if (txData.length > 0 && yestCount > 0) {
             setTxGrowth(((txData.length - yestCount) / yestCount) * 100);
           } else if (txData.length > 0) {
             setTxGrowth(100);
@@ -294,7 +294,7 @@ export default function Dashboard() {
           const yestProfit = dayManifest[yestStr]?.profit || 0;
           const yestSales = dayManifest[yestStr]?.sales || 0;
 
-          if (yestProfit > 0) {
+          if (profit > 0 && yestProfit > 0) {
             setProfitGrowth(((profit - yestProfit) / yestProfit) * 100);
           } else if (profit > 0) {
             setProfitGrowth(100);
@@ -302,7 +302,7 @@ export default function Dashboard() {
             setProfitGrowth(0);
           }
 
-          if (yestSales > 0) {
+          if (sales > 0 && yestSales > 0) {
             setSalesGrowth(((sales - yestSales) / yestSales) * 100);
           } else if (sales > 0) {
             setSalesGrowth(100);
