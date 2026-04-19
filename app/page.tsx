@@ -1077,10 +1077,78 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="bg-surface-container-low p-3 rounded-2xl border border-outline-variant/10 shadow-sm">
-            <h3 className="font-extrabold text-[8px] text-on-surface-variant/50 mb-3 uppercase tracking-[0.2em] px-1">Growth Matrix</h3>
-            <div className="h-[100px] relative">
-              <Bar data={salesData} options={cartesianOptions} />
+          <div className="bg-surface-container-low p-4 rounded-3xl border border-outline-variant/10 shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow duration-300">
+            {/* Subtle ambient glow on hover */}
+            <div className="absolute -top-8 -right-8 w-24 h-24 bg-primary/5 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-all duration-700 pointer-events-none" />
+
+            {/* Header */}
+            <div className="flex justify-between items-start mb-3">
+              <div>
+                <h3 className="font-black text-[9px] text-primary uppercase tracking-[0.2em]">Growth Matrix</h3>
+                <p className="text-[7px] font-bold text-on-surface-variant/30 uppercase tracking-widest mt-0.5">7-Day Sales Velocity</p>
+              </div>
+              <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[7px] font-black uppercase ${salesGrowth > 0 ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : salesGrowth < 0 ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-primary/5 text-primary/50 border border-primary/10'}`}>
+                {salesGrowth > 0 ? '↑' : salesGrowth < 0 ? '↓' : '—'} {Math.abs(salesGrowth).toFixed(1)}%
+              </div>
+            </div>
+
+            {/* Peak Day Callout */}
+            {Math.max(...dailyVolumeData, 0) > 0 && (
+              <div className="flex items-center gap-2 mb-3 p-2 rounded-xl bg-primary/5 border border-primary/10">
+                <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse flex-shrink-0" />
+                <div className="flex items-baseline gap-1.5 min-w-0">
+                  <span className="text-[8px] font-black text-primary uppercase tracking-tight truncate">
+                    {dailyVolumeLabels[dailyVolumeData.indexOf(Math.max(...dailyVolumeData))] || '—'}
+                  </span>
+                  <span className="text-[7px] text-on-surface-variant/40 font-bold uppercase tracking-wider flex-shrink-0">peak day</span>
+                </div>
+                <span className="ml-auto text-[8px] font-black text-primary tracking-tighter flex-shrink-0">
+                  {fmt(Math.max(...dailyVolumeData))}
+                </span>
+              </div>
+            )}
+
+            {/* Bar Chart */}
+            <div className="h-[90px] relative">
+              <Bar 
+                data={{
+                  ...salesData,
+                  datasets: [{
+                    ...salesData.datasets[0],
+                    backgroundColor: dailyVolumeData.map((val, i) =>
+                      i === dailyVolumeData.indexOf(Math.max(...dailyVolumeData))
+                        ? (theme === 'dark' ? '#60A5FA' : '#00286d')
+                        : (theme === 'dark' ? 'rgba(59,130,246,0.3)' : 'rgba(0,40,109,0.2)')
+                    ),
+                    hoverBackgroundColor: theme === 'dark' ? '#93C5FD' : '#003d9b',
+                    borderRadius: 0,
+                    categoryPercentage: 1.0,
+                    barPercentage: 1.0,
+                  }]
+                }} 
+                options={{
+                  ...cartesianOptions,
+                  plugins: { ...cartesianOptions.plugins, legend: { display: false } },
+                  scales: {
+                    y: { display: false },
+                    x: {
+                      grid: { display: false },
+                      border: { display: false },
+                      ticks: {
+                        font: { size: 7, family: 'Poppins', weight: 'bold' as const },
+                        color: theme === 'dark' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)',
+                        padding: 6,
+                      }
+                    }
+                  }
+                }} 
+              />
+            </div>
+
+            {/* Footer strip */}
+            <div className="mt-3 pt-3 border-t border-outline-variant/5 flex items-center gap-1.5">
+              <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${salesGrowth > 0 ? 'bg-emerald-500' : salesGrowth < 0 ? 'bg-red-500' : 'bg-on-surface-variant/20'}`} />
+              <span className={`text-[8px] font-black uppercase tracking-widest ${salesGrowth > 0 ? 'text-emerald-500' : salesGrowth < 0 ? 'text-red-500' : 'text-on-surface-variant/40'}`}>vs yesterday</span>
             </div>
           </div>
 
