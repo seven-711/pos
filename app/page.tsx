@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   Receipt,
   ArrowRight,
+  ArrowUpRight,
   Loader2,
   Eye,
   EyeOff,
@@ -113,6 +114,8 @@ export default function Dashboard() {
   const [dailyVolumeLabels, setDailyVolumeLabels] = useState<string[]>([]);
   const [dailyVolumeData, setDailyVolumeData] = useState<number[]>([]);
   const [peakHoursData, setPeakHoursData] = useState<number[]>([]);
+  const [summaryRange, setSummaryRange] = useState<'today' | 'this_month' | 'last_month' | 'custom'>('today');
+  const [customDate, setCustomDate] = useState<string>(new Date().toLocaleDateString('en-CA'));
   const [categoryChartData, setCategoryChartData] = useState<any>({ labels: [], datasets: [] });
   const [error, setError] = useState<string | null>(null);
   const [isTimeout, setIsTimeout] = useState(false);
@@ -125,8 +128,11 @@ export default function Dashboard() {
 
     fetchDashboardData();
 
-    // Periodic Refresh (every 60s) for live intelligence
-    const refreshInterval = setInterval(() => fetchDashboardData(true), 60000);
+    // Periodic Refresh (every 60s) for live intelligence (only if range is 'today')
+    let refreshInterval: NodeJS.Timeout | null = null;
+    if (summaryRange === 'today') {
+      refreshInterval = setInterval(() => fetchDashboardData(true), 60000);
+    }
 
     // Listen for global ecosystem sync
     const handleGlobalSync = () => {
@@ -136,10 +142,10 @@ export default function Dashboard() {
 
     return () => {
       clearTimeout(timer);
-      clearInterval(refreshInterval);
+      if (refreshInterval) clearInterval(refreshInterval);
       window.removeEventListener('global-sync', handleGlobalSync);
     };
-  }, [activeSession]);
+  }, [activeSession, summaryRange, customDate]);
 
   useEffect(() => {
     if (!activeSession) return;
@@ -165,7 +171,7 @@ export default function Dashboard() {
   const fetchDashboardData = async (silent = false) => {
     setError(null);
     setIsTimeout(false);
-    if (!silent) setLoading(true);
+    if (!silent && !hasSystemBooted) setLoading(true);
 
     try {
       // We use the activeSession from context instead of local state
@@ -173,22 +179,27 @@ export default function Dashboard() {
       const currentSession = activeSession;
       const isLive = !!currentSession;
 
-      const todayStr = new Date().toLocaleDateString('en-CA');
-      const startOfDay = `${todayStr}T00:00:00+08:00`;
-      const endOfDay = `${todayStr}T23:59:59+08:00`;
+      const now = new Date();
+      let queryStart, queryEnd;
 
-      // We still check for sessions to determine context, but the data is for the full day
-      const { data: latestSessions } = await supabase
-        .from("store_sessions")
-        .select("*")
-        .order("started_at", { ascending: false })
-        .limit(1);
-
-      const latest = latestSessions?.[0];
-
-      // Standardize query boundaries to the Full Calendar Day
-      const queryStart = startOfDay;
-      const queryEnd = endOfDay;
+      if (summaryRange === 'today') {
+        const todayStr = now.toLocaleDateString('en-CA');
+        queryStart = `${todayStr}T00:00:00+08:00`;
+        queryEnd = `${todayStr}T23:59:59+08:00`;
+      } else if (summaryRange === 'this_month') {
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        queryStart = firstDay.toISOString();
+        queryEnd = now.toISOString();
+      } else if (summaryRange === 'last_month') {
+        const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+        queryStart = firstDayLastMonth.toISOString();
+        queryEnd = lastDayLastMonth.toISOString();
+      } else {
+        // Custom Date
+        queryStart = `${customDate}T00:00:00+08:00`;
+        queryEnd = `${customDate}T23:59:59+08:00`;
+      }
 
       // 2. Fetch Transactions
       const { data: txDataRaw, error: txErr } = await supabase
@@ -487,28 +498,55 @@ export default function Dashboard() {
     <div className="max-w-7xl mx-auto w-full px-1">
       {/* Dashboard Header */}
       <div className="flex flex-col gap-2 mb-2 mt-2">
-        <div className="flex justify-between items-end">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-3">
           <div>
             <p className="text-secondary font-label text-[10px] font-bold uppercase tracking-[0.25em] mb-1">
-              {(activeSession && !showPreview) ? "Live Intelligence Flow" : totalSales > 0 ? "Last Session Summary" : "System Standby"}
+              {summaryRange === 'today' 
+                ? (activeSession ? "Live Intelligence Flow" : "Last Session Summary") 
+                : summaryRange === 'this_month' 
+                  ? "Current Month Analytics" 
+                  : summaryRange === 'last_month' 
+                    ? "Previous Month Review" 
+                    : `Archive Entry: ${customDate}`}
             </p>
             <h1 className="text-xl font-extrabold tracking-tight text-primary font-heading uppercase">Dashboard</h1>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowPreview(!showPreview)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[9px] font-black uppercase tracking-wider transition-all ${showPreview
-                  ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
-                  : "bg-surface-container text-secondary border-outline-variant/10 hover:bg-surface-highest"
-                }`}
-            >
-              {showPreview ? <EyeOff size={12} /> : <Eye size={12} />}
-              {showPreview ? "Exit Preview" : "Preview Close"}
-            </button>
-            <div className="hidden md:flex bg-surface-container rounded-2xl p-1 gap-1 border border-outline-variant/10">
-              <div className={`flex items-center px-4 py-2 gap-2 text-xs font-bold ${(activeSession && !showPreview) ? "text-secondary" : "text-on-surface-variant/40"}`}>
-                <div className={`w-2 h-2 rounded-full ${(activeSession && !showPreview) ? "bg-secondary animate-pulse" : "bg-outline-variant"}`}></div>
-                {(activeSession && !showPreview) ? "SYSTEM LIVE" : "SESSION CLOSED"}
+
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Historical Range Navigator */}
+            <div className="flex bg-surface-container rounded-2xl p-1 gap-1 border border-outline-variant/10 shadow-sm overflow-x-auto no-scrollbar max-w-[90vw] md:max-w-none">
+              {[
+                { id: 'today', label: 'Today' },
+                { id: 'this_month', label: 'This Month' },
+                { id: 'last_month', label: 'Last Month' },
+                { id: 'custom', label: 'Custom' }
+              ].map((range) => (
+                <button
+                  key={range.id}
+                  onClick={() => setSummaryRange(range.id as any)}
+                  className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+                    summaryRange === range.id
+                      ? "bg-primary text-white shadow-lg shadow-primary/20"
+                      : "text-secondary hover:bg-surface-highest"
+                  }`}
+                >
+                  {range.id === 'custom' && summaryRange === 'custom' ? (
+                    <input 
+                      type="date" 
+                      value={customDate} 
+                      onChange={(e) => setCustomDate(e.target.value)}
+                      className="bg-transparent border-none p-0 focus:ring-0 text-[9px] font-black uppercase text-white cursor-pointer"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  ) : range.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="hidden lg:flex bg-surface-container rounded-2xl p-1 gap-1 border border-outline-variant/10">
+              <div className={`flex items-center px-4 py-2 gap-2 text-xs font-bold ${activeSession ? "text-secondary" : "text-on-surface-variant/40"}`}>
+                <div className={`w-2 h-2 rounded-full ${activeSession ? "bg-secondary animate-pulse" : "bg-outline-variant"}`}></div>
+                {activeSession ? "SYSTEM LIVE" : "SESSION CLOSED"}
               </div>
             </div>
           </div>
@@ -517,56 +555,91 @@ export default function Dashboard() {
 
       {/* Summary Cards Row */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
-        <div className={`col-span-2 md:col-span-1 p-4 rounded-3xl relative overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer ${theme === 'dark'
-            ? "bg-gradient-to-br from-[#FF9500] via-[#FF8C00] to-[#E67E00] text-white shadow-[0_20px_50px_rgba(255,149,0,0.3)] border border-white/20"
-            : "bg-gradient-to-br from-[#0052D4] via-[#4364F7] to-[#6FB1FC] text-white shadow-[0_20px_50px_rgba(0,82,212,0.2)] border border-white/10"
+        <div className={`col-span-2 md:col-span-1 p-4 rounded-3xl relative overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer border border-white/20 flex flex-col justify-between min-h-[130px] ${theme === 'dark'
+            ? "bg-gradient-to-br from-[#FF9500] via-[#FF8C00] to-[#E67E00] text-white shadow-[0_20px_50px_rgba(255,149,0,0.3)]"
+            : "bg-gradient-to-br from-[#0052D4] via-[#4364F7] to-[#6FB1FC] text-white shadow-[0_20px_50px_rgba(0,82,212,0.2)]"
           }`}>
           {/* Decorative Gloss/Glow */}
-          <div className={`absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white opacity-[0.15] pointer-events-none`} />
-          <div className="absolute -top-12 -right-12 w-32 h-32 bg-white/20 blur-[40px] rounded-full pointer-events-none" />
-
-          <span className="text-[9px] font-black uppercase tracking-[0.25em] block mb-5 relative z-10 text-white/80">Total Sales Today</span>
-
-          <div className="text-2xl font-black font-heading tracking-tighter mb-1 relative z-10 text-white drop-shadow-md">
-            {fmt(totalSales)}
+          <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white opacity-[0.2] pointer-events-none" />
+          <div className="absolute -right-6 -bottom-6 opacity-10 group-hover:opacity-30 transition-all duration-700 group-hover:rotate-0 group-hover:scale-110">
+            <Wallet size={120} strokeWidth={1} />
           </div>
 
-          <div className="text-[10px] font-black flex items-center gap-2 uppercase tracking-wide relative z-10 text-white/70">
-            <div className="p-1.5 rounded-xl flex items-center justify-center bg-white/20">
+          <div className="relative z-10">
+            <span className="text-[8px] font-black uppercase tracking-[0.25em] text-white/70 block mb-1">Total Sales</span>
+            <div className="text-2xl font-black font-heading tracking-tighter text-white drop-shadow-md">
+              {fmt(totalSales)}
+            </div>
+          </div>
+
+          <div className="relative z-10 flex items-center gap-2">
+            <div className="bg-white/20 backdrop-blur-md p-1.5 rounded-xl border border-white/10 flex items-center justify-center">
               <TrendingUp size={12} strokeWidth={3} className="text-white" />
             </div>
-            <span>{txCount} Cycles</span>
+            <span className="text-[10px] font-black uppercase tracking-widest">{txCount} Cycles</span>
           </div>
-
-          <Wallet className="absolute -right-6 -bottom-6 w-28 h-28 rotate-12 transition-all duration-700 opacity-20 group-hover:rotate-0 group-hover:scale-110 group-hover:opacity-30 text-white" />
         </div>
 
+
         {/* Gross Profit Card */}
-        <div className="bg-gradient-to-br from-[#046b5e] via-[#046b5e] to-[#035147] p-4 rounded-3xl relative overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer text-white border border-white/10 shadow-[0_20px_50px_rgba(4,107,94,0.15)]">
-          <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white opacity-[0.1] pointer-events-none" />
-          <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/70 block mb-4 relative z-10">Gross Profit</span>
-          <div className="text-lg font-extrabold font-heading mb-1 relative z-10 drop-shadow-sm">{fmt(totalProfit)}</div>
-          <div className="text-[8px] font-black uppercase tracking-widest text-white/50 relative z-10">
-            Yield: {totalSales > 0 ? ((totalProfit / totalSales) * 100).toFixed(1) : 0}%
+        <div className="bg-gradient-to-br from-[#046156] via-[#058b7a] to-[#046156] p-4 rounded-3xl relative overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer text-white border border-white/10 shadow-[0_20px_50px_rgba(4,107,94,0.15)] flex flex-col justify-between min-h-[130px]">
+          <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/10 opacity-[0.2] pointer-events-none" />
+          <div className="absolute -right-2 top-0 opacity-10 group-hover:opacity-20 transition-all duration-700 group-hover:rotate-12 group-hover:scale-110">
+            <TrendingUp size={100} strokeWidth={1.5} />
+          </div>
+          
+          <div className="relative z-10">
+            <span className="text-[8px] font-black uppercase tracking-[0.25em] text-white/50 block mb-1">Gross Yield</span>
+            <div className="text-2xl font-black font-heading tracking-tighter drop-shadow-lg">{fmt(totalProfit)}</div>
+          </div>
+
+          <div className="relative z-10">
+            <div className="inline-flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-2 py-0.5 rounded-full border border-white/10 text-[9px] font-black uppercase tracking-tight">
+              <div className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse"></div>
+              {totalSales > 0 ? ((totalProfit / totalSales) * 100).toFixed(1) : 0}% Margin
+            </div>
           </div>
         </div>
 
         {/* Net Earnings Card */}
-        <div className="bg-gradient-to-br from-[#4A00E0] via-[#8E2DE2] to-[#4A00E0] p-4 rounded-3xl relative overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer text-white border border-white/10 shadow-[0_20px_50px_rgba(74,0,224,0.15)]">
-          <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white opacity-[0.1] pointer-events-none" />
-          <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/70 block mb-4 relative z-10">Net Earnings</span>
-          <div className="text-lg font-extrabold font-heading mb-1 relative z-10 drop-shadow-sm">{fmt(netProfit)}</div>
-          <div className="text-[8px] font-black uppercase tracking-widest text-white/50 relative z-10 uppercase">Net Archive</div>
+        <div className="bg-gradient-to-br from-[#3D00B0] via-[#5F00FF] to-[#3D00B0] p-4 rounded-3xl relative overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer text-white border border-white/10 shadow-[0_20px_50px_rgba(61,0,176,0.15)] flex flex-col justify-between min-h-[130px]">
+          <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/10 opacity-[0.2] pointer-events-none" />
+          <div className="absolute -right-2 top-0 opacity-10 group-hover:opacity-20 transition-all duration-700 group-hover:-rotate-12 group-hover:scale-110">
+            <ArrowUpRight size={100} strokeWidth={1.5} />
+          </div>
+
+          <div className="relative z-10">
+            <span className="text-[8px] font-black uppercase tracking-[0.25em] text-white/50 block mb-1">Net Flow</span>
+            <div className="text-2xl font-black font-heading tracking-tighter drop-shadow-lg">{fmt(netProfit)}</div>
+          </div>
+
+          <div className="relative z-10 text-[8px] font-black uppercase tracking-[0.2em] text-white/40 flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-[1px] bg-white/20"></div>
+              Session Archive
+            </div>
+            <span className="text-[7px] opacity-70 ml-6 text-white/30 lowercase italic">Less {fmt(totalExpenses)} in expenses</span>
+          </div>
         </div>
 
         {/* Efficiency Card */}
-        <div className="col-span-2 md:col-span-1 bg-gradient-to-br from-[#FF416C] to-[#FF4B2B] p-4 rounded-3xl relative overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer text-white border border-white/10 shadow-[0_20px_50px_rgba(255,65,108,0.15)]">
-          <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white opacity-[0.12] pointer-events-none" />
-          <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/70 block mb-3 relative z-10">Efficiency</span>
-          <div className="flex items-center gap-1 bg-white/10 w-fit px-2 py-1 rounded-full text-[8px] font-black text-white border border-white/10 uppercase tracking-tighter mb-2 relative z-10">
-            Net ROI {totalSales > 0 ? ((netProfit / totalSales) * 100).toFixed(0) : 0}%
+        <div className="col-span-2 md:col-span-1 bg-gradient-to-br from-[#D4145A] via-[#FBB03B] to-[#D4145A] p-4 rounded-3xl relative overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer text-white border border-white/10 shadow-[0_20px_50px_rgba(212,20,90,0.15)] flex flex-col justify-between min-h-[130px]">
+          <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/10 opacity-[0.2] pointer-events-none" />
+          
+          <div className="relative z-10">
+            <span className="text-[8px] font-black uppercase tracking-[0.25em] text-white/50 block mb-1">Velocity</span>
+            <div className="text-2xl font-black font-heading tracking-tighter drop-shadow-lg">
+              {txCount} <span className="text-xs opacity-50">Cycles</span>
+            </div>
           </div>
-          <div className="text-lg font-extrabold font-heading relative z-10">{txCount} <span className="text-[10px] font-medium opacity-60">Cycles</span></div>
+
+          <div className="relative z-10 flex items-center gap-2">
+            <div className="bg-black/20 backdrop-blur-lg px-2 py-1 rounded-xl border border-white/10">
+              <span className="text-[10px] font-black text-white">
+                {totalSales > 0 ? ((netProfit / totalSales) * 100).toFixed(0) : 0}% <span className="text-[7px] text-white/50 uppercase tracking-tighter">Net ROI</span>
+              </span>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -577,7 +650,13 @@ export default function Dashboard() {
           <div className="flex flex-col sm:flex-row justify-center sm:justify-between items-center sm:items-start mb-8 gap-4">
             <div className="text-center sm:text-left">
               <span className="text-xl font-black text-on-surface tracking-tighter uppercase font-heading">
-                {timeRange === '1M' ? 'Monthly Yield Flow' : timeRange === '1Y' ? 'Annual Velocity Hub' : 'Historical Velocity Hub'}
+                {summaryRange === 'today' 
+                  ? (timeRange === '1M' ? 'Monthly Yield Flow' : 'Historical Velocity Hub')
+                  : summaryRange === 'this_month'
+                    ? 'Intra-Month Velocity'
+                    : summaryRange === 'last_month'
+                      ? 'Retrospective Archive'
+                      : `Range Analysis Hub`}
               </span>
             </div>
 

@@ -282,7 +282,7 @@ function InventoryContent() {
                 <div 
                   key={p.id}
                   id={`product-${p.id}`}
-                  className={`p-4 rounded-2xl flex items-center justify-between group relative overflow-hidden transition-all border-2 duration-500 ${
+                  className={`p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 group relative overflow-hidden transition-all border-2 duration-500 ${
                     isHighlighted 
                       ? 'border-primary shadow-2xl scale-[1.01] z-10' 
                       : isLow 
@@ -303,54 +303,56 @@ function InventoryContent() {
                   {/* Edge Indicator */}
                   <div className={`absolute left-0 top-0 bottom-0 w-1 transition-all duration-300 ${isLow ? 'bg-error' : 'bg-primary opacity-0 group-hover:opacity-100'}`} />
 
-                  <div className="flex gap-4 items-center relative z-10">
-                    <div className="w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center bg-surface-container-highest shadow-inner group-hover:scale-105 transition-transform relative">
+                  <div className="flex gap-4 items-start sm:items-center relative z-10 flex-1">
+                    <div className="w-14 h-14 sm:w-12 sm:h-12 rounded-xl overflow-hidden flex items-center justify-center bg-surface-container-highest shadow-inner group-hover:scale-105 transition-transform shrink-0">
                       {p.image_url ? (
                         <Image 
                           src={p.image_url} 
                           alt={p.name} 
-                          width={48} 
-                          height={48} 
+                          width={56} 
+                          height={56} 
                           className="w-full h-full object-cover"
                           priority={index < 8}
-                          unoptimized={true} // Fallback to prevent broken remote images
+                          unoptimized={true}
                         />
                       ) : (
                         <Package size={24} className="text-primary/40" />
                       )}
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="text-[10px] font-mono text-on-surface-variant font-bold opacity-50 uppercase">#{p.id.split('-')[0]}</p>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <p className="text-[9px] font-mono text-on-surface-variant font-bold opacity-60 uppercase bg-surface-container-highest px-1.5 py-0.5 rounded leading-none">#{p.id.split('-')[0]}</p>
                         {isLow && (
-                          <div className="flex items-center gap-1 px-1.5 py-0.5 bg-error text-white rounded text-[8px] font-black uppercase tracking-tighter animate-in zoom-in">
+                          <div className="flex items-center gap-1 px-1.5 py-0.5 bg-error text-white rounded text-[8px] font-black uppercase tracking-tighter shadow-sm">
                             <AlertCircle size={8} />
-                            Low
+                            Critical
                           </div>
                         )}
+                        <span className="text-[9px] font-black uppercase text-secondary/50 tracking-widest">{p.categories?.name || 'Uncategorized'}</span>
                       </div>
-                      <p className="font-bold text-sm text-on-surface group-hover:text-primary transition-colors">{p.name}</p>
-                      <p className="text-xs font-semibold text-secondary/70">₱{Number(p.cost_price || 0).toFixed(2)} unit cost</p>
+                      <p className="font-bold text-base sm:text-sm text-on-surface group-hover:text-primary transition-colors truncate">{p.name}</p>
+                      <p className="text-xs font-semibold text-secondary/70">₱{Number(p.cost_price || 0).toFixed(2)} <span className="text-[10px] opacity-60 uppercase font-bold tracking-tighter">unit cost</span></p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-6 relative z-10">
-                    <div className="text-right shrink-0">
-                      <p className={`text-[9px] font-black uppercase mb-1 tracking-widest ${isLow ? 'text-error animate-pulse' : 'text-on-surface-variant'}`}>
-                        {isLow ? 'Warning: Low' : 'Inventory'}
+                  <div className="flex items-center justify-between sm:justify-end gap-6 relative z-10 pt-2 sm:pt-0 border-t sm:border-none border-outline-variant/10">
+                    <div className="text-left sm:text-right">
+                      <p className={`text-[8px] font-black uppercase mb-1 tracking-[0.2em] ${isLow ? 'text-error font-bold' : 'text-on-surface-variant/60'}`}>
+                        {isLow ? 'Warning: Low' : 'In Stock'}
                       </p>
                       <div className="flex items-center gap-2">
-                         <span className={`px-2.5 py-1 rounded-lg font-black text-xs transition-all ${
-                           isLow ? 'bg-error text-white shadow-lg shadow-error/20' : 'bg-surface-container-highest text-on-surface'
+                         <span className={`px-3 py-1.5 rounded-xl font-black text-sm transition-all ${
+                           isLow ? 'bg-error text-white shadow-lg shadow-error/30' : 'bg-surface-container-highest text-on-surface'
                          }`}>
                            {p.stock} 
                          </span>
+                         <span className="text-[9px] font-bold text-secondary opacity-40 uppercase sm:hidden">Units Available</span>
                       </div>
                     </div>
                     <button 
                       onClick={() => { setSelectedProduct(p); setAdjustQty(0); setShowAdjustModal(true); }}
-                      className={`p-3 rounded-xl transition-all active:scale-90 cursor-pointer shadow-sm ${
-                        isLow ? 'bg-error text-white hover:bg-error-high' : 'bg-primary/10 text-primary hover:bg-primary hover:text-white'
+                      className={`p-3.5 sm:p-3 rounded-2xl sm:rounded-xl transition-all active:scale-95 cursor-pointer shadow-md ${
+                        isLow ? 'bg-error text-white hover:shadow-error/40' : 'bg-primary text-white shadow-primary/20 hover:scale-105'
                       }`}
                       title="Update stock level"
                     >
