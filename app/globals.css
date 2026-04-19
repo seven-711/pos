@@ -52,6 +52,16 @@
   --color-secondary-fixed-dim: #84d5c5;
 }
 
+@layer base {
+  :root {
+    --font-sans: var(--font-poppins), system-ui, sans-serif;
+  }
+  
+  * {
+    font-family: var(--font-sans) !important;
+  }
+}
+
 @layer utilities {
   .recessed-card {
     background: var(--color-surface-container-low);

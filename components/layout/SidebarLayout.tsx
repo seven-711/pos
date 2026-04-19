@@ -233,18 +233,18 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
             </div>
           </main>
 
-          {/* Dedicated Notification View (Mobile Slide from RIGHT) */}
+          {/* Dedicated Notification View (Mobile Slide) */}
           <div 
             className={`
               absolute inset-0 md:hidden bg-white z-[300] transition-transform duration-500 ease-ios
-              ${showNotifications ? 'translate-x-0 shadow-2xl' : 'translate-x-[100%]'}
+              ${showNotifications ? 'translate-x-0 shadow-2xl' : (showCart ? 'translate-x-[-100%]' : 'translate-x-[100%]')}
             `}
           >
             <NotificationMobileView />
           </div>
 
 
-          {/* Dedicated Cart View (Mobile Slide from RIGHT) */}
+          {/* Dedicated Cart View (Mobile Slide) */}
           <div 
             className={`
               absolute inset-0 md:hidden bg-white z-[301] transition-transform duration-500 ease-ios

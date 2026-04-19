@@ -242,21 +242,21 @@ export default function POSPage() {
   return (
     <div className="max-w-7xl mx-auto w-full relative">
       {/* Header / Search */}
-      <div className="flex flex-col md:flex-row gap-4 mb-8">
+      <div className="flex flex-col md:flex-row gap-2 mb-4">
         <div className="relative flex-grow">
-          <Search size={22} className="absolute left-4 top-1/2 -translate-y-[50%] text-on-surface-variant" />
+          <Search size={18} className="absolute left-4 top-1/2 -translate-y-[50%] text-on-surface-variant opacity-40" />
           <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-12 pr-4 py-4 bg-surface-container-high rounded-xl border-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all placeholder:text-on-surface-variant/50 text-on-surface outline-none"
+            className="w-full pl-11 pr-4 py-2.5 bg-surface-container-high rounded-xl border-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all placeholder:text-on-surface-variant/40 text-[11px] font-bold text-on-surface outline-none"
             placeholder="Search products or SKU..."
             type="text"
           />
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-3 md:pb-0 custom-scrollbar">
+        <div className="flex gap-1.5 overflow-x-auto pb-2 md:pb-0 custom-scrollbar">
           <button
             onClick={() => setSelectedCategory(null)}
-            className={`px-6 py-4 rounded-xl font-bold text-sm whitespace-nowrap transition-all active:scale-95 ${!selectedCategory ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface-variant'}`}
+            className={`px-3.5 py-2.5 rounded-xl font-black text-[10px] uppercase whitespace-nowrap transition-all active:scale-95 ${!selectedCategory ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface-variant'}`}
           >
             All Items
           </button>
@@ -264,7 +264,7 @@ export default function POSPage() {
             <button
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id)}
-              className={`px-6 py-4 rounded-xl font-bold text-sm whitespace-nowrap transition-all active:scale-95 ${selectedCategory === cat.id ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface-variant'}`}
+              className={`px-3.5 py-2.5 rounded-xl font-black text-[10px] uppercase whitespace-nowrap transition-all active:scale-95 ${selectedCategory === cat.id ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface-variant'}`}
             >
               {cat.name}
             </button>
@@ -303,6 +303,7 @@ export default function POSPage() {
                             fill
                             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
                             className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out" 
+                            unoptimized={true} // Fallback for remote storage images
                           />
                         ) : (
                           <div className="w-full h-full flex flex-col items-center justify-center bg-primary/5 group-hover:bg-primary/10 transition-colors">

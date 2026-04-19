@@ -15,7 +15,8 @@ import {
   ArrowRight,
   Loader2,
   Eye,
-  EyeOff
+  EyeOff,
+  Package
 } from "lucide-react";
 import { useSession, type Session } from "@/lib/contexts/SessionContext";
 import { useTheme } from "@/lib/contexts/ThemeContext";
@@ -105,6 +106,10 @@ export default function Dashboard() {
   // Chart data
   const [hourlyProfitLabels, setHourlyProfitLabels] = useState<string[]>([]);
   const [hourlyProfitData, setHourlyProfitData] = useState<number[]>([]);
+  const [historyProfitLabels, setHistoryProfitLabels] = useState<string[]>([]);
+  const [historyProfitData, setHistoryProfitData] = useState<number[]>([]);
+  const [historySalesData, setHistorySalesData] = useState<number[]>([]);
+  const [timeRange, setTimeRange] = useState<'1Y' | '6M' | '3M' | '1M'>('1M');
   const [dailyVolumeLabels, setDailyVolumeLabels] = useState<string[]>([]);
   const [dailyVolumeData, setDailyVolumeData] = useState<number[]>([]);
   const [peakHoursData, setPeakHoursData] = useState<number[]>([]);
@@ -117,7 +122,7 @@ export default function Dashboard() {
     const timer = setTimeout(() => {
       if (loading) setIsTimeout(true);
     }, 10000); // 10s timeout fallback
-    
+
     fetchDashboardData();
 
     // Periodic Refresh (every 60s) for live intelligence
@@ -128,7 +133,7 @@ export default function Dashboard() {
       fetchDashboardData(true);
     };
     window.addEventListener('global-sync', handleGlobalSync);
-    
+
     return () => {
       clearTimeout(timer);
       clearInterval(refreshInterval);
@@ -167,7 +172,7 @@ export default function Dashboard() {
 
       const currentSession = activeSession;
       const isLive = !!currentSession;
-      
+
       const todayStr = new Date().toLocaleDateString('en-CA');
       const startOfDay = `${todayStr}T00:00:00+08:00`;
       const endOfDay = `${todayStr}T23:59:59+08:00`;
@@ -178,7 +183,7 @@ export default function Dashboard() {
         .select("*")
         .order("started_at", { ascending: false })
         .limit(1);
-      
+
       const latest = latestSessions?.[0];
 
       // Standardize query boundaries to the Full Calendar Day
@@ -218,13 +223,38 @@ export default function Dashboard() {
         setHourlyProfitData(Object.values(hourlyMap));
         setPeakHoursData(peakMap);
 
+        // Fetch All-Time History for Daily Velocity
+        const { data: allHistory } = await supabase
+          .from("transactions")
+          .select("created_at, total_profit, total_amount")
+          .order("created_at", { ascending: true });
+
+        if (allHistory) {
+          // Use a single map to ensure keys (dates) are perfectly aligned for both metrics
+          const dayManifest: Record<string, { profit: number, sales: number }> = {};
+
+          (allHistory as any[]).forEach((t: { created_at: string, total_profit: number | null, total_amount: number | null }) => {
+            const dateStr = new Date(t.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            if (!dayManifest[dateStr]) {
+              dayManifest[dateStr] = { profit: 0, sales: 0 };
+            }
+            dayManifest[dateStr].profit += (Number(t.total_profit) || 0);
+            dayManifest[dateStr].sales += (Number(t.total_amount) || 0);
+          });
+
+          const labels = Object.keys(dayManifest);
+          setHistoryProfitLabels(labels);
+          setHistoryProfitData(labels.map(l => dayManifest[l].profit));
+          setHistorySalesData(labels.map(l => dayManifest[l].sales));
+        }
+
         // Category Intelligence
         const categoryMap: Record<string, number> = {};
         txData.forEach((tx) => {
           tx.transaction_items?.forEach((item) => {
             // Identify services (where product_id is null) vs physical products
             let catName = item.products?.categories?.name;
-            
+
             if (!catName) {
               catName = "Gcash services";
             }
@@ -250,7 +280,7 @@ export default function Dashboard() {
             hoverOffset: 12,
             spacing: 4,
             borderRadius: 8,
-            borderWidth: 0, 
+            borderWidth: 0,
             cutout: "82%",
           }]
         });
@@ -288,7 +318,7 @@ export default function Dashboard() {
       // 5. Low Stock
       const { data: stockData, error: stockErr } = await supabase
         .from("products")
-        .select("id, name, stock")
+        .select("id, name, stock, image_url")
         .lte("stock", 10).limit(3);
       if (stockErr) throw stockErr;
       if (stockData) setLowStock(stockData.map((s: any) => ({ ...s, quantity: s.stock })));
@@ -315,25 +345,22 @@ export default function Dashboard() {
     datasets: [{
       label: "Profit",
       data: hourlyProfitData.length > 0 ? hourlyProfitData : [0],
-      borderColor: theme === 'dark' ? "#8aaaff" : "#00286d",
+      borderColor: "#3B82F6",
       borderWidth: 4,
       fill: true,
       backgroundColor: (context: any) => {
         const ctx = context.chart.ctx;
         const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-        if (theme === 'dark') {
-          gradient.addColorStop(0, 'rgba(138, 170, 255, 0.25)');
-          gradient.addColorStop(1, 'rgba(138, 170, 255, 0)');
-        } else {
-          gradient.addColorStop(0, 'rgba(0, 40, 109, 0.15)');
-          gradient.addColorStop(1, 'rgba(0, 40, 109, 0)');
-        }
+        gradient.addColorStop(0, 'rgba(59, 130, 246, 0.35)'); // Electric Blue at peak
+        gradient.addColorStop(0.6, 'rgba(59, 130, 246, 0.05)'); // Fade out mid-way
+        gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');    // Total transparent at base
         return gradient;
       },
       tension: 0.5,
       pointRadius: 0,
+      pointHitRadius: 20, // Make it much easier to trigger hover
       pointHoverRadius: 8,
-      pointHoverBackgroundColor: theme === 'dark' ? "#8aaaff" : "#00286d",
+      pointHoverBackgroundColor: "#3B82F6",
       pointHoverBorderColor: "#fff",
       pointHoverBorderWidth: 3,
     }],
@@ -383,12 +410,12 @@ export default function Dashboard() {
     plugins: commonPlugins,
     scales: {
       y: { display: false },
-      x: { 
-        grid: { display: false }, 
-        ticks: { 
-          font: { size: 9, family: "Inter", weight: 'bold' as const },
+      x: {
+        grid: { display: false },
+        ticks: {
+          font: { size: 9, family: "Poppins", weight: 'bold' as const },
           color: theme === 'dark' ? '#ffffff' : 'rgba(0,0,0,0.4)'
-        } 
+        }
       },
     },
   };
@@ -400,7 +427,14 @@ export default function Dashboard() {
       duration: 1500,
       easing: 'easeOutQuart' as const
     },
-    plugins: commonPlugins,
+    plugins: {
+      ...commonPlugins,
+      tooltip: {
+        ...commonPlugins.tooltip,
+        titleFont: { ...commonPlugins.tooltip.titleFont, family: "Poppins" },
+        bodyFont: { ...commonPlugins.tooltip.bodyFont, family: "Poppins" }
+      }
+    },
   };
 
   const fmt = (n: number) =>
@@ -423,7 +457,7 @@ export default function Dashboard() {
                 <h1 className="text-2xl font-black font-heading text-on-surface tracking-tight">Sync Encountered a Glitch</h1>
                 <p className="text-on-surface-variant text-sm mt-1">{error || "The operational matrix handshake timed out. Check your internet or local network connection."}</p>
               </div>
-              <button 
+              <button
                 onClick={() => fetchDashboardData()}
                 className="px-8 py-3 bg-primary text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20 cursor-pointer"
               >
@@ -438,7 +472,8 @@ export default function Dashboard() {
                   <Activity size={28} className="text-primary animate-pulse" />
                 </div>
               </div>
-              <h1 className="text-4xl font-black text-primary tracking-tighter mb-2 font-heading">POS NI ESTELA</h1>
+              <h1 className="text-4xl font-black text-primary tracking-tighter mb-2 font-heading italic">POS NI ESTELA</h1>
+              <div className="h-[2px] w-12 bg-primary mx-auto mb-6"></div>
               <div className="h-[2px] w-12 bg-primary mx-auto mb-6"></div>
               {/* Placeholder to keep layout spacing if needed, but removing text as requested */}
             </>
@@ -460,13 +495,12 @@ export default function Dashboard() {
             <h1 className="text-xl font-extrabold tracking-tight text-primary font-heading uppercase">Dashboard</h1>
           </div>
           <div className="flex items-center gap-2">
-            <button 
+            <button
               onClick={() => setShowPreview(!showPreview)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[9px] font-black uppercase tracking-wider transition-all ${
-                showPreview 
-                  ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" 
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[9px] font-black uppercase tracking-wider transition-all ${showPreview
+                  ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
                   : "bg-surface-container text-secondary border-outline-variant/10 hover:bg-surface-highest"
-              }`}
+                }`}
             >
               {showPreview ? <EyeOff size={12} /> : <Eye size={12} />}
               {showPreview ? "Exit Preview" : "Preview Close"}
@@ -483,157 +517,404 @@ export default function Dashboard() {
 
       {/* Summary Cards Row */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
-        <div className="col-span-2 md:col-span-1 bg-surface-container-low p-3 rounded-xl border border-outline-variant/10 shadow-sm relative overflow-hidden group">
-          <span className="text-on-surface-variant text-[10px] font-bold uppercase tracking-widest block mb-4">Total Sales Today</span>
-          <div className="text-lg font-extrabold text-primary font-heading mb-0.5">{fmt(totalSales)}</div>
-          <div className="text-[9px] text-secondary font-bold flex items-center gap-1 uppercase tracking-tighter">
-            <TrendingUp size={12} />
-            {txCount} Cycles
+        <div className={`col-span-2 md:col-span-1 p-4 rounded-3xl relative overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer ${theme === 'dark'
+            ? "bg-gradient-to-br from-[#FF9500] via-[#FF8C00] to-[#E67E00] text-white shadow-[0_20px_50px_rgba(255,149,0,0.3)] border border-white/20"
+            : "bg-gradient-to-br from-[#0052D4] via-[#4364F7] to-[#6FB1FC] text-white shadow-[0_20px_50px_rgba(0,82,212,0.2)] border border-white/10"
+          }`}>
+          {/* Decorative Gloss/Glow */}
+          <div className={`absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white opacity-[0.15] pointer-events-none`} />
+          <div className="absolute -top-12 -right-12 w-32 h-32 bg-white/20 blur-[40px] rounded-full pointer-events-none" />
+
+          <span className="text-[9px] font-black uppercase tracking-[0.25em] block mb-5 relative z-10 text-white/80">Total Sales Today</span>
+
+          <div className="text-2xl font-black font-heading tracking-tighter mb-1 relative z-10 text-white drop-shadow-md">
+            {fmt(totalSales)}
           </div>
-          <Wallet className="absolute -right-2 -bottom-2 text-primary/5 w-16 h-16 rotate-12" />
+
+          <div className="text-[10px] font-black flex items-center gap-2 uppercase tracking-wide relative z-10 text-white/70">
+            <div className="p-1.5 rounded-xl flex items-center justify-center bg-white/20">
+              <TrendingUp size={12} strokeWidth={3} className="text-white" />
+            </div>
+            <span>{txCount} Cycles</span>
+          </div>
+
+          <Wallet className="absolute -right-6 -bottom-6 w-28 h-28 rotate-12 transition-all duration-700 opacity-20 group-hover:rotate-0 group-hover:scale-110 group-hover:opacity-30 text-white" />
         </div>
 
-        <div className="bg-surface-container-low p-3 rounded-xl border border-outline-variant/10 shadow-sm">
-          <span className="text-on-surface-variant text-[8px] font-bold uppercase tracking-widest block mb-2">Gross Profit</span>
-          <div className="text-lg font-extrabold text-on-surface font-heading mb-0.5">{fmt(totalProfit)}</div>
-          <div className="text-[8px] text-on-surface-variant/60 font-bold uppercase tracking-widest">
+        {/* Gross Profit Card */}
+        <div className="bg-gradient-to-br from-[#046b5e] via-[#046b5e] to-[#035147] p-4 rounded-3xl relative overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer text-white border border-white/10 shadow-[0_20px_50px_rgba(4,107,94,0.15)]">
+          <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white opacity-[0.1] pointer-events-none" />
+          <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/70 block mb-4 relative z-10">Gross Profit</span>
+          <div className="text-lg font-extrabold font-heading mb-1 relative z-10 drop-shadow-sm">{fmt(totalProfit)}</div>
+          <div className="text-[8px] font-black uppercase tracking-widest text-white/50 relative z-10">
             Yield: {totalSales > 0 ? ((totalProfit / totalSales) * 100).toFixed(1) : 0}%
           </div>
         </div>
 
-        <div className="bg-surface-container p-3 rounded-xl border border-primary/10 shadow-sm">
-          <span className="text-on-surface-variant text-[8px] font-bold uppercase tracking-widest block mb-2">Net Earnings</span>
-          <div className={`text-lg font-extrabold font-heading mb-0.5 ${netProfit >= 0 ? "text-primary" : "text-error"}`}>{fmt(netProfit)}</div>
-          <div className="text-[8px] text-tertiary font-bold uppercase tracking-widest">EXP: -{fmt(totalExpenses)}</div>
+        {/* Net Earnings Card */}
+        <div className="bg-gradient-to-br from-[#4A00E0] via-[#8E2DE2] to-[#4A00E0] p-4 rounded-3xl relative overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer text-white border border-white/10 shadow-[0_20px_50px_rgba(74,0,224,0.15)]">
+          <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white opacity-[0.1] pointer-events-none" />
+          <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/70 block mb-4 relative z-10">Net Earnings</span>
+          <div className="text-lg font-extrabold font-heading mb-1 relative z-10 drop-shadow-sm">{fmt(netProfit)}</div>
+          <div className="text-[8px] font-black uppercase tracking-widest text-white/50 relative z-10 uppercase">Net Archive</div>
         </div>
 
-        <div className="col-span-2 md:col-span-1 bg-surface-container-highest p-3 rounded-xl relative overflow-hidden group border border-outline-variant/10">
-          <span className="text-on-surface-variant text-[8px] font-bold uppercase tracking-widest block mb-1">Efficiency</span>
-          <div className="flex items-center gap-1 bg-[var(--color-surface-container-highest)]/60 w-fit px-1.5 py-0.5 rounded-full text-[8px] font-black text-primary border border-primary/5 uppercase tracking-tighter mb-2">
+        {/* Efficiency Card */}
+        <div className="col-span-2 md:col-span-1 bg-gradient-to-br from-[#FF416C] to-[#FF4B2B] p-4 rounded-3xl relative overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer text-white border border-white/10 shadow-[0_20px_50px_rgba(255,65,108,0.15)]">
+          <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white opacity-[0.12] pointer-events-none" />
+          <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/70 block mb-3 relative z-10">Efficiency</span>
+          <div className="flex items-center gap-1 bg-white/10 w-fit px-2 py-1 rounded-full text-[8px] font-black text-white border border-white/10 uppercase tracking-tighter mb-2 relative z-10">
             Net ROI {totalSales > 0 ? ((netProfit / totalSales) * 100).toFixed(0) : 0}%
           </div>
-          <div className="text-lg font-extrabold text-on-surface font-heading">{txCount}</div>
+          <div className="text-lg font-extrabold font-heading relative z-10">{txCount} <span className="text-[10px] font-medium opacity-60">Cycles</span></div>
         </div>
       </section>
 
       {/* Main Analysis Section */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-2 mb-2">
-        {/* Sales Chart */}
-        <div className="md:col-span-8 bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/10 shadow-sm">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-extrabold text-sm text-primary font-heading uppercase tracking-tight">Fin-Velocity</h3>
-            <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/40">Hourly Yield Flow</span>
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-2 mb-2 items-start">
+        {/* Fin-Velocity Chart - Redesigned Command Center */}
+        <div className="md:col-span-8 bg-surface-container-low p-6 rounded-3xl border border-outline-variant/10 shadow-sm relative overflow-hidden group">
+          <div className="flex flex-col sm:flex-row justify-center sm:justify-between items-center sm:items-start mb-8 gap-4">
+            <div className="text-center sm:text-left">
+              <span className="text-xl font-black text-on-surface tracking-tighter uppercase font-heading">
+                {timeRange === '1M' ? 'Monthly Yield Flow' : timeRange === '1Y' ? 'Annual Velocity Hub' : 'Historical Velocity Hub'}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-4">
+              {/* Granular Range Toggle */}
+              <div className="bg-surface-container-high p-0.5 rounded-xl flex border border-outline-variant/10">
+                {[
+                  { id: '1M', label: '1 Month' },
+                  { id: '3M', label: '3 Months' },
+                  { id: '6M', label: '6 Months' },
+                  { id: '1Y', label: '1 Year' }
+                ].map((range) => (
+                  <button
+                    key={range.id}
+                    onClick={() => setTimeRange(range.id as any)}
+                    className={`px-2.5 py-1 rounded-lg font-medium text-[9px] transition-all ${timeRange === range.id ? 'bg-primary text-white shadow-sm' : 'text-on-surface-variant hover:bg-surface-container'}`}
+                  >
+                    {range.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
-          <div className="h-[320px] w-full relative">
-            <Line data={profitData} options={{ ...cartesianOptions, scales: { ...cartesianOptions.scales, x: { ...cartesianOptions.scales.x, display: true, ticks: { ...cartesianOptions.scales.x.ticks, font: { ...cartesianOptions.scales.x.ticks.font, weight: 'bold' as const } } } } }} />
+
+          <div className="h-[180px] w-full relative">
+            {(() => {
+              const now = new Date();
+              const days = timeRange === '1M' ? 30 : timeRange === '3M' ? 90 : timeRange === '6M' ? 180 : 365;
+              const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+
+              const filteredIndices = historyProfitLabels.map((l, i) => {
+                const year = l.includes('Jan') && now.getMonth() < 6 ? now.getFullYear() : now.getFullYear();
+                const d = new Date(l + ', ' + year);
+                return d >= cutoff ? i : -1;
+              }).filter(i => i !== -1);
+
+              return (
+                <Line
+                  data={{
+                    labels: filteredIndices.map(i => historyProfitLabels[i]),
+                    datasets: [
+                      {
+                        ...profitData.datasets[0],
+                        data: filteredIndices.map(i => historySalesData[i]),
+                        label: 'Gross Sales',
+                        borderColor: "#F59E0B", // Orange for Sales
+                        pointHoverBackgroundColor: "#F59E0B",
+                        backgroundColor: (context: any) => {
+                          const ctx = context.chart.ctx;
+                          const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+                          gradient.addColorStop(0, 'rgba(245, 158, 11, 0.35)');
+                          gradient.addColorStop(0.6, 'rgba(245, 158, 11, 0.05)');
+                          gradient.addColorStop(1, 'rgba(245, 158, 11, 0)');
+                          return gradient;
+                        },
+                      },
+                      {
+                        label: 'Net Profit',
+                        data: filteredIndices.map(i => historyProfitData[i]),
+                        borderColor: "#10B981", // Green for Profit
+                        pointHoverBackgroundColor: "#10B981",
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        tension: 0.5,
+                        fill: false, // Keep it clean to avoid overlapping fills
+                      }
+                    ]
+                  }}
+                  options={{
+                    ...cartesianOptions,
+                    interaction: {
+                      mode: 'index',
+                      intersect: false,
+                    },
+                    plugins: {
+                      ...cartesianOptions.plugins,
+                      tooltip: {
+                        enabled: true,
+                        backgroundColor: 'rgba(0,0,0,0.85)',
+                        padding: 12,
+                        titleFont: { family: 'Poppins', weight: 'bold', size: 10 },
+                        bodyFont: { family: 'Poppins', weight: 'bold', size: 13 },
+                        displayColors: true,
+                        boxWidth: 8,
+                        boxHeight: 8,
+                        boxPadding: 6,
+                        usePointStyle: true,
+                        callbacks: {
+                          label: (context) => {
+                            const i = context.dataIndex;
+                            const globalIdx = filteredIndices[i];
+                            const s = historySalesData[globalIdx] || 0;
+                            const p = historyProfitData[globalIdx] || 0;
+
+                            // Let Chart.js handle the multi-item tooltip by returning value for each dataset
+                            if (context.datasetIndex === 0) {
+                              return ` Sales: ${fmt(s)}`;
+                            } else {
+                              return ` Profit: ${fmt(p)}`;
+                            }
+                          }
+                        }
+                      }
+                    },
+                    scales: {
+                      ...cartesianOptions.scales,
+                      y: {
+                        display: true,
+                        min: 0,
+                        max: 1000,
+                        grid: {
+                          color: 'rgba(59, 130, 246, 0.08)',
+                          drawTicks: false,
+                        },
+                        afterBuildTicks: (axis: any) => {
+                          axis.ticks = [100, 250, 500, 750, 1000].map(v => ({ value: v }));
+                        },
+                        border: { display: false },
+                        ticks: {
+                          padding: 10,
+                          font: { family: 'Poppins', size: 9, weight: 'bold' as const },
+                          color: theme === 'dark' ? 'rgba(59, 130, 246, 0.5)' : 'rgba(59, 130, 246, 0.4)',
+                          callback: (value: any) => {
+                            if (value === 1000) return '₱1k';
+                            return '₱' + value;
+                          }
+                        }
+                      },
+                      x: {
+                        ...cartesianOptions.scales.x,
+                        display: true,
+                        ticks: {
+                          ...cartesianOptions.scales.x.ticks,
+                          padding: 10,
+                          font: { ...cartesianOptions.scales.x.ticks.font, size: 8, family: 'Poppins', weight: 'bold' as const }
+                        }
+                      }
+                    }
+                  }}
+                />
+              );
+            })()}
           </div>
         </div>
 
-        {/* Side Stats Section */}
-        <div className="md:col-span-4 flex flex-col gap-8">
-          {/* Category Hub */}
-          <div className="bg-surface-container-low p-4 rounded-xl border border-outline-variant/10 shadow-sm relative overflow-hidden">
-            <h3 className="font-extrabold text-xs text-primary mb-4 font-heading uppercase tracking-tight flex justify-between items-center">
-              Segments
-              <Activity size={14} className="text-on-surface-variant" />
-            </h3>
-            <div className="h-[140px] relative mb-2">
-              <Doughnut data={categoryChartData} options={{ ...doughnutOptions, cutout: '85%' }} />
+        {/* Category Intelligence */}
+        <div className="md:col-span-4 bg-surface-container-low p-6 rounded-3xl border border-outline-variant/10 shadow-sm relative overflow-hidden group">
+          <h3 className="font-extrabold text-[10px] text-primary mb-6 font-heading uppercase tracking-[0.2em] flex justify-between items-center opacity-70">
+            Segments Hub
+            <Activity size={14} className="text-primary/40 group-hover:rotate-180 transition-transform duration-700" />
+          </h3>
+
+          <div className="grid grid-cols-2 gap-8 items-center">
+            <div className="h-[150px] relative">
+              <Doughnut data={categoryChartData} options={{ ...doughnutOptions, cutout: '82%' }} />
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-2xl font-black text-primary">{categoryChartData.labels?.length || 0}</span>
-                <span className="text-[8px] font-black text-on-surface-variant uppercase tracking-widest">Active Sectors</span>
+                <span className="text-3xl font-black text-primary leading-none">
+                  {categoryChartData.labels?.length || 0}
+                </span>
+                <span className="text-[7px] font-black text-on-surface-variant uppercase tracking-[0.1em] mt-1 opacity-50">Sectors</span>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              {categoryChartData.labels.slice(0, 4).map((label: string, idx: number) => (
-                <div key={label} className="flex items-center gap-2 text-[10px] font-bold text-on-surface-variant uppercase tracking-tighter">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: categoryChartData.datasets[0].backgroundColor[idx] }}></div>
-                  <span className="truncate">{label}</span>
+
+            <div className="flex flex-col gap-3.5 pr-2">
+              {categoryChartData.labels.slice(0, 5).map((label: string, idx: number) => (
+                <div key={label} className="flex items-center gap-3 group/item">
+                  <div
+                    className="w-1.5 h-6 rounded-full shadow-sm group-hover/item:scale-y-125 transition-transform"
+                    style={{ backgroundColor: categoryChartData.datasets[0].backgroundColor[idx] || '#ccc' }}
+                  />
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[9px] font-black text-on-surface uppercase tracking-tight truncate">
+                      {label}
+                    </span>
+                    <span className="text-[7px] font-bold text-on-surface-variant/40 uppercase tracking-widest text-primary/40">Active Stream</span>
+                  </div>
                 </div>
               ))}
-            </div>
-          </div>
-
-          {/* Risk Widget (Low Stock) */}
-          <div className="bg-error/5 p-4 rounded-xl border border-error/10 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-black text-[9px] text-error uppercase tracking-widest flex items-center gap-1">
-                <AlertCircle size={12} />
-                Risk
-              </h3>
-            </div>
-            <div className="space-y-2">
-              {lowStock.length === 0 ? (
-                <div className="flex items-center gap-2 text-on-surface-variant py-1">
-                  <span className="text-[8px] font-bold uppercase tracking-widest">Reconciled</span>
-                </div>
-              ) : (
-                lowStock.map(item => (
-                  <div key={item.id} className="flex justify-between items-center group">
-                    <div>
-                      <p className="text-[10px] font-bold text-on-surface">{item.name}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[10px] font-bold text-error">{item.quantity}u</p>
-                    </div>
-                  </div>
-                ))
-              )}
             </div>
           </div>
         </div>
       </div>
 
       {/* Tertiary Layout: Activity & Store Status */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
-        {/* Live Activity Stream */}
-        <div className="md:col-span-2 bg-surface-container-low rounded-xl border border-outline-variant/10 shadow-sm overflow-hidden">
-          <div className="p-3 border-b border-outline-variant/10 flex justify-between items-center bg-[var(--color-surface-container)]/50">
-            <h3 className="font-extrabold text-xs text-primary font-heading uppercase tracking-tight">Intelligence Feed</h3>
-            <span className="px-1.5 py-0.5 bg-surface-container text-on-surface-variant text-[7px] font-bold uppercase tracking-widest rounded-full">Auditor Sync</span>
+      <section className="grid grid-cols-1 md:grid-cols-12 gap-2 mb-2 items-start">
+        {/* Transaction History */}
+        <div className="md:col-span-8 bg-surface-container-low rounded-2xl border border-outline-variant/10 shadow-sm overflow-hidden flex flex-col h-fit">
+          <div className="p-4 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container/30 backdrop-blur-md">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-primary rounded-full animate-ping"></div>
+              <h3 className="font-black text-[10px] text-primary font-heading uppercase tracking-widest">Transaction History</h3>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-[7px] font-bold text-on-surface-variant/30 uppercase tracking-widest">Live Sync</span>
+            </div>
           </div>
-          <div className="divide-y divide-outline-variant/10">
+
+          <div className="divide-y divide-outline-variant/5">
             {recentTX.length === 0 ? (
-              <div className="p-20 text-center text-on-surface-variant opacity-30 italic">No activity ledgered today.</div>
+              <div className="p-12 text-center text-on-surface-variant opacity-20 italic font-medium">No ledgered activity today.</div>
             ) : (
               recentTX.map(tx => (
-                <div key={tx.id} className="p-3 hover:bg-[var(--color-surface-container-highest)] transition-colors flex justify-between items-center group cursor-pointer">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary">
-                      <Receipt size={16} className="opacity-40" />
+                <div key={tx.id} className="p-4 hover:bg-primary/[0.02] transition-all flex justify-between items-center group relative cursor-pointer">
+                  <div className="absolute left-0 top-1/4 bottom-1/4 w-0.5 bg-primary opacity-0 group-hover:opacity-100 transition-all rounded-r-full"></div>
+                  
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-surface-container flex items-center justify-center text-on-surface-variant group-hover:text-primary transition-colors">
+                      <Receipt size={18} className="opacity-40 group-hover:opacity-100 transition-opacity" />
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-on-surface">#ID: {tx.id.split('-')[0].toUpperCase()}</p>
-                      <p className="text-[8px] font-bold text-on-surface-variant/50 uppercase">{new Date(tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="text-[11px] font-bold text-on-surface tracking-tight truncate max-w-[150px]">
+                          {tx.transaction_items?.[0]?.products?.name || "Gcash Service"}
+                          {(tx.transaction_items?.length || 0) > 1 && (
+                            <div className="relative group/more inline-block">
+                              <span className="text-primary/50 ml-1 cursor-help hover:text-primary transition-colors">+{tx.transaction_items.length - 1} more</span>
+                              <div className="absolute bottom-full left-0 mb-2 p-2 bg-on-surface text-surface text-[8px] font-black uppercase tracking-widest rounded-lg opacity-0 group-hover/more:opacity-100 active:opacity-100 pointer-events-none transition-all duration-300 whitespace-nowrap z-50 shadow-2xl border border-white/10 translate-y-2 group-hover/more:translate-y-0">
+                                <div className="flex flex-col gap-1">
+                                  {tx.transaction_items.slice(1).map((item, idx) => (
+                                    <div key={idx} className="flex items-center gap-2">
+                                      <div className="w-1 h-1 bg-primary rounded-full"></div>
+                                      {item.products?.name || "Service Entry"}
+                                    </div>
+                                  ))}
+                                </div>
+                                <div className="absolute top-[100%] left-2 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-on-surface"></div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <span className="bg-emerald-500/10 text-emerald-600 text-[6px] font-black px-1 py-0.5 rounded uppercase tracking-widest">VERIFIED</span>
+                      </div>
+                      <p className="text-[8px] font-bold text-on-surface-variant/40 uppercase tracking-widest font-heading">
+                        {new Date(tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      </p>
                     </div>
                   </div>
+
                   <div className="flex flex-col items-end">
-                    <span className="text-xs font-black text-primary">{fmt(tx.total_amount)}</span>
+                    <span className="text-sm font-black text-primary tracking-tighter">{fmt(tx.total_amount)}</span>
+                    <span className="text-[7px] font-black text-on-surface-variant/20 uppercase tracking-tighter mt-0.5">#TX-{tx.id.slice(0, 8).toUpperCase()}</span>
                   </div>
                 </div>
               ))
             )}
           </div>
-          <button className="w-full p-4 text-[9px] font-bold text-on-surface-variant text-center uppercase tracking-[0.2em] bg-surface-container/50 hover:bg-surface-container transition-all">View All Archives</button>
+          <button className="w-full p-3.5 text-[8px] font-black text-primary text-center uppercase tracking-[0.3em] bg-surface-container/20 hover:bg-primary/5 transition-all border-t border-outline-variant/10">
+            Access Full Archive
+          </button>
         </div>
 
-        <div className="flex flex-col gap-2">
-          <div className="bg-surface-container p-4 rounded-xl border border-outline-variant/10 shadow-sm">
-            <h3 className="font-extrabold text-[8px] text-on-surface-variant mb-2 uppercase tracking-widest">Growth</h3>
-            <div className="h-[120px] relative">
+        {/* Side Section: Risk matrix and ROI */}
+        <div className="md:col-span-4 flex flex-col gap-2">
+          {/* Depletion Risk Widget */}
+          <div className="bg-error/5 p-3 rounded-2xl border border-error/10 shadow-sm relative overflow-hidden group">
+            <div className="flex items-center justify-between mb-3 px-1">
+              <h3 className="font-black text-[9px] text-error uppercase tracking-[0.2em] flex items-center gap-1.5">
+                <div className="w-1 h-1 bg-error rounded-full animate-pulse"></div>
+                Depletion Risk
+              </h3>
+              <span className="text-[7px] font-bold text-error/30 uppercase tracking-widest">Priority</span>
+            </div>
+
+            <div className="space-y-1.5">
+              {lowStock.length === 0 ? (
+                <div className="py-4 text-center bg-white/5 rounded-xl border border-dashed border-error/10">
+                  <p className="text-[8px] font-black text-error/30 uppercase tracking-widest">Inventory Clear</p>
+                </div>
+              ) : (
+                lowStock.map(item => {
+                  const stockPercent = (item.quantity / 10) * 100;
+                  const isCritical = item.quantity <= 3;
+                  return (
+                    <div key={item.id} className="relative p-2 rounded-xl flex items-center gap-3 group/item overflow-hidden bg-surface-container-low border border-outline-variant/5 transition-all hover:bg-surface-container-highest">
+                      <div className={`absolute inset-0 pointer-events-none transition-all duration-1000 ${isCritical ? 'bg-red-500 animate-pulse' : 'bg-amber-500'} opacity-[0.06]`} style={{ width: `${stockPercent}%` }} />
+                      <div className={`absolute left-0 top-0 bottom-0 w-0.5 ${isCritical ? 'bg-red-500' : 'bg-amber-400'}`} />
+                      <div className="relative z-10 w-8 h-8 rounded-lg overflow-hidden bg-surface-container shadow-inner flex-shrink-0">
+                        {item.image_url ? (
+                          <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-error/5">
+                            <Package size={14} className="text-on-surface-variant/20" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0 relative z-10">
+                        <h4 className="text-[10px] font-black text-on-surface truncate tracking-tight uppercase">{item.name}</h4>
+                        <div className="flex items-center gap-1.5 ">
+                          <span className={`text-[9px] font-black ${isCritical ? 'text-red-500' : 'text-amber-600'} tracking-tighter`}>{item.quantity} units</span>
+                          <span className="text-[7px] font-bold text-on-surface-variant/30 lowercase italic">remain</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          <div className="bg-surface-container-low p-3 rounded-2xl border border-outline-variant/10 shadow-sm">
+            <h3 className="font-extrabold text-[8px] text-on-surface-variant/50 mb-3 uppercase tracking-[0.2em] px-1">Growth Matrix</h3>
+            <div className="h-[100px] relative">
               <Bar data={salesData} options={cartesianOptions} />
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-primary to-primary-container p-4 rounded-xl text-on-primary shadow-lg shadow-primary/20 relative overflow-hidden">
+          <div className="bg-gradient-to-br from-indigo-600 via-primary to-secondary p-4 rounded-2xl text-white shadow-xl shadow-primary/30 relative overflow-hidden group border border-white/10">
+            {/* Ambient Glow */}
+            <div className="absolute -top-12 -right-12 w-24 h-24 bg-white/10 blur-2xl rounded-full group-hover:bg-white/20 transition-all duration-700"></div>
+
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
+              <TrendingUp size={60} strokeWidth={1} />
+            </div>
+
             <div className="relative z-10">
-              <div className="flex items-end gap-1 mb-2">
-                <span className="text-2xl font-black font-heading leading-none">{roi}</span>
-                <span className="text-xs font-bold mb-0.5">% ROI</span>
+              <div className="flex items-baseline gap-1">
+                <h3 className="text-3xl font-black font-heading tracking-tighter">{roi}%</h3>
+                <div className="flex items-center text-[7px] font-bold text-emerald-300 bg-emerald-500/20 px-1.5 py-0.5 rounded-full border border-emerald-500/20">
+                  +2.4%
+                </div>
               </div>
-              <button className="bg-white/20 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest">
-                Analytics
-              </button>
+
+              <p className="text-[8px] font-bold uppercase tracking-[0.2em] mt-0.5 text-white/60">Yield ROI</p>
+
+              <div className="mt-4">
+                <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden backdrop-blur-md">
+                  <div
+                    className="h-full bg-gradient-to-r from-white/40 via-white to-white/40 shadow-[0_0_10px_rgba(255,255,255,0.5)] relative overflow-hidden"
+                    style={{ width: `${roi}%` }}>
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-[shimmer_2s_infinite]"></div>
+                  </div>
+                </div>
+                <div className="mt-2 flex justify-between text-[7px] font-bold text-white/30 lowercase italic">
+                  <span>alpha_node</span>
+                  <span className="bg-white/10 px-1 rounded">SYNCED</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

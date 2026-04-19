@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import { Manrope, Inter } from "next/font/google";
+import { Manrope, Poppins } from "next/font/google";
 import "./globals.css";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { SessionProvider } from "@/lib/contexts/SessionContext";
@@ -14,9 +14,10 @@ const manrope = Manrope({
   variable: "--font-heading",
 });
 
-const inter = Inter({ 
+const poppins = Poppins({
   subsets: ["latin"],
-  variable: "--font-body",
+  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
+  variable: "--font-poppins",
 });
 
 export const metadata: Metadata = {
@@ -39,7 +40,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${manrope.variable} ${inter.variable} antialiased surface-base min-h-screen text-[var(--color-on-surface)]`}>
+      <body className={`${manrope.variable} ${poppins.variable} ${poppins.className} antialiased surface-base min-h-screen text-[var(--color-on-surface)]`}>
         {process.env.NODE_ENV === "development" && (
           <Script
             src="//unpkg.com/react-grab/dist/index.global.js"

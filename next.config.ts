@@ -27,6 +27,8 @@ const nextConfig: NextConfig = {
       }
     ];
   },
+  // Allow network access for HMR and Dev resources
+  allowedDevOrigins: ['192.168.1.10', 'localhost:3000'],
 };
 
 export default nextConfig;

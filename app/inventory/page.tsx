@@ -25,6 +25,7 @@ import {
 import { MediaGallery } from "@/components/storage/MediaGallery";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import Image from "next/image";
 
 
 interface Product {
@@ -271,46 +272,94 @@ function InventoryContent() {
           ) : filteredProducts.length === 0 ? (
             <div className="p-12 text-center text-on-surface-variant font-semibold">No products found.</div>
           ) : (
-            filteredProducts.map(p => (
-              <div 
-                key={p.id}
-                id={`product-${p.id}`}
-                className={`p-4 rounded-xl flex items-center justify-between group bg-surface-container-low hover:bg-surface-container transition-all border-2 ${
-                  highlightedId === p.id 
-                    ? 'border-primary shadow-[0_0_20px_rgba(var(--color-primary-rgb),0.3)] scale-[1.02] ring-2 ring-primary/20' 
-                    : 'border-outline-variant/10'
-                } ${p.stock <= (p.min_stock || 10) ? 'border-l-4 border-l-error' : ''} duration-500`}
-              >
+            filteredProducts.map((p, index) => {
+              const isLow = p.stock <= (p.min_stock || 10);
+              // Calculate fill based on stock relative to a healthy capacity (4x min_stock)
+              const fillPercentage = Math.min(100, (p.stock / ((p.min_stock || 10) * 4)) * 100);
+              const isHighlighted = highlightedId === p.id;
 
-                <div className="flex gap-4 items-center">
-                  <div className="w-12 h-12 rounded-lg overflow-hidden flex items-center justify-center bg-surface-container-highest">
-                    {p.image_url ? (
-                      <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <Package size={24} className="text-primary/40" />
-                    )}
+              return (
+                <div 
+                  key={p.id}
+                  id={`product-${p.id}`}
+                  className={`p-4 rounded-2xl flex items-center justify-between group relative overflow-hidden transition-all border-2 duration-500 ${
+                    isHighlighted 
+                      ? 'border-primary shadow-2xl scale-[1.01] z-10' 
+                      : isLow 
+                        ? 'border-error/20 bg-error/5' 
+                        : 'border-outline-variant/10 bg-surface-container-low hover:bg-surface-container'
+                  }`}
+                >
+                  {/* Dynamic Stock Level Filling Layer */}
+                  <div 
+                    className={`absolute inset-0 pointer-events-none transition-all duration-1000 ease-ios opacity-[0.08] ${
+                      isLow ? 'bg-error animate-pulse' : 'bg-primary'
+                    }`}
+                    style={{ 
+                      width: `${fillPercentage}%`,
+                    }}
+                  />
+                  
+                  {/* Edge Indicator */}
+                  <div className={`absolute left-0 top-0 bottom-0 w-1 transition-all duration-300 ${isLow ? 'bg-error' : 'bg-primary opacity-0 group-hover:opacity-100'}`} />
+
+                  <div className="flex gap-4 items-center relative z-10">
+                    <div className="w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center bg-surface-container-highest shadow-inner group-hover:scale-105 transition-transform relative">
+                      {p.image_url ? (
+                        <Image 
+                          src={p.image_url} 
+                          alt={p.name} 
+                          width={48} 
+                          height={48} 
+                          className="w-full h-full object-cover"
+                          priority={index < 8}
+                          unoptimized={true} // Fallback to prevent broken remote images
+                        />
+                      ) : (
+                        <Package size={24} className="text-primary/40" />
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-[10px] font-mono text-on-surface-variant font-bold opacity-50 uppercase">#{p.id.split('-')[0]}</p>
+                        {isLow && (
+                          <div className="flex items-center gap-1 px-1.5 py-0.5 bg-error text-white rounded text-[8px] font-black uppercase tracking-tighter animate-in zoom-in">
+                            <AlertCircle size={8} />
+                            Low
+                          </div>
+                        )}
+                      </div>
+                      <p className="font-bold text-sm text-on-surface group-hover:text-primary transition-colors">{p.name}</p>
+                      <p className="text-xs font-semibold text-secondary/70">₱{Number(p.cost_price || 0).toFixed(2)} unit cost</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-[10px] font-mono text-on-surface-variant leading-none mb-1 font-bold">UID: {p.id.split('-')[0].toUpperCase()}</p>
-                    <p className="font-bold text-sm text-on-surface">{p.name}</p>
-                    <p className="text-xs font-semibold text-secondary">₱{Number(p.cost_price || 0).toFixed(2)} cost</p>
+
+                  <div className="flex items-center gap-6 relative z-10">
+                    <div className="text-right shrink-0">
+                      <p className={`text-[9px] font-black uppercase mb-1 tracking-widest ${isLow ? 'text-error animate-pulse' : 'text-on-surface-variant'}`}>
+                        {isLow ? 'Warning: Low' : 'Inventory'}
+                      </p>
+                      <div className="flex items-center gap-2">
+                         <span className={`px-2.5 py-1 rounded-lg font-black text-xs transition-all ${
+                           isLow ? 'bg-error text-white shadow-lg shadow-error/20' : 'bg-surface-container-highest text-on-surface'
+                         }`}>
+                           {p.stock} 
+                         </span>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => { setSelectedProduct(p); setAdjustQty(0); setShowAdjustModal(true); }}
+                      className={`p-3 rounded-xl transition-all active:scale-90 cursor-pointer shadow-sm ${
+                        isLow ? 'bg-error text-white hover:bg-error-high' : 'bg-primary/10 text-primary hover:bg-primary hover:text-white'
+                      }`}
+                      title="Update stock level"
+                    >
+                      <Plus size={20} strokeWidth={3} />
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center gap-6">
-                  <div className="text-right shrink-0">
-                    <p className={`text-[10px] font-bold uppercase mb-1 ${p.stock <= (p.min_stock || 10) ? 'text-error' : 'text-on-surface-variant'}`}>{p.stock <= (p.min_stock || 10) ? 'Low Stock' : 'In Stock'}</p>
-                    <span className={`px-3 py-1 rounded font-bold text-sm inline-block ${p.stock <= (p.min_stock || 10) ? 'bg-error-container text-on-error-container' : 'bg-surface-container-highest text-on-surface'}`}>{p.stock}</span>
-                  </div>
-                  <button 
-                    onClick={() => { setSelectedProduct(p); setAdjustQty(0); setShowAdjustModal(true); }}
-                    className="p-3 bg-primary/10 text-primary rounded-lg hover:bg-primary hover:text-white transition-all active:scale-90 cursor-pointer"
-                    title="Adjust stock"
-                  >
-                    <Plus size={20} />
-                  </button>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </section>
