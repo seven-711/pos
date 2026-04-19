@@ -558,18 +558,9 @@ export default function Dashboard() {
   return (
     <div className="max-w-7xl mx-auto w-full px-1">
       {/* Dashboard Header */}
-      <div className="flex flex-col gap-2 mb-2 mt-2">
+      <div className="flex flex-col mb-2">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-3">
           <div>
-            <p className="text-secondary font-label text-[10px] font-bold uppercase tracking-[0.25em] mb-1">
-              {summaryRange === 'today' 
-                ? (activeSession ? "Live Intelligence Flow" : "Last Session Summary") 
-                : summaryRange === 'this_month' 
-                  ? "Current Month Analytics" 
-                  : summaryRange === 'last_month' 
-                    ? "Previous Month Review" 
-                    : `Archive Entry: ${customDate}`}
-            </p>
             <h1 className="text-xl font-extrabold tracking-tight text-primary font-heading uppercase">Dashboard</h1>
           </div>
 
@@ -604,12 +595,6 @@ export default function Dashboard() {
               ))}
             </div>
 
-            <div className="hidden lg:flex bg-surface-container rounded-2xl p-1 gap-1 border border-outline-variant/10">
-              <div className={`flex items-center px-4 py-2 gap-2 text-xs font-bold ${activeSession ? "text-secondary" : "text-on-surface-variant/40"}`}>
-                <div className={`w-2 h-2 rounded-full ${activeSession ? "bg-secondary animate-pulse" : "bg-outline-variant"}`}></div>
-                {activeSession ? "SYSTEM LIVE" : "SESSION CLOSED"}
-              </div>
-            </div>
           </div>
         </div>
       </div>
