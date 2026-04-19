@@ -114,11 +114,17 @@ export default function Dashboard() {
   const [dailyVolumeLabels, setDailyVolumeLabels] = useState<string[]>([]);
   const [dailyVolumeData, setDailyVolumeData] = useState<number[]>([]);
   const [peakHoursData, setPeakHoursData] = useState<number[]>([]);
+  const [txPerHour, setTxPerHour] = useState<number>(0);
+  const [txGrowth, setTxGrowth] = useState<number>(0);
+  const [performanceLabel, setPerformanceLabel] = useState<string>("Analyzing...");
   const [summaryRange, setSummaryRange] = useState<'today' | 'this_month' | 'last_month' | 'custom'>('today');
   const [customDate, setCustomDate] = useState<string>(new Date().toLocaleDateString('en-CA'));
   const [categoryChartData, setCategoryChartData] = useState<any>({ labels: [], datasets: [] });
   const [error, setError] = useState<string | null>(null);
   const [isTimeout, setIsTimeout] = useState(false);
+  const [profitGrowth, setProfitGrowth] = useState<number>(0);
+  const [salesGrowth, setSalesGrowth] = useState<number>(0);
+  const [netFlowGrowth, setNetFlowGrowth] = useState<number>(0);
   const [showReminder, setShowReminder] = useState(false);
 
   useEffect(() => {
@@ -257,6 +263,61 @@ export default function Dashboard() {
           setHistoryProfitLabels(labels);
           setHistoryProfitData(labels.map(l => dayManifest[l].profit));
           setHistorySalesData(labels.map(l => dayManifest[l].sales));
+
+          // Velocity Calculation: Compare current sum to yesterday
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+          const yestStr = yesterday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+          const yestCount = (allHistory as any[]).filter(t => 
+            new Date(t.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) === yestStr
+          ).length;
+
+          if (yestCount > 0) {
+            setTxGrowth(((txData.length - yestCount) / yestCount) * 100);
+          } else if (txData.length > 0) {
+            setTxGrowth(100);
+          } else {
+            setTxGrowth(0);
+          }
+
+          // Performance Label Logic (Simple Average Comparison)
+          const allCounts = labels.map(l => (allHistory as any[]).filter(t => 
+            new Date(t.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) === l
+          ).length);
+          const avgCount = allCounts.reduce((a, b) => a + b, 0) / (allCounts.length || 1);
+          
+          if (txData.length > avgCount * 1.2) setPerformanceLabel("Top 20% Performance");
+          else if (txData.length > avgCount) setPerformanceLabel("Above Average");
+          else setPerformanceLabel("Stable Rhythm");
+
+          const yestProfit = dayManifest[yestStr]?.profit || 0;
+          const yestSales = dayManifest[yestStr]?.sales || 0;
+
+          if (yestProfit > 0) {
+            setProfitGrowth(((profit - yestProfit) / yestProfit) * 100);
+          } else if (profit > 0) {
+            setProfitGrowth(100);
+          } else {
+            setProfitGrowth(0);
+          }
+
+          if (yestSales > 0) {
+            setSalesGrowth(((sales - yestSales) / yestSales) * 100);
+          } else if (sales > 0) {
+            setSalesGrowth(100);
+          } else {
+            setSalesGrowth(0);
+          }
+
+          // Transactions per hour calc
+          if (activeSession) {
+            const started = new Date(activeSession.started_at);
+            const hoursElapsed = Math.max(1, (new Date().getTime() - started.getTime()) / (1000 * 60 * 60));
+            setTxPerHour(txData.length / hoursElapsed);
+          } else {
+            setTxPerHour(0);
+          }
         }
 
         // Category Intelligence
@@ -555,70 +616,120 @@ export default function Dashboard() {
 
       {/* Summary Cards Row */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
-        <div className={`col-span-2 md:col-span-1 p-4 rounded-3xl relative overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer border border-white/20 flex flex-col justify-between min-h-[130px] ${theme === 'dark'
+
+        {/* ─── Total Sales Card ─── */}
+        <div className={`col-span-2 md:col-span-1 p-4 rounded-3xl relative overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer border border-white/20 flex flex-col justify-between min-h-[140px] ${theme === 'dark'
             ? "bg-gradient-to-br from-[#FF9500] via-[#FF8C00] to-[#E67E00] text-white shadow-[0_20px_50px_rgba(255,149,0,0.3)]"
             : "bg-gradient-to-br from-[#0052D4] via-[#4364F7] to-[#6FB1FC] text-white shadow-[0_20px_50px_rgba(0,82,212,0.2)]"
           }`}>
-          {/* Decorative Gloss/Glow */}
-          <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white opacity-[0.2] pointer-events-none" />
-          <div className="absolute -right-6 -bottom-6 opacity-10 group-hover:opacity-30 transition-all duration-700 group-hover:rotate-0 group-hover:scale-110">
+          <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white opacity-[0.15] pointer-events-none" />
+          <div className="absolute -right-6 -bottom-6 opacity-10 group-hover:opacity-25 transition-all duration-700 group-hover:scale-110">
             <Wallet size={120} strokeWidth={1} />
           </div>
 
           <div className="relative z-10">
-            <span className="text-[8px] font-black uppercase tracking-[0.25em] text-white/70 block mb-1">Total Sales</span>
-            <div className="text-2xl font-black font-heading tracking-tighter text-white drop-shadow-md">
+            <div className="flex justify-between items-start mb-1">
+              <span className="text-[8px] font-black uppercase tracking-[0.25em] text-white/70">Total Revenue</span>
+              {salesGrowth !== 0 && (
+                <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[7px] font-black ${salesGrowth > 0 ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
+                  {salesGrowth > 0 ? '\u2191' : '\u2193'} {Math.abs(salesGrowth).toFixed(0)}%
+                </div>
+              )}
+            </div>
+            <div className="text-3xl font-black font-heading tracking-tighter text-white drop-shadow-md leading-none">
               {fmt(totalSales)}
             </div>
+            <p className="text-[7px] font-bold uppercase tracking-widest text-white/40 mt-1">{txCount} transactions {summaryRange === 'today' ? 'today' : 'this period'}</p>
           </div>
 
-          <div className="relative z-10 flex items-center gap-2">
-            <div className="bg-white/20 backdrop-blur-md p-1.5 rounded-xl border border-white/10 flex items-center justify-center">
-              <TrendingUp size={12} strokeWidth={3} className="text-white" />
-            </div>
-            <span className="text-[10px] font-black uppercase tracking-widest">{txCount} Cycles</span>
+          <div className="relative z-10 flex flex-col gap-1.5">
+            {salesGrowth !== 0 && (
+              <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter ${salesGrowth > 0 ? 'bg-white/20 text-white' : 'bg-red-500/20 text-red-200'}`}>
+                {salesGrowth > 0 ? <TrendingUp size={8} /> : <TrendingUp size={8} className="rotate-180" />}
+                {Math.abs(salesGrowth).toFixed(1)}% {salesGrowth > 0 ? 'higher' : 'lower'}
+                <span className="opacity-50 lowercase ml-0.5">vs yesterday</span>
+              </div>
+            )}
+            {txCount > 0 && activeSession && (
+              <p className="text-[7px] text-white/30 uppercase font-bold tracking-tighter ml-0.5">Peak hour: {hourlyProfitLabels.length > 0 ? hourlyProfitLabels[hourlyProfitData.indexOf(Math.max(...hourlyProfitData))] : '--'}</p>
+            )}
           </div>
         </div>
 
-
-        {/* Gross Profit Card */}
-        <div className="bg-gradient-to-br from-[#046156] via-[#058b7a] to-[#046156] p-4 rounded-3xl relative overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer text-white border border-white/10 shadow-[0_20px_50px_rgba(4,107,94,0.15)] flex flex-col justify-between min-h-[130px]">
-          <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/10 opacity-[0.2] pointer-events-none" />
+        {/* ─── Gross Yield Card ─── */}
+        <div className="bg-gradient-to-br from-[#046156] via-[#058b7a] to-[#046156] p-4 rounded-3xl relative overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer text-white border border-white/10 shadow-[0_20px_50px_rgba(4,107,94,0.15)] flex flex-col justify-between min-h-[140px]">
+          <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/10 opacity-[0.15] pointer-events-none" />
           <div className="absolute -right-2 top-0 opacity-10 group-hover:opacity-20 transition-all duration-700 group-hover:rotate-12 group-hover:scale-110">
             <TrendingUp size={100} strokeWidth={1.5} />
           </div>
           
           <div className="relative z-10">
-            <span className="text-[8px] font-black uppercase tracking-[0.25em] text-white/50 block mb-1">Gross Yield</span>
-            <div className="text-2xl font-black font-heading tracking-tighter drop-shadow-lg">{fmt(totalProfit)}</div>
+            <div className="flex justify-between items-start mb-1">
+              <span className="text-[8px] font-black uppercase tracking-[0.25em] text-white/50">Gross Profit</span>
+              {profitGrowth !== 0 && (
+                <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[7px] font-black ${profitGrowth > 0 ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
+                  {profitGrowth > 0 ? '\u2191' : '\u2193'} {Math.abs(profitGrowth).toFixed(0)}%
+                </div>
+              )}
+            </div>
+            <div className="text-3xl font-black font-heading tracking-tighter drop-shadow-lg leading-none">{fmt(totalProfit)}</div>
+            <p className="text-[7px] font-bold uppercase tracking-widest text-white/40 mt-1">Profit margin from sales</p>
           </div>
 
-          <div className="relative z-10">
+          <div className="flex flex-col gap-1.5 relative z-10">
             <div className="inline-flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-2 py-0.5 rounded-full border border-white/10 text-[9px] font-black uppercase tracking-tight">
-              <div className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse"></div>
+              <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></div>
               {totalSales > 0 ? ((totalProfit / totalSales) * 100).toFixed(1) : 0}% Margin
             </div>
+            
+            {profitGrowth !== 0 && (
+              <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter ${profitGrowth > 0 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'}`}>
+                {profitGrowth > 0 ? <TrendingUp size={8} /> : <TrendingUp size={8} className="rotate-180" />}
+                {Math.abs(profitGrowth).toFixed(1)}% {profitGrowth > 0 ? 'higher' : 'lower'}
+                <span className="opacity-50 lowercase ml-0.5">vs yesterday</span>
+              </div>
+            )}
+            {totalSales > 0 && totalProfit / totalSales < 0.15 && (
+              <p className="text-[7px] text-amber-300/70 font-bold uppercase tracking-tighter ml-0.5">Margin below 15% — review pricing</p>
+            )}
           </div>
         </div>
 
-        {/* Net Earnings Card */}
-        <div className="bg-gradient-to-br from-[#3D00B0] via-[#5F00FF] to-[#3D00B0] p-4 rounded-3xl relative overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer text-white border border-white/10 shadow-[0_20px_50px_rgba(61,0,176,0.15)] flex flex-col justify-between min-h-[130px]">
-          <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/10 opacity-[0.2] pointer-events-none" />
+        {/* ─── Net Flow Card ─── */}
+        <div className="bg-gradient-to-br from-[#3D00B0] via-[#5F00FF] to-[#3D00B0] p-4 rounded-3xl relative overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer text-white border border-white/10 shadow-[0_20px_50px_rgba(61,0,176,0.15)] flex flex-col justify-between min-h-[140px]">
+          <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/10 opacity-[0.15] pointer-events-none" />
           <div className="absolute -right-2 top-0 opacity-10 group-hover:opacity-20 transition-all duration-700 group-hover:-rotate-12 group-hover:scale-110">
             <ArrowUpRight size={100} strokeWidth={1.5} />
           </div>
 
           <div className="relative z-10">
-            <span className="text-[8px] font-black uppercase tracking-[0.25em] text-white/50 block mb-1">Net Flow</span>
-            <div className="text-2xl font-black font-heading tracking-tighter drop-shadow-lg">{fmt(netProfit)}</div>
+            <div className="flex justify-between items-start mb-1">
+              <span className="text-[8px] font-black uppercase tracking-[0.25em] text-white/50">Net Profit</span>
+              {netProfit !== 0 && (
+                <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[7px] font-black ${netProfit >= 0 ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
+                  {netProfit >= 0 ? '\u2191' : '\u2193'} {totalSales > 0 ? ((netProfit / totalSales) * 100).toFixed(0) : 0}%
+                </div>
+              )}
+            </div>
+            <div className="text-3xl font-black font-heading tracking-tighter drop-shadow-lg leading-none">{fmt(netProfit)}</div>
+            <p className="text-[7px] font-bold uppercase tracking-widest text-white/40 mt-1">After all deductions</p>
           </div>
 
-          <div className="relative z-10 text-[8px] font-black uppercase tracking-[0.2em] text-white/40 flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-[1px] bg-white/20"></div>
-              Session Archive
+          <div className="flex flex-col gap-1.5 relative z-10">
+            {/* Mini Breakdown */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1 bg-emerald-500/20 px-2 py-0.5 rounded-full">
+                <span className="text-[8px] font-black text-emerald-300">{fmt(totalProfit)}</span>
+                <span className="text-[6px] text-emerald-300/60 uppercase">in</span>
+              </div>
+              <div className="flex items-center gap-1 bg-red-500/20 px-2 py-0.5 rounded-full">
+                <span className="text-[8px] font-black text-red-300">{fmt(totalExpenses)}</span>
+                <span className="text-[6px] text-red-300/60 uppercase">out</span>
+              </div>
             </div>
-            <span className="text-[7px] opacity-70 ml-6 text-white/30 lowercase italic">Less {fmt(totalExpenses)} in expenses</span>
+            <p className={`text-[7px] font-bold uppercase tracking-tighter ml-0.5 ${netProfit >= totalProfit * 0.5 ? 'text-emerald-300/50' : 'text-amber-300/50'}`}>
+              {totalExpenses === 0 ? 'No expenses recorded' : netProfit >= totalProfit * 0.8 ? 'Healthy cash flow' : netProfit >= totalProfit * 0.5 ? 'Moderate expenses' : 'High expense ratio'}
+            </p>
           </div>
         </div>
 
@@ -626,19 +737,44 @@ export default function Dashboard() {
         <div className="col-span-2 md:col-span-1 bg-gradient-to-br from-[#D4145A] via-[#FBB03B] to-[#D4145A] p-4 rounded-3xl relative overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer text-white border border-white/10 shadow-[0_20px_50px_rgba(212,20,90,0.15)] flex flex-col justify-between min-h-[130px]">
           <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/10 opacity-[0.2] pointer-events-none" />
           
-          <div className="relative z-10">
-            <span className="text-[8px] font-black uppercase tracking-[0.25em] text-white/50 block mb-1">Velocity</span>
-            <div className="text-2xl font-black font-heading tracking-tighter drop-shadow-lg">
-              {txCount} <span className="text-xs opacity-50">Cycles</span>
+          {/* Subtle Sparkline Background */}
+          <div className="absolute bottom-0 left-0 right-0 h-12 opacity-30 pointer-events-none">
+            <div className="flex items-end justify-between h-full px-4 gap-0.5">
+              {peakHoursData.map((val, i) => (
+                <div 
+                  key={i} 
+                  className="bg-white rounded-t-sm transition-all duration-1000"
+                  style={{ 
+                    height: `${Math.max(10, (val / Math.max(...peakHoursData, 1)) * 100)}%`,
+                    width: '100%' 
+                  }}
+                />
+              ))}
             </div>
           </div>
 
-          <div className="relative z-10 flex items-center gap-2">
-            <div className="bg-black/20 backdrop-blur-lg px-2 py-1 rounded-xl border border-white/10">
-              <span className="text-[10px] font-black text-white">
-                {totalSales > 0 ? ((netProfit / totalSales) * 100).toFixed(0) : 0}% <span className="text-[7px] text-white/50 uppercase tracking-tighter">Net ROI</span>
+          <div className="relative z-10">
+            <div className="flex justify-between items-start mb-1">
+              <span className="text-[8px] font-black uppercase tracking-[0.25em] text-white/50">Velocity Index</span>
+              {txGrowth !== 0 && (
+                <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[7px] font-black uppercase ${txGrowth > 0 ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
+                  {txGrowth > 0 ? '↑' : '↓'} {Math.abs(txGrowth).toFixed(0)}%
+                </div>
+              )}
+            </div>
+            <div className="text-3xl font-black font-heading tracking-tighter drop-shadow-lg leading-none">
+              {txCount} <span className="text-xs opacity-50">Cycles</span>
+            </div>
+            <p className="text-[7px] font-bold uppercase tracking-widest text-white/40 mt-1">~{txPerHour.toFixed(1)} transactions per hour</p>
+          </div>
+
+          <div className="relative z-10 flex flex-col gap-1.5">
+            <div className="inline-flex items-center gap-1.5 bg-black/20 backdrop-blur-lg px-2 py-0.5 rounded-full border border-white/10">
+              <span className="text-[9px] font-black text-white uppercase tracking-tight">
+                {performanceLabel}
               </span>
             </div>
+            <p className="text-[7px] text-white/30 uppercase font-black tracking-tighter ml-1">Speed vs Session Avg</p>
           </div>
         </div>
       </section>
