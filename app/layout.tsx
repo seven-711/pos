@@ -12,12 +12,14 @@ import { ThemeProvider } from "@/lib/contexts/ThemeContext";
 const manrope = Manrope({ 
   subsets: ["latin"],
   variable: "--font-heading",
+  display: 'swap',
 });
 
 const poppins = Poppins({
   subsets: ["latin"],
   weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
   variable: "--font-poppins",
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
@@ -39,8 +41,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${manrope.variable} ${poppins.variable} ${poppins.className} antialiased surface-base min-h-screen text-[var(--color-on-surface)]`}>
+    <html lang="en" suppressHydrationWarning className={`${manrope.variable} ${poppins.variable}`}>
+      <body className={`${poppins.className} antialiased surface-base min-h-screen text-[var(--color-on-surface)]`}>
         {process.env.NODE_ENV === "development" && (
           <Script
             src="//unpkg.com/react-grab/dist/index.global.js"
