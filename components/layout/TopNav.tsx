@@ -23,8 +23,8 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
   const [isMounted, setIsMounted] = useState(false);
   const [countdown, setCountdown] = useState(15);
 
-  useEffect(() => { 
-    setIsMounted(true); 
+  useEffect(() => {
+    setIsMounted(true);
     const interval = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
@@ -65,9 +65,7 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
 
 
   return (
-    <header className="w-full sticky top-0 min-h-16 h-auto shrink-0 bg-[var(--color-surface)] flex items-center justify-between px-4 md:px-8 z-[110] pointer-events-auto print:hidden" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 10px)', marginTop: '-10px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}>
-      {/* Top-bleed buffer to eliminate status bar 'tiny line' */}
-      <div className="absolute top-[-40px] left-0 right-0 h-[40px] bg-[var(--color-surface)] pointer-events-none" />
+    <header className="w-full min-h-16 h-auto shrink-0 bg-[var(--color-surface)] backdrop-blur-md flex items-center justify-between px-4 md:px-8 z-[110] shadow-sm pointer-events-auto print:hidden" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       {/* Brand — Mobile & Desktop trigger */}
       <button
         onClick={onMenuClick}
@@ -93,14 +91,14 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
           <div className="relative w-4 h-4 flex items-center justify-center">
             <svg className="w-full h-full -rotate-90">
               <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="2" fill="transparent" className="text-outline-variant/10" />
-              <circle 
-                cx="8" cy="8" r="7" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                fill="transparent" 
-                className={`text-primary transition-all ${countdown === 15 ? 'duration-0' : 'duration-1000'} ease-linear`} 
-                strokeDasharray="44" 
-                strokeDashoffset={44 * (1 - countdown / 15)} 
+              <circle
+                cx="8" cy="8" r="7"
+                stroke="currentColor"
+                strokeWidth="2"
+                fill="transparent"
+                className={`text-primary transition-all ${countdown === 15 ? 'duration-0' : 'duration-1000'} ease-linear`}
+                strokeDasharray="44"
+                strokeDashoffset={44 * (1 - countdown / 15)}
               />
             </svg>
             <span className={`absolute text-[7px] font-black text-primary ${countdown <= 3 ? 'animate-pulse text-error' : ''}`}>{countdown}</span>
@@ -125,8 +123,8 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
             aria-label="Notifications"
             onClick={handleNotificationClick}
             className={`p-3 rounded-full transition-colors cursor-pointer touch-manipulation relative ${isDesktopDropdownOpen || showNotifications
-                ? 'bg-[var(--color-surface-container)] text-[var(--color-primary)]'
-                : 'hover:bg-[var(--color-surface-container)] hover:text-[var(--color-primary)]'
+              ? 'bg-[var(--color-surface-container)] text-[var(--color-primary)]'
+              : 'hover:bg-[var(--color-surface-container)] hover:text-[var(--color-primary)]'
               }`}
             style={{ WebkitTapHighlightColor: "transparent" }}
           >
@@ -151,8 +149,8 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
             aria-label="Shopping Cart"
             onClick={handleCartClick}
             className={`p-3 rounded-full transition-colors cursor-pointer touch-manipulation relative ${isCartDesktopOpen || showCart
-                ? 'bg-[var(--color-surface-container)] text-[var(--color-primary)]'
-                : 'hover:bg-[var(--color-surface-container)] hover:text-[var(--color-primary)]'
+              ? 'bg-[var(--color-surface-container)] text-[var(--color-primary)]'
+              : 'hover:bg-[var(--color-surface-container)] hover:text-[var(--color-primary)]'
               }`}
             style={{ WebkitTapHighlightColor: "transparent" }}
           >
