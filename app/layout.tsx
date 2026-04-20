@@ -41,7 +41,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#080616", // Matches your dashboard's deep surface in dark mode
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fcf9f8" },
+    { media: "(prefers-color-scheme: dark)", color: "#080616" },
+  ],
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
