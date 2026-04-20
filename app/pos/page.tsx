@@ -164,14 +164,27 @@ export default function POSPage() {
       paymentMethod = "Balance Adjustment";
     }
 
+    // For ADJUST and INITIALIZE, skip transaction recording — these are balance state changes, not sales
+    if (serviceMode === "ADJUST" || serviceMode === "INITIALIZE") {
+      try {
+        await updateStoreConfig("digital_gcash_balance", newBalance);
+        setGcashBalance(newBalance);
+        setVaultInitialized(true);
+        setShowServiceModal(false);
+        showToast(serviceMode === "INITIALIZE" ? "Vault initialized." : "Balance adjusted.");
+      } catch (err: any) {
+        showToast(err.message || "Failed to update balance", "error");
+      }
+      return;
+    }
+
+    // For actual services (CASH_IN, CASH_OUT, LOAD), record as a transaction
     const { success, message } = await recordServiceTransaction({
-      type: serviceMode === "INITIALIZE" ? "STARTING BALANCE" : serviceMode.replace("_", " "),
-      amount: serviceMode === "INITIALIZE" ? 0 : amount,
-      fee: serviceMode === "INITIALIZE" ? 0 : fee,
+      type: serviceMode.replace("_", " "),
+      amount,
+      fee,
       payment_method: paymentMethod,
-      notes: serviceMode === "INITIALIZE" 
-        ? "Initial Vault Configuration [GCash]" 
-        : (serviceMode === "ADJUST" ? `${serviceForm.reason} [GCash]` : `${serviceMode} Transaction [GCash]`)
+      notes: `${serviceMode} Transaction [GCash]`
     });
 
     if (success) {
