@@ -1,37 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🏪 POS ni Estela
+### *Precision Retail Management for Estela's Store*
 
-## Getting Started
+[![Next.js](https://img.shields.io/badge/Framework-Next.js%2015-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![Supabase](https://img.shields.io/badge/Database-Supabase-emerald?style=for-the-badge&logo=supabase)](https://supabase.com/)
+[![Tailwind](https://img.shields.io/badge/Styling-Tailwind%20CSS-blue?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
 
-First, run the development server:
+---
 
+## 🕊️ The Mission
+**POS ni Estela** is a bespoke, high-density Point of Sale and Inventory Intelligence system built specifically for my mother’s retail operations. It combines "Instant-On" mobile efficiency with a clean, expansive "Executive Terminal" aesthetic for desktop, ensuring that store data is not just recorded, but understood.
+
+---
+
+## 🧠 Intelligence Suite
+
+### 🤖 AnimaBot: The Guardian
+Our built-in **Shop Health Sentinel**. AnimaBot doesn't just display data; it interprets it. 
+- **Contextual Feedback**: Randomizes messages based on daily profit, stock levels, and transaction velocity.
+- **Emotional Logic**: Transitions between *Neutral*, *Healthy*, *Hard Work*, and *Risk* states to provide a human-centric read on the store's pulse.
+- **Historical Time-Travel**: Syncs with the horizontal calendar to give sentiment feedback on specific past dates.
+
+### 📈 Metrics Radar
+- **Dual-Radial Performance**: High-fidelity SVG gauges tracking **Profit Goals** vs. **Yesterday's Benchmark**.
+- **Monthly Yield Flow**: Advanced Chart.js visualizations with a 2,200-peso ceiling to monitor long-term growth trajectories.
+- **Dynamic Goals**: Real-time tracking against a ₱500 daily profit mission.
+
+---
+
+## 🛠️ Core Features
+
+| Feature | Description | Icon |
+| :--- | :--- | :---: |
+| **Hyper-Mobile Dashboard** | Collapsible navigation and specific thumb-optimized date selection. | 📱 |
+| **Inventory Vault** | Real-time stock persistence with "Depletion Risk" priority alerts. | 📦 |
+| **Yield Analytics** | Interactive graphs showing Profit vs. Sales across multiple time horizons. | 💹 |
+| **Expense Ledger** | Integrated tracking to calculate true ROI and Net Profitability. | 💸 |
+| **Bundle Intelligence** | Support for multi-tiered pricing and bulk transaction logic. | 🎁 |
+
+---
+
+## 🚀 Technical Stack
+
+- **Frontend**: Next.js 15 (App Router) + React 19
+- **Database/Auth**: Supabase (PostgreSQL)
+- **Visuals**: Chart.js for canvas-level reporting + Lucide icons
+- **Animations**: Lottie + Framer Motion for premium micro-interactions
+- **Styling**: Tailored Tailwind CSS with a unified "Technical Premium" theme
+
+---
+
+## 🛠️ Setup & Development
+
+### 1. Clone & Install
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone [repository-url]
+cd pos
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Environment Configuration
+Create a `.env.local` with your Supabase credentials:
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_key
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Ignition
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) to access the command center.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# pos
+## 👨‍💻 Vision
+Built as a family-first engineering project, focusing on transforming daily manual transactions into a data-driven retail legacy.

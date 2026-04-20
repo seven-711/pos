@@ -1,6 +1,16 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
+import Lottie from "lottie-react";
+import Image from "next/image";
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const animaBotData  = require("../public/AnimaBot.json")   as any;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const angryBotData  = require("../public/angryrobot.json") as any;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const happyBotData  = require("../public/happyrobot.json") as any;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const sadBotData    = require("../public/sadrobot.json")   as any;
 import { supabase } from "@/lib/supabase";
 import {
   Wallet,
@@ -17,7 +27,13 @@ import {
   Loader2,
   Eye,
   EyeOff,
-  Package
+  Package,
+  Calendar,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Target,
+  Trophy
 } from "lucide-react";
 import { useSession, type Session } from "@/lib/contexts/SessionContext";
 import { useTheme } from "@/lib/contexts/ThemeContext";
@@ -82,6 +98,9 @@ type Transaction = {
 
 
 export default function Dashboard() {
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [dateOffset, setDateOffset]     = useState(0);
+  const [msgIndex, setMsgIndex]         = useState(0);
   const { activeSession, refreshSession, isLayoutHidden, setIsLayoutHidden, hasSystemBooted, setHasSystemBooted } = useSession();
   const [loading, setLoading] = useState(!hasSystemBooted);
 
@@ -121,6 +140,7 @@ export default function Dashboard() {
   const [customDate, setCustomDate] = useState<string>(new Date().toLocaleDateString('en-CA'));
   const [categoryChartData, setCategoryChartData] = useState<any>({ labels: [], datasets: [] });
   const [error, setError] = useState<string | null>(null);
+  const [yesterdaySales, setYesterdaySales] = useState(0);
   const [isTimeout, setIsTimeout] = useState(false);
   const [profitGrowth, setProfitGrowth] = useState<number>(0);
   const [salesGrowth, setSalesGrowth] = useState<number>(0);
@@ -152,6 +172,48 @@ export default function Dashboard() {
       window.removeEventListener('global-sync', handleGlobalSync);
     };
   }, [activeSession, summaryRange, customDate]);
+
+  // --- Caching Layer: Instant Rehydration ---
+  useEffect(() => {
+    if (!isMounted) return;
+    
+    const cacheKey = `dashboard_cache_${summaryRange}_${summaryRange === 'custom' ? customDate : ''}`;
+    const saved = localStorage.getItem(cacheKey);
+    
+    if (saved) {
+      try {
+        const cache = JSON.parse(saved);
+        // Only load if recent (e.g., within 24h for history, or just to show something)
+        setTxCount(cache.txCount || 0);
+        setTotalSales(cache.totalSales || 0);
+        setTotalProfit(cache.totalProfit || 0);
+        setTotalExpenses(cache.totalExpenses || 0);
+        setRecentTX(cache.recentTX || []);
+        setLowStock(cache.lowStock || []);
+        setHourlyProfitLabels(cache.hourlyProfitLabels || []);
+        setHourlyProfitData(cache.hourlyProfitData || []);
+        setHistoryProfitLabels(cache.historyProfitLabels || []);
+        setHistoryProfitData(cache.historyProfitData || []);
+        setHistorySalesData(cache.historySalesData || []);
+        setTxGrowth(cache.txGrowth || 0);
+        setPerformanceLabel(cache.performanceLabel || "Analyzing...");
+        setProfitGrowth(cache.profitGrowth || 0);
+        setSalesGrowth(cache.salesGrowth || 0);
+        setTxPerHour(cache.txPerHour || 0);
+        setCategoryChartData(cache.categoryChartData || { labels: [], datasets: [] });
+        setPeakHoursData(cache.peakHoursData || []);
+        setDailyVolumeLabels(cache.dailyVolumeLabels || []);
+        setDailyVolumeData(cache.dailyVolumeData || []);
+        
+        // If we have cached data, we can stop the initial blank loader sooner
+        if (hasSystemBooted) {
+          setLoading(false);
+        }
+      } catch (e) {
+        console.error("Cache Hydration Error:", e);
+      }
+    }
+  }, [summaryRange, customDate, isMounted]);
 
   useEffect(() => {
     if (!activeSession) return;
@@ -187,6 +249,11 @@ export default function Dashboard() {
 
       const now = new Date();
       let queryStart, queryEnd;
+      
+      // Hoist maps for caching scope
+      let hourlyMap: Record<string, number> = {};
+      let peakMap: number[] = new Array(12).fill(0);
+      let dayMap: Record<string, number> = {};
 
       if (summaryRange === 'today') {
         const todayStr = now.toLocaleDateString('en-CA');
@@ -227,8 +294,6 @@ export default function Dashboard() {
         setRecentTX([...txData].reverse().slice(0, 5));
 
         // Hourly aggregation & Peak hours
-        const hourlyMap: Record<string, number> = {};
-        const peakMap: number[] = new Array(12).fill(0);
         txData.forEach((t) => {
           const localDate = new Date(t.created_at);
           const hour = localDate.getHours();
@@ -269,7 +334,7 @@ export default function Dashboard() {
           yesterday.setDate(yesterday.getDate() - 1);
           const yestStr = yesterday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
-          const yestCount = (allHistory as any[]).filter(t => 
+          const yestCount = (allHistory as any[]).filter(t =>
             new Date(t.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) === yestStr
           ).length;
 
@@ -282,17 +347,18 @@ export default function Dashboard() {
           }
 
           // Performance Label Logic (Simple Average Comparison)
-          const allCounts = labels.map(l => (allHistory as any[]).filter(t => 
+          const allCounts = labels.map(l => (allHistory as any[]).filter(t =>
             new Date(t.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) === l
           ).length);
           const avgCount = allCounts.reduce((a, b) => a + b, 0) / (allCounts.length || 1);
-          
+
           if (txData.length > avgCount * 1.2) setPerformanceLabel("Top 20% Performance");
           else if (txData.length > avgCount) setPerformanceLabel("Above Average");
           else setPerformanceLabel("Stable Rhythm");
 
           const yestProfit = dayManifest[yestStr]?.profit || 0;
           const yestSales = dayManifest[yestStr]?.sales || 0;
+          setYesterdaySales(yestSales);
 
           if (profit > 0 && yestProfit > 0) {
             setProfitGrowth(((profit - yestProfit) / yestProfit) * 100);
@@ -377,7 +443,6 @@ export default function Dashboard() {
         .order("created_at", { ascending: true });
       if (weekErr) throw weekErr;
       if (weekTx) {
-        const dayMap: Record<string, number> = {};
         const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         weekTx.forEach((t: any) => {
           const day = dayLabels[new Date(t.created_at).getDay()];
@@ -393,7 +458,41 @@ export default function Dashboard() {
         .select("id, name, stock, image_url")
         .lte("stock", 10).limit(3);
       if (stockErr) throw stockErr;
-      if (stockData) setLowStock(stockData.map((s: any) => ({ ...s, quantity: s.stock })));
+      if (stockData) {
+        const mappedStock = stockData.map((s: any) => ({ ...s, quantity: s.stock }));
+        setLowStock(mappedStock);
+      }
+
+      // ─── POST-FETCH CACHING ───
+      // We capture the state values to persist them
+      const cacheObj = {
+        txCount: txData?.length || 0,
+        totalSales: txData?.reduce((acc, t: any) => acc + Number(t.total_amount || 0), 0) || 0,
+        totalProfit: txData?.reduce((acc, t: any) => acc + Number(t.total_profit || 0), 0) || 0,
+        totalExpenses: expData?.reduce((acc: number, e: any) => acc + Number(e.amount || 0), 0) || 0,
+        recentTX: [...(txData || [])].reverse().slice(0, 5),
+        lowStock: (stockData || []).map((s: any) => ({ ...s, quantity: s.stock })),
+        hourlyProfitLabels: Object.keys(hourlyMap),
+        hourlyProfitData: Object.values(hourlyMap),
+        historyProfitLabels,
+        historyProfitData,
+        historySalesData,
+        txGrowth,
+        performanceLabel,
+        profitGrowth,
+        salesGrowth,
+        txPerHour,
+        categoryChartData,
+        peakHoursData: peakMap,
+        dailyVolumeLabels: Object.keys(dayMap),
+        dailyVolumeData: Object.values(dayMap),
+        timestamp: Date.now()
+      };
+      const cacheKey = `dashboard_cache_${summaryRange}_${summaryRange === 'custom' ? customDate : ''}`;
+      localStorage.setItem(cacheKey, JSON.stringify(cacheObj));
+      
+      // Randomize the bot's message variation for this sync
+      setMsgIndex(Math.floor(Math.random() * 5));
 
     } catch (err: any) {
       console.error("Dashboard Sync Error:", err);
@@ -429,14 +528,19 @@ export default function Dashboard() {
         return gradient;
       },
       tension: 0.5,
-      pointRadius: 0,
-      pointHitRadius: 20, // Make it much easier to trigger hover
-      pointHoverRadius: 8,
-      pointHoverBackgroundColor: "#3B82F6",
-      pointHoverBorderColor: "#fff",
       pointHoverBorderWidth: 3,
+    },
+    {
+      label: "2K Target",
+      data: new Array(hourlyProfitData.length || 1).fill(2000),
+      borderColor: "rgba(255, 255, 255, 0.2)",
+      borderWidth: 1,
+      borderDash: [5, 5],
+      pointRadius: 0,
+      fill: false,
+      tension: 0,
     }],
-  };
+    };
 
   const salesData = {
     labels: dailyVolumeLabels.length > 0 ? dailyVolumeLabels : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
@@ -481,7 +585,11 @@ export default function Dashboard() {
     },
     plugins: commonPlugins,
     scales: {
-      y: { display: false },
+      y: { 
+        display: false,
+        max: 2200,
+        beginAtZero: true
+      },
       x: {
         grid: { display: false },
         ticks: {
@@ -558,76 +666,303 @@ export default function Dashboard() {
   return (
     <div className="max-w-7xl mx-auto w-full px-1">
       {/* Dashboard Header */}
-      <div className="flex flex-col mb-2">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-3">
-          <div>
-            <h1 className="text-xl font-extrabold tracking-tight text-primary font-heading uppercase">Dashboard</h1>
+      <div className="flex flex-col gap-2 mb-3">
+
+        {/* ── Row 1: Dashboard Title + Range Navigator ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <h1 className="hidden sm:block text-xl font-extrabold tracking-tight text-primary font-heading uppercase">Dashboard</h1>
+
+          {/* ─── Desktop-Only Range Navigator ─── */}
+          <div className="hidden sm:flex bg-surface-container rounded-2xl p-1 gap-1 border border-outline-variant/10 shadow-sm no-scrollbar">
+            {[
+              { id: 'today', label: 'Today' },
+              { id: 'this_month', label: 'This Month' },
+              { id: 'last_month', label: 'Last Month' },
+              { id: 'custom', label: 'Custom' }
+            ].map((range) => (
+              <button
+                key={range.id}
+                onClick={() => setSummaryRange(range.id as any)}
+                className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${summaryRange === range.id
+                    ? "bg-primary text-white shadow-lg shadow-primary/20"
+                    : "text-secondary hover:bg-surface-highest"
+                  }`}
+              >
+                {range.id === 'custom' && summaryRange === 'custom' ? (
+                  <input
+                    type="date"
+                    value={customDate}
+                    onChange={(e) => setCustomDate(e.target.value)}
+                    className="bg-transparent border-none p-0 focus:ring-0 text-[9px] font-black uppercase text-white cursor-pointer w-full text-center"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                ) : range.label}
+              </button>
+            ))}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Historical Range Navigator */}
-            <div className="flex bg-surface-container rounded-2xl p-1 gap-1 border border-outline-variant/10 shadow-sm overflow-x-auto no-scrollbar max-w-[90vw] md:max-w-none">
-              {[
-                { id: 'today', label: 'Today' },
-                { id: 'this_month', label: 'This Month' },
-                { id: 'last_month', label: 'Last Month' },
-                { id: 'custom', label: 'Custom' }
-              ].map((range) => (
-                <button
-                  key={range.id}
-                  onClick={() => setSummaryRange(range.id as any)}
-                  className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
-                    summaryRange === range.id
-                      ? "bg-primary text-white shadow-lg shadow-primary/20"
-                      : "text-secondary hover:bg-surface-highest"
-                  }`}
-                >
-                  {range.id === 'custom' && summaryRange === 'custom' ? (
-                    <input 
-                      type="date" 
-                      value={customDate} 
-                      onChange={(e) => setCustomDate(e.target.value)}
-                      className="bg-transparent border-none p-0 focus:ring-0 text-[9px] font-black uppercase text-white cursor-pointer"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  ) : range.label}
-                </button>
-              ))}
-            </div>
+          {/* ─── Mobile-Only Collapsible Calendar ─── */}
+          <div className="flex sm:hidden flex-col gap-2 max-w-[calc(100vw-0.5rem)] overflow-hidden">
+            <button 
+              onClick={() => setShowCalendar(!showCalendar)}
+              className="flex items-center justify-between px-3 py-2 bg-surface-container rounded-lg border border-outline-variant/10 shadow-sm sm:hidden"
+            >
+              <div className="flex items-center gap-2">
+                <Calendar size={12} className="text-primary" />
+                <span className="text-[10px] font-black text-on-surface uppercase">CALENDAR</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[9px] font-bold text-primary/60">{new Date(customDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                <ChevronDown size={12} className={`text-secondary transform transition-transform duration-300 ${showCalendar ? 'rotate-180' : ''}`} />
+              </div>
+            </button>
 
+            {/* The actual Calendar Content (Mobile Only) */}
+            <div className={`${showCalendar ? 'flex' : 'hidden'} sm:hidden flex-col gap-2 transition-all duration-500 overflow-hidden`}>
+              <div className="flex items-center justify-between px-1 mb-1 sm:hidden">
+                <span className="text-[10px] font-black text-primary uppercase tracking-widest">{new Date(customDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
+                <button 
+                  onClick={() => setSummaryRange(summaryRange === 'today' ? 'this_month' : 'today')}
+                  className="text-[8px] font-black text-secondary uppercase bg-surface-highest px-2 py-1 rounded-lg border border-outline-variant/10"
+                >
+                  {summaryRange === 'today' ? 'View Month' : 'View Today'}
+                </button>
+              </div>
+
+              <div className="flex w-full max-w-[calc(100vw-1.5rem)] items-center gap-1 pb-1">
+                <button 
+                  onClick={() => setDateOffset(prev => prev + 5)}
+                  className="p-2 hover:bg-surface-highest rounded-full text-secondary transition-colors"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+
+                <div className="flex-1 flex items-center gap-1 overflow-x-auto no-scrollbar">
+                  {Array.from({ length: 5 }).map((_, i) => {
+                    const date = new Date();
+                    // dateOffset moves us back in time by groups or days
+                    date.setDate(date.getDate() - (4 - i + dateOffset));
+                    const isoDate = date.toLocaleDateString('en-CA');
+                    const isSelected = (summaryRange === 'custom' && customDate === isoDate) || (summaryRange === 'today' && i === 4 && dateOffset === 0 && customDate === isoDate);
+                    const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+                    const dayNum = date.getDate();
+
+                    return (
+                      <button
+                        key={isoDate}
+                        onClick={() => {
+                          setCustomDate(isoDate);
+                          setSummaryRange('custom');
+                        }}
+                        className={`flex-none flex flex-col items-center justify-center w-[56px] h-[60px] rounded-xl border transition-all duration-300 ${
+                          isSelected 
+                            ? "bg-primary text-white border-primary shadow-lg shadow-primary/25 scale-105 z-10" 
+                            : "bg-surface-container text-secondary border-outline-variant/10 hover:border-primary/30"
+                        }`}
+                      >
+                        <span className={`text-[8px] font-black uppercase tracking-tighter ${isSelected ? 'text-white/70' : 'text-on-surface-variant/40'}`}>{dayName}</span>
+                        <span className="text-base font-black tracking-tighter mt-1">{dayNum}</span>
+                        {isSelected && <div className="w-1.5 h-1.5 bg-white rounded-full mt-1.5 animate-pulse" />}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button 
+                  onClick={() => setDateOffset(prev => Math.max(0, prev - 5))}
+                  className={`p-2 hover:bg-surface-highest rounded-full text-secondary transition-colors ${dateOffset === 0 ? 'opacity-20 pointer-events-none' : ''}`}
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
+
+        {/* ── Row 2: Robot + Speech Bubble ── */}
+        {(() => {
+          const isIdle     = txCount === 0;
+          const isRisk     = lowStock.length > 8;
+          const marginPct  = totalSales > 0 ? (totalProfit / totalSales) * 100 : 0;
+          const isHardWork = !isIdle && txCount >= 5 && marginPct < 15;
+          const isHealthy  = !isIdle && !isRisk && !isHardWork && totalProfit > 0;
+
+          // Emotion Variations
+          const variations = {
+            neutral: [
+              "Hmm... no sales yet. The shop is open but quiet. Let's wake things up — go make that first sale happen! 💪",
+              "Everything is set up and ready! Just waiting for our first customer to walk through the door. You got this, boss!",
+              "Quiet start so far. Perfect time to double-check your displays while we wait for the first transaction!",
+              "The register is empty but the potential is huge! Let's get the ball rolling and secure that first sale.",
+              "All systems go! Zero sales for now, but I'm ready to record some big numbers today!"
+            ],
+            healthy: [
+              `YES!! We're absolutely crushing it today! 🎉 ₱${totalProfit.toFixed(2)} in pure profit and ${marginPct.toFixed(1)}% margin — that's serious business!`,
+              `Look at those numbers! 💎 ₱${totalProfit.toFixed(2)} profit. Your strategy is working perfectly, boss. Keep the sales coming!`,
+              `We are on fire! 🔥 ₱${totalProfit.toFixed(2)} in the bank already. This is exactly how you grow a business. Absolute legend!`,
+              `Incredible performance! 🚀 ${marginPct.toFixed(1)}% margin is no joke. The shop has never looked better financially!`,
+              `Profit and momentum — we have both! 📈 ₱${totalProfit.toFixed(2)} profit so far. Today is definitely going to be a win!`
+            ],
+            hardwork: [
+              `Ugh, ${txCount} transactions and only ${marginPct.toFixed(1)}% margin?! 😤 We're working SO hard but barely making anything.`,
+              `We're busy, but are we profitable? 🧐 ${marginPct.toFixed(1)}% margin means we need to rethink our pricing or costs immediately.`,
+              `Lots of customers but the profit is hiding! 🕵️‍♂️ We need to boost that ${marginPct.toFixed(1)}% margin to make this hustle worth it.`,
+              `The energy is high but the profit is low. ${txCount} sales and only ${marginPct.toFixed(1)}% left over? Let's fix those margins, boss!`,
+              `Hard work should pay off more! 😓 We've done ${txCount} transactions but the margin is still trapped at ${marginPct.toFixed(1)}%.`
+            ],
+            risk: [
+              `Oh no... 😢 ${lowStock.length} products are dangerously low on stock. If we run out, we'll start losing sales!`,
+              `Warning! ⚠️ We have ${lowStock.length} items nearly empty. Reorder now before our customers go looking elsewhere!`,
+              `Our shelves are getting thin! ${lowStock.length} priority items are about to hit zero. Don't let those profits slip away!`,
+              `Supply alert! 🚨 ${lowStock.length} products need your attention right now. Out of stock means out of pocket!`,
+              `We're running on fumes for ${lowStock.length} items! ⛽ Get those restock orders in before we have to say "sorry, we're out."`
+            ]
+          };
+
+          let botData      = animaBotData;
+          let glowColor    = "rgba(100,116,139,0.25)";
+          let bubbleMsg    = variations.neutral[msgIndex];
+          let bubbleBorder = "border-secondary/30";
+          let bubbleText   = "text-on-surface-variant/60";
+
+          if (isIdle && !isRisk) {
+              // Stay neutral
+          } else if (isRisk) {
+            botData      = sadBotData;
+            glowColor    = "rgba(239,68,68,0.4)";
+            bubbleMsg    = variations.risk[msgIndex];
+            bubbleBorder = "border-error/40";
+            bubbleText   = "text-error";
+          } else if (isHealthy) {
+            botData      = happyBotData;
+            glowColor    = "rgba(52,211,153,0.4)";
+            bubbleMsg    = variations.healthy[msgIndex];
+            bubbleBorder = "border-emerald-400/40";
+            bubbleText   = "text-emerald-400";
+          } else if (isHardWork) {
+            botData      = angryBotData;
+            glowColor    = "rgba(251,191,36,0.35)";
+            bubbleMsg    = variations.hardwork[msgIndex];
+            bubbleBorder = "border-amber-400/40";
+            bubbleText   = "text-amber-400";
+          }
+
+          return (
+            <div className="flex flex-col-reverse items-center sm:flex-row sm:items-end gap-2 sm:gap-4 mt-2 -mb-12">
+              {/* Bot — centered on mobile, bigger, crops into cards below */}
+              <div className="relative w-36 h-36 sm:w-40 sm:h-40 flex-shrink-0">
+                <div className="absolute -inset-4 rounded-full blur-3xl pointer-events-none transition-colors duration-700" style={{ background: glowColor }} />
+                <Lottie animationData={botData} loop={true} autoplay={true} style={{ width: "100%", height: "100%" }} />
+              </div>
+
+              {/* Speech Bubble — no label/dot, just emotional text */}
+              <div className={`relative bg-surface-container dark:bg-surface-container-high border ${bubbleBorder} rounded-xl sm:rounded-2xl rounded-bl-sm sm:rounded-bl-none sm:rounded-tl-sm px-4 py-3 shadow-xl w-full max-w-[calc(100vw-2.5rem)] sm:max-w-sm sm:mb-14`}>
+                {/* Tail pointing down toward bot on mobile */}
+                <div className={`absolute sm:hidden -bottom-[7px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[7px] border-l-transparent border-r-[7px] border-r-transparent border-t-[7px] border-t-surface-container dark:border-t-surface-container-high`} />
+                {/* Tail pointing left toward bot on desktop */}
+                <div className={`absolute hidden sm:block top-4 -left-[7px] w-0 h-0 border-t-[7px] border-t-transparent border-b-[7px] border-b-transparent border-r-[7px] border-r-surface-container dark:border-r-surface-container-high`} />
+                
+                <p className={`text-[10px] sm:text-[11px] font-semibold leading-relaxed ${bubbleText}`}>{bubbleMsg}</p>
+              </div>
+            </div>
+          );
+        })()}
+
       </div>
 
       {/* Summary Cards Row */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
 
         {/* ─── Total Sales Card ─── */}
-        <div className={`col-span-2 md:col-span-1 p-4 rounded-3xl relative overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer border border-white/20 flex flex-col justify-between min-h-[140px] ${theme === 'dark'
-            ? "bg-gradient-to-br from-[#FF9500] via-[#FF8C00] to-[#E67E00] text-white shadow-[0_20px_50px_rgba(255,149,0,0.3)]"
-            : "bg-gradient-to-br from-[#0052D4] via-[#4364F7] to-[#6FB1FC] text-white shadow-[0_20px_50px_rgba(0,82,212,0.2)]"
+        <div className={`col-span-2 md:col-span-1 p-2 sm:p-4 rounded-xl sm:rounded-3xl relative overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer border border-white/20 flex flex-col justify-between min-h-[90px] sm:min-h-[140px] ${theme === 'dark'
+          ? "bg-gradient-to-br from-[#FF9500] via-[#FF8C00] to-[#E67E00] text-white shadow-[0_20px_50px_rgba(255,149,0,0.3)]"
+          : "bg-gradient-to-br from-[#0052D4] via-[#4364F7] to-[#6FB1FC] text-white shadow-[0_20px_50px_rgba(0,82,212,0.2)]"
           }`}>
           <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white opacity-[0.15] pointer-events-none" />
-          <div className="absolute -right-6 -bottom-6 opacity-10 group-hover:opacity-25 transition-all duration-700 group-hover:scale-110">
-            <Wallet size={120} strokeWidth={1} />
+          <div className="absolute -right-6 -bottom-6 opacity-5 sm:opacity-10 group-hover:opacity-25 transition-all duration-700 group-hover:scale-110">
+            <Wallet className="w-16 h-16 sm:w-28 sm:h-28" strokeWidth={1} />
           </div>
 
-          <div className="relative z-10">
-            <div className="flex justify-between items-start mb-1">
-              <span className="text-[8px] font-black uppercase tracking-[0.25em] text-white/70">Total Revenue</span>
-              {salesGrowth !== 0 && (
-                <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[7px] font-black ${salesGrowth > 0 ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
-                  {salesGrowth > 0 ? '\u2191' : '\u2193'} {Math.abs(salesGrowth).toFixed(0)}%
+          <div className="relative z-10 flex items-center justify-between gap-2 overflow-hidden">
+            <div className="flex-1">
+              <div className="flex justify-start sm:justify-between items-center sm:items-start gap-1.5 sm:gap-0 mb-1 w-full">
+                <span className="text-[8px] font-black uppercase tracking-[0.25em] text-white/70">Total Revenue</span>
+                {salesGrowth !== 0 && (
+                  <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[6px] font-black ${salesGrowth > 0 ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
+                    {salesGrowth > 0 ? '\u2191' : '\u2193'} {Math.abs(salesGrowth).toFixed(0)}%
+                  </div>
+                )}
+              </div>
+              <div className="text-xl sm:text-3xl font-black font-heading tracking-tighter text-white drop-shadow-md leading-none">
+                {fmt(totalSales)}
+              </div>
+              <div className="flex sm:hidden flex-col gap-0.5 mt-1">
+                <p className="text-[7px] font-black text-white/50 uppercase tracking-widest leading-none">
+                  {fmt(Math.max(0, yesterdaySales - totalSales))} TO EXCEED YESTERDAY
+                </p>
+                <p className="text-[7px] font-black text-white/50 uppercase tracking-widest leading-none">
+                  {(Math.min(100, (totalProfit / 500) * 100)).toFixed(0)}% OF ₱500 PROFIT GOAL REACHED
+                </p>
+              </div>
+              <p className="hidden sm:block text-[7px] font-bold uppercase tracking-widest text-white/40 mt-1">{txCount} transactions {summaryRange === 'today' ? 'today' : 'this period'}</p>
+            </div>
+
+            {/* Radial Radar Array (Mobile Spotlight Only) */}
+            <div className="flex-none flex sm:hidden items-center gap-3 pr-1">
+              {/* Radial 1: Profit Goal */}
+              <div className="flex flex-col items-center gap-1">
+                <div className="relative w-16 h-16 flex items-center justify-center">
+                  <svg className="w-full h-full -rotate-90 text-white">
+                    <circle cx="50%" cy="50%" r="28" className="stroke-white/10 fill-none" strokeWidth="5" />
+                    <circle
+                      cx="50%" cy="50%" r="28"
+                      className="stroke-current fill-none transition-all duration-1000"
+                      strokeWidth="5"
+                      strokeDasharray={2 * Math.PI * 28}
+                      strokeDashoffset={2 * Math.PI * 28 * (1 - Math.min(1, totalProfit / 500))}
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-[10px] font-black leading-none">{(Math.min(100, (totalProfit / 500) * 100)).toFixed(0)}%</span>
+                    <span className="text-[5px] font-black text-white/50 uppercase tracking-tighter">Goal</span>
+                  </div>
                 </div>
-              )}
+              </div>
+
+              {/* Radial 2: Revenue Exceedance (The "Challenger" Gauge) */}
+              <div className="flex flex-col items-center gap-1">
+                <div className="relative w-16 h-16 flex items-center justify-center">
+                  {/* Subtle inner background glow */}
+                  <div className="absolute inset-2 rounded-full bg-cyan-400/5 blur-[8px] animate-pulse" />
+                  
+                  <svg className="w-full h-full -rotate-90 relative z-10">
+                    <circle cx="50%" cy="50%" r="28" className="stroke-white/5 fill-none" strokeWidth="5" />
+                    <circle
+                      cx="50%" cy="50%" r="28"
+                      className="stroke-cyan-400 fill-none transition-all duration-1000"
+                      strokeWidth="5"
+                      strokeDasharray={2 * Math.PI * 28}
+                      strokeDashoffset={2 * Math.PI * 28 * (1 - Math.min(1, totalSales / (yesterdaySales || 1)))}
+                      strokeLinecap="round"
+                      style={{ filter: 'drop-shadow(0 0 10px rgba(34,211,238,0.8))' }}
+                    />
+                  </svg>
+                  
+                  {/* Central Crystal Display */}
+                  <div className="absolute inset-[8px] rounded-full bg-white/10 backdrop-blur-[2px] border border-white/10 flex flex-col items-center justify-center shadow-inner z-20">
+                    <Trophy size={8} className="text-cyan-300 mb-0.5 animate-bounce" />
+                    <span className="text-[10px] font-black text-white leading-none tracking-tighter drop-shadow-[0_0_5px_rgba(34,211,238,0.3)]">
+                      ₱{Math.max(0, Math.floor(yesterdaySales - totalSales))}
+                    </span>
+                    <span className="text-[4px] font-black text-cyan-300/70 uppercase tracking-widest mt-0.5">TO BEAT</span>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="text-3xl font-black font-heading tracking-tighter text-white drop-shadow-md leading-none">
-              {fmt(totalSales)}
-            </div>
-            <p className="text-[7px] font-bold uppercase tracking-widest text-white/40 mt-1">{txCount} transactions {summaryRange === 'today' ? 'today' : 'this period'}</p>
           </div>
 
-          <div className="relative z-10 flex flex-col gap-1.5">
+          <div className="hidden sm:flex relative z-10 flex-col gap-1.5">
             {salesGrowth !== 0 && (
               <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter ${salesGrowth > 0 ? 'bg-white/20 text-white' : 'bg-red-500/20 text-red-200'}`}>
                 {salesGrowth > 0 ? <TrendingUp size={8} /> : <TrendingUp size={8} className="rotate-180" />}
@@ -642,96 +977,98 @@ export default function Dashboard() {
         </div>
 
         {/* ─── Gross Yield Card ─── */}
-        <div className="bg-gradient-to-br from-[#046156] via-[#058b7a] to-[#046156] p-4 rounded-3xl relative overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer text-white border border-white/10 shadow-[0_20px_50px_rgba(4,107,94,0.15)] flex flex-col justify-between min-h-[140px]">
+        <div className="bg-gradient-to-br from-[#046156] via-[#058b7a] to-[#046156] p-2 sm:p-4 rounded-xl sm:rounded-3xl relative overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer text-white border border-white/10 shadow-[0_20px_50px_rgba(4,107,94,0.15)] flex flex-col justify-between min-h-[90px] sm:min-h-[140px]">
           <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/10 opacity-[0.15] pointer-events-none" />
-          <div className="absolute -right-2 top-0 opacity-10 group-hover:opacity-20 transition-all duration-700 group-hover:rotate-12 group-hover:scale-110">
-            <TrendingUp size={100} strokeWidth={1.5} />
+          <div className="absolute -right-2 top-0 opacity-5 sm:opacity-10 group-hover:opacity-20 transition-all duration-700 group-hover:rotate-12 group-hover:scale-110">
+            <TrendingUp size={60} className="sm:w-[100px] sm:h-[100px]" strokeWidth={1.5} />
           </div>
-          
+
           <div className="relative z-10">
-            <div className="flex justify-between items-start mb-1">
+            <div className="flex justify-start sm:justify-between items-center sm:items-start gap-1.5 sm:gap-0 mb-1 w-full">
               <span className="text-[8px] font-black uppercase tracking-[0.25em] text-white/50">Gross Profit</span>
               {profitGrowth !== 0 && (
-                <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[7px] font-black ${profitGrowth > 0 ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
+                <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[6px] font-black ${profitGrowth > 0 ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
                   {profitGrowth > 0 ? '\u2191' : '\u2193'} {Math.abs(profitGrowth).toFixed(0)}%
                 </div>
               )}
             </div>
-            <div className="text-3xl font-black font-heading tracking-tighter drop-shadow-lg leading-none">{fmt(totalProfit)}</div>
-            <p className="text-[7px] font-bold uppercase tracking-widest text-white/40 mt-1">Profit margin from sales</p>
+            <div className="text-2xl sm:text-3xl font-black font-heading tracking-tighter drop-shadow-lg leading-none">{fmt(totalProfit)}</div>
+            <p className="hidden sm:block text-[7px] font-bold uppercase tracking-widest text-white/40 mt-1">Profit margin from sales</p>
           </div>
 
           <div className="flex flex-col gap-1.5 relative z-10">
-            <div className="inline-flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-2 py-0.5 rounded-full border border-white/10 text-[9px] font-black uppercase tracking-tight">
+            <div className="inline-flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-2 py-0.5 rounded-full border border-white/10 text-[9px] font-black uppercase tracking-tight w-fit">
               <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></div>
               {totalSales > 0 ? ((totalProfit / totalSales) * 100).toFixed(1) : 0}% Margin
             </div>
-            
-            {profitGrowth !== 0 && (
-              <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter ${profitGrowth > 0 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'}`}>
-                {profitGrowth > 0 ? <TrendingUp size={8} /> : <TrendingUp size={8} className="rotate-180" />}
-                {Math.abs(profitGrowth).toFixed(1)}% {profitGrowth > 0 ? 'higher' : 'lower'}
-                <span className="opacity-50 lowercase ml-0.5">vs yesterday</span>
-              </div>
-            )}
-            {totalSales > 0 && totalProfit / totalSales < 0.15 && (
-              <p className="text-[7px] text-amber-300/70 font-bold uppercase tracking-tighter ml-0.5">Margin below 15% — review pricing</p>
-            )}
+
+            <div className="hidden sm:flex flex-col gap-1.5">
+              {profitGrowth !== 0 && (
+                <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter ${profitGrowth > 0 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'}`}>
+                  {profitGrowth > 0 ? <TrendingUp size={8} /> : <TrendingUp size={8} className="rotate-180" />}
+                  {Math.abs(profitGrowth).toFixed(1)}% {profitGrowth > 0 ? 'higher' : 'lower'}
+                  <span className="opacity-50 lowercase ml-0.5">vs yesterday</span>
+                </div>
+              )}
+              {totalSales > 0 && totalProfit / totalSales < 0.15 && (
+                <p className="text-[7px] text-amber-300/70 font-bold uppercase tracking-tighter ml-0.5">Margin below 15% — review pricing</p>
+              )}
+            </div>
           </div>
         </div>
 
         {/* ─── Net Flow Card ─── */}
-        <div className="bg-gradient-to-br from-[#3D00B0] via-[#5F00FF] to-[#3D00B0] p-4 rounded-3xl relative overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer text-white border border-white/10 shadow-[0_20px_50px_rgba(61,0,176,0.15)] flex flex-col justify-between min-h-[140px]">
+        <div className="bg-gradient-to-br from-[#3D00B0] via-[#5F00FF] to-[#3D00B0] p-2 sm:p-4 rounded-xl sm:rounded-3xl relative overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer text-white border border-white/10 shadow-[0_20px_50px_rgba(61,0,176,0.15)] flex flex-col justify-between min-h-[90px] sm:min-h-[140px]">
           <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/10 opacity-[0.15] pointer-events-none" />
-          <div className="absolute -right-2 top-0 opacity-10 group-hover:opacity-20 transition-all duration-700 group-hover:-rotate-12 group-hover:scale-110">
-            <ArrowUpRight size={100} strokeWidth={1.5} />
+          <div className="absolute -right-2 top-0 opacity-5 sm:opacity-10 group-hover:opacity-20 transition-all duration-700 group-hover:-rotate-12 group-hover:scale-110">
+            <ArrowUpRight size={60} className="sm:w-[100px] sm:h-[100px]" strokeWidth={1.5} />
           </div>
 
           <div className="relative z-10">
-            <div className="flex justify-between items-start mb-1">
+            <div className="flex justify-start sm:justify-between items-center sm:items-start gap-1.5 sm:gap-0 mb-1 w-full">
               <span className="text-[8px] font-black uppercase tracking-[0.25em] text-white/50">Net Profit</span>
               {netProfit !== 0 && (
-                <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[7px] font-black ${netProfit >= 0 ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
+                <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[6px] font-black ${netProfit >= 0 ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
                   {netProfit >= 0 ? '\u2191' : '\u2193'} {totalSales > 0 ? ((netProfit / totalSales) * 100).toFixed(0) : 0}%
                 </div>
               )}
             </div>
-            <div className="text-3xl font-black font-heading tracking-tighter drop-shadow-lg leading-none">{fmt(netProfit)}</div>
-            <p className="text-[7px] font-bold uppercase tracking-widest text-white/40 mt-1">After all deductions</p>
+            <div className="text-2xl sm:text-3xl font-black font-heading tracking-tighter drop-shadow-lg leading-none">{fmt(netProfit)}</div>
+            <p className="hidden sm:block text-[7px] font-bold uppercase tracking-widest text-white/40 mt-1">After all deductions</p>
           </div>
 
-          <div className="flex flex-col gap-1.5 relative z-10">
+          <div className="flex flex-col gap-1 relative z-10">
             {/* Mini Breakdown */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1 bg-emerald-500/20 px-2 py-0.5 rounded-full">
-                <span className="text-[8px] font-black text-emerald-300">{fmt(totalProfit)}</span>
-                <span className="text-[6px] text-emerald-300/60 uppercase">in</span>
+            <div className="flex items-center gap-1.5 sm:gap-3">
+              <div className="flex items-center gap-1 bg-emerald-500/20 px-1.5 py-0.5 rounded-full">
+                <span className="text-[7px] sm:text-[8px] font-black text-emerald-300">{fmt(totalProfit)}</span>
+                <span className="text-[5px] sm:text-[6px] text-emerald-300/60 uppercase">in</span>
               </div>
-              <div className="flex items-center gap-1 bg-red-500/20 px-2 py-0.5 rounded-full">
-                <span className="text-[8px] font-black text-red-300">{fmt(totalExpenses)}</span>
-                <span className="text-[6px] text-red-300/60 uppercase">out</span>
+              <div className="flex items-center gap-1 bg-red-500/20 px-1.5 py-0.5 rounded-full">
+                <span className="text-[7px] sm:text-[8px] font-black text-red-300">{fmt(totalExpenses)}</span>
+                <span className="text-[5px] sm:text-[6px] text-red-300/60 uppercase">out</span>
               </div>
             </div>
-            <p className={`text-[7px] font-bold uppercase tracking-tighter ml-0.5 ${netProfit >= totalProfit * 0.5 ? 'text-emerald-300/50' : 'text-amber-300/50'}`}>
+            <p className={`hidden sm:block text-[7px] font-bold uppercase tracking-tighter ml-0.5 ${netProfit >= totalProfit * 0.5 ? 'text-emerald-300/50' : 'text-amber-300/50'}`}>
               {totalExpenses === 0 ? 'No expenses recorded' : netProfit >= totalProfit * 0.8 ? 'Healthy cash flow' : netProfit >= totalProfit * 0.5 ? 'Moderate expenses' : 'High expense ratio'}
             </p>
           </div>
         </div>
 
         {/* Efficiency Card */}
-        <div className="col-span-2 md:col-span-1 bg-gradient-to-br from-[#D4145A] via-[#FBB03B] to-[#D4145A] p-4 rounded-3xl relative overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer text-white border border-white/10 shadow-[0_20px_50px_rgba(212,20,90,0.15)] flex flex-col justify-between min-h-[130px]">
+        <div className="col-span-2 md:col-span-1 bg-gradient-to-br from-[#D4145A] via-[#FBB03B] to-[#D4145A] p-2 sm:p-4 rounded-xl sm:rounded-3xl relative overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer text-white border border-white/10 shadow-[0_20px_50px_rgba(212,20,90,0.15)] flex flex-col justify-between min-h-[90px] sm:min-h-[130px]">
           <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/10 opacity-[0.2] pointer-events-none" />
-          
+
           {/* Subtle Sparkline Background */}
           <div className="absolute bottom-0 left-0 right-0 h-12 opacity-30 pointer-events-none">
             <div className="flex items-end justify-between h-full px-4 gap-0.5">
               {peakHoursData.map((val, i) => (
-                <div 
-                  key={i} 
+                <div
+                  key={i}
                   className="bg-white rounded-t-sm transition-all duration-1000"
-                  style={{ 
+                  style={{
                     height: `${Math.max(10, (val / Math.max(...peakHoursData, 1)) * 100)}%`,
-                    width: '100%' 
+                    width: '100%'
                   }}
                 />
               ))}
@@ -747,19 +1084,19 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
-            <div className="text-3xl font-black font-heading tracking-tighter drop-shadow-lg leading-none">
+            <div className="text-2xl sm:text-3xl font-black font-heading tracking-tighter drop-shadow-lg leading-none">
               {txCount} <span className="text-xs opacity-50">Cycles</span>
             </div>
-            <p className="text-[7px] font-bold uppercase tracking-widest text-white/40 mt-1">~{txPerHour.toFixed(1)} transactions per hour</p>
+            <p className="hidden sm:block text-[7px] font-bold uppercase tracking-widest text-white/40 mt-1">~{txPerHour.toFixed(1)} transactions per hour</p>
           </div>
 
           <div className="relative z-10 flex flex-col gap-1.5">
-            <div className="inline-flex items-center gap-1.5 bg-black/20 backdrop-blur-lg px-2 py-0.5 rounded-full border border-white/10">
+            <div className="inline-flex items-center gap-1.5 bg-black/20 backdrop-blur-lg px-2 py-0.5 rounded-full border border-white/10 w-fit">
               <span className="text-[9px] font-black text-white uppercase tracking-tight">
                 {performanceLabel}
               </span>
             </div>
-            <p className="text-[7px] text-white/30 uppercase font-black tracking-tighter ml-1">Speed vs Session Avg</p>
+            <p className="hidden sm:block text-[7px] text-white/30 uppercase font-black tracking-tighter ml-1">Speed vs Session Avg</p>
           </div>
         </div>
       </section>
@@ -767,11 +1104,11 @@ export default function Dashboard() {
       {/* Main Analysis Section */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-2 mb-2 items-start">
         {/* Fin-Velocity Chart - Redesigned Command Center */}
-        <div className="md:col-span-8 bg-surface-container-low p-6 rounded-3xl border border-outline-variant/10 shadow-sm relative overflow-hidden group">
+        <div className="md:col-span-8 bg-surface-container-low p-6 rounded-xl sm:rounded-3xl border border-outline-variant/10 shadow-sm relative overflow-hidden group">
           <div className="flex flex-col sm:flex-row justify-center sm:justify-between items-center sm:items-start mb-8 gap-4">
             <div className="text-center sm:text-left">
               <span className="text-xl font-black text-on-surface tracking-tighter uppercase font-heading">
-                {summaryRange === 'today' 
+                {summaryRange === 'today'
                   ? (timeRange === '1M' ? 'Monthly Yield Flow' : 'Historical Velocity Hub')
                   : summaryRange === 'this_month'
                     ? 'Intra-Month Velocity'
@@ -887,13 +1224,13 @@ export default function Dashboard() {
                       y: {
                         display: true,
                         min: 0,
-                        max: 1000,
+                        max: 2200,
                         grid: {
                           color: 'rgba(59, 130, 246, 0.08)',
                           drawTicks: false,
                         },
                         afterBuildTicks: (axis: any) => {
-                          axis.ticks = [100, 250, 500, 750, 1000].map(v => ({ value: v }));
+                          axis.ticks = [250, 500, 1000, 1500, 2000].map(v => ({ value: v }));
                         },
                         border: { display: false },
                         ticks: {
@@ -902,6 +1239,7 @@ export default function Dashboard() {
                           color: theme === 'dark' ? 'rgba(59, 130, 246, 0.5)' : 'rgba(59, 130, 246, 0.4)',
                           callback: (value: any) => {
                             if (value === 1000) return '₱1k';
+                            if (value === 2000) return '₱2k';
                             return '₱' + value;
                           }
                         }
@@ -982,7 +1320,7 @@ export default function Dashboard() {
               recentTX.map(tx => (
                 <div key={tx.id} className="p-4 hover:bg-primary/[0.02] transition-all flex justify-between items-center group relative cursor-pointer">
                   <div className="absolute left-0 top-1/4 bottom-1/4 w-0.5 bg-primary opacity-0 group-hover:opacity-100 transition-all rounded-r-full"></div>
-                  
+
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-xl bg-surface-container flex items-center justify-center text-on-surface-variant group-hover:text-primary transition-colors">
                       <Receipt size={18} className="opacity-40 group-hover:opacity-100 transition-opacity" />
@@ -1032,7 +1370,7 @@ export default function Dashboard() {
         {/* Side Section: Risk matrix and ROI */}
         <div className="md:col-span-4 flex flex-col gap-2">
           {/* Depletion Risk Widget */}
-          <div className="bg-error/5 p-3 rounded-2xl border border-error/10 shadow-sm relative overflow-hidden group">
+          <div className="bg-error/5 p-3 rounded-lg sm:rounded-2xl border border-error/10 shadow-sm relative overflow-hidden group">
             <div className="flex items-center justify-between mb-3 px-1">
               <h3 className="font-black text-[9px] text-error uppercase tracking-[0.2em] flex items-center gap-1.5">
                 <div className="w-1 h-1 bg-error rounded-full animate-pulse"></div>
@@ -1056,7 +1394,13 @@ export default function Dashboard() {
                       <div className={`absolute left-0 top-0 bottom-0 w-0.5 ${isCritical ? 'bg-red-500' : 'bg-amber-400'}`} />
                       <div className="relative z-10 w-8 h-8 rounded-lg overflow-hidden bg-surface-container shadow-inner flex-shrink-0">
                         {item.image_url ? (
-                          <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                          <Image
+                            src={item.image_url}
+                            alt={item.name}
+                            width={32}
+                            height={32}
+                            className="w-full h-full object-cover"
+                          />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center bg-error/5">
                             <Package size={14} className="text-on-surface-variant/20" />
@@ -1077,7 +1421,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="bg-surface-container-low p-4 rounded-3xl border border-outline-variant/10 shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow duration-300">
+          <div className="bg-surface-container-low p-4 rounded-xl sm:rounded-3xl border border-outline-variant/10 shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow duration-300">
             {/* Subtle ambient glow on hover */}
             <div className="absolute -top-8 -right-8 w-24 h-24 bg-primary/5 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-all duration-700 pointer-events-none" />
 
@@ -1110,7 +1454,7 @@ export default function Dashboard() {
 
             {/* Bar Chart */}
             <div className="h-[90px] relative">
-              <Bar 
+              <Bar
                 data={{
                   ...salesData,
                   datasets: [{
@@ -1125,7 +1469,7 @@ export default function Dashboard() {
                     categoryPercentage: 1.0,
                     barPercentage: 1.0,
                   }]
-                }} 
+                }}
                 options={{
                   ...cartesianOptions,
                   plugins: { ...cartesianOptions.plugins, legend: { display: false } },
@@ -1141,7 +1485,7 @@ export default function Dashboard() {
                       }
                     }
                   }
-                }} 
+                }}
               />
             </div>
 

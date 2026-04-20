@@ -42,3 +42,19 @@ next-env.d.ts
 
 # temp scripts
 /tmp/
+
+# Agent Intelligence
+.agents/logs/
+.agents/scratch/
+.agents/temp/
+
+# Supabase Local State
+.supabase/
+supabase/.temp/
+
+# Local UI/Design Assets 
+# (Exclude generated images if they are temporary/mockups)
+/public/generated/
+
+# Sensitive Metadata
+metadata.json
