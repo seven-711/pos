@@ -26,11 +26,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       } else {
         document.documentElement.classList.remove("dark");
       }
+      // Update status bar
+      const color = savedTheme === "dark" ? "#080616" : "#fcf9f8";
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute('content', color);
     } else {
       // Defaulting to "dark"
       setTheme("dark");
       document.documentElement.classList.add("dark");
       localStorage.setItem("theme", "dark");
+      // Update status bar
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute('content', "#080616");
     }
   }, []);
 
@@ -44,6 +51,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     } else {
       document.documentElement.classList.remove("dark");
     }
+
+    // Update status bar theme color
+    const color = newTheme === "dark" ? "#080616" : "#fcf9f8";
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', color);
   };
 
   // Prevent hydration mismatch by not rendering until mounted
