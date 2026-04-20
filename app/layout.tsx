@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { Manrope, Poppins } from "next/font/google";
 import "./globals.css";
@@ -25,6 +25,11 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "POS ni Estela",
   description: "Advanced AI CRM and Point of Sale System",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "POS ni Estela",
+  },
   icons: {
     icon: [
       { url: '/logo.png', type: 'image/png' },
@@ -33,6 +38,15 @@ export const metadata: Metadata = {
       { url: '/logo.png', type: 'image/png' },
     ],
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#080616", // Matches your dashboard's deep surface in dark mode
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

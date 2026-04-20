@@ -57,10 +57,16 @@ interface Product {
 
 
 export default function POSPage() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const { hasSystemBooted, setHasSystemBooted } = useSession();
-  const [loading, setLoading] = useState(!hasSystemBooted);
+  const { 
+    hasSystemBooted, 
+    setHasSystemBooted,
+    products,
+    setProducts,
+    categories,
+    setCategories
+  } = useSession();
+  
+  const [loading, setLoading] = useState(products.length === 0);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
@@ -200,10 +206,19 @@ export default function POSPage() {
 
 
   const fetchData = async (silent = false) => {
-    if (!silent) setLoading(true);
+    // Only show loading if we have absolutely no data
+    if (!silent && products.length === 0) setLoading(true);
+    
     try {
-      const { data: prodData, error: prodErr } = await supabase.from('products').select('*, categories(name)').order('name');
-      const { data: catData, error: catErr } = await supabase.from('categories').select('*').order('name');
+      const { data: prodData, error: prodErr } = await supabase
+        .from('products')
+        .select('*, categories(name)')
+        .order('name');
+        
+      const { data: catData, error: catErr } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name');
       
       if (prodErr) throw prodErr;
       if (catErr) throw catErr;
@@ -212,7 +227,6 @@ export default function POSPage() {
       if (catData) setCategories(catData);
     } catch (err: any) {
       console.error("POS Sync Error:", err);
-      // Optional: Set an error state if needed
     } finally {
       setLoading(false);
       setHasSystemBooted(true);

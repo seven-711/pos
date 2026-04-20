@@ -11,6 +11,25 @@ export type Session = {
   total_profit: number | null;
 };
 
+export interface Category {
+  id: string;
+  name: string;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  stock: number;
+  min_stock: number;
+  cost_price: number;
+  selling_price: number;
+  category_id: string;
+  image_url?: string;
+  categories?: { name: string };
+  bundle_qty?: number | null;
+  bundle_price?: number | null;
+}
+
 interface SessionContextType {
   activeSession: Session | null;
   loading: boolean;
@@ -19,6 +38,11 @@ interface SessionContextType {
   refreshSession: () => Promise<void>;
   hasSystemBooted: boolean;
   setHasSystemBooted: (val: boolean) => void;
+  // Global Data Cache
+  products: Product[];
+  setProducts: (val: Product[]) => void;
+  categories: Category[];
+  setCategories: (val: Category[]) => void;
 }
 
 
@@ -112,6 +136,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   };
 
   const [isLayoutHidden, setIsLayoutHidden] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   return (
     <SessionContext.Provider value={{ 
@@ -121,7 +147,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       setIsLayoutHidden,
       refreshSession,
       hasSystemBooted,
-      setHasSystemBooted
+      setHasSystemBooted,
+      products,
+      setProducts,
+      categories,
+      setCategories
     }}>
       {children}
     </SessionContext.Provider>

@@ -101,7 +101,18 @@ export default function Dashboard() {
   const [showCalendar, setShowCalendar] = useState(false);
   const [dateOffset, setDateOffset]     = useState(0);
   const [msgIndex, setMsgIndex]         = useState(0);
-  const { activeSession, refreshSession, isLayoutHidden, setIsLayoutHidden, hasSystemBooted, setHasSystemBooted } = useSession();
+  const { 
+    activeSession, 
+    refreshSession, 
+    isLayoutHidden, 
+    setIsLayoutHidden, 
+    hasSystemBooted, 
+    setHasSystemBooted,
+    products: cachedProducts,
+    setProducts,
+    categories: cachedCategories,
+    setCategories
+  } = useSession();
   const [loading, setLoading] = useState(!hasSystemBooted);
 
   // KPIs
@@ -359,6 +370,14 @@ export default function Dashboard() {
           const yestProfit = dayManifest[yestStr]?.profit || 0;
           const yestSales = dayManifest[yestStr]?.sales || 0;
           setYesterdaySales(yestSales);
+
+          // 7. Background Pre-load for POS (if not already loaded)
+          if (cachedProducts.length === 0) {
+            const { data: prodData } = await supabase.from('products').select('*, categories(name)').order('name');
+            const { data: catData } = await supabase.from('categories').select('*').order('name');
+            if (prodData) setProducts(prodData);
+            if (catData) setCategories(catData);
+          }
 
           if (profit > 0 && yestProfit > 0) {
             setProfitGrowth(((profit - yestProfit) / yestProfit) * 100);
