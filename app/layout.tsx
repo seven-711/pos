@@ -25,6 +25,7 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "POS ni Estela",
   description: "Advanced AI CRM and Point of Sale System",
+  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

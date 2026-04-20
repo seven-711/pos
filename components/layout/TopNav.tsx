@@ -65,7 +65,7 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
 
 
   return (
-    <header className="w-full min-h-16 h-auto shrink-0 bg-[var(--color-surface)]/90 backdrop-blur-md flex items-center justify-between px-4 md:px-8 z-[110] border-b border-[var(--color-outline-variant)]/10 shadow-sm pointer-events-auto print:hidden" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+    <header className="w-full min-h-16 h-auto shrink-0 bg-[var(--color-surface)] backdrop-blur-md flex items-center justify-between px-4 md:px-8 z-[110] shadow-sm pointer-events-auto print:hidden" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       {/* Brand — Mobile & Desktop trigger */}
       <button
         onClick={onMenuClick}
