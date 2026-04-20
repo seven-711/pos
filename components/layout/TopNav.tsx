@@ -66,6 +66,8 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
 
   return (
     <header className="w-full sticky top-0 min-h-16 h-auto shrink-0 bg-[var(--color-surface)] flex items-center justify-between px-4 md:px-8 z-[110] shadow-sm pointer-events-auto print:hidden" style={{ paddingTop: 'env(safe-area-inset-top)', marginTop: '-1px' }}>
+      {/* Top-bleed buffer to eliminate status bar 'tiny line' */}
+      <div className="absolute top-[-40px] left-0 right-0 h-[40px] bg-[var(--color-surface)] pointer-events-none" />
       {/* Brand — Mobile & Desktop trigger */}
       <button
         onClick={onMenuClick}
