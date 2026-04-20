@@ -64,6 +64,10 @@
   body {
     background-color: var(--color-background);
   }
+
+  html, body {
+    overscroll-behavior-y: contain;
+  }
 }
 
 @layer utilities {

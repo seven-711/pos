@@ -18,7 +18,8 @@ import {
   Users,
   X,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  RefreshCw
 } from "lucide-react";
 
 
@@ -65,31 +66,61 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Swipe Gesture Handling
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [startX, setStartX] = useState<number>(0);
+  const [touchStart, setTouchStart] = useState<{x: number, y: number} | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const swipeThreshold = 50;
   const edgeThreshold = 60; // Distance from edge to trigger swipe
 
+  // Pull to Refresh State
+  const [pullDistance, setPullDistance] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const reloadThreshold = 80;
+
   const handleTouchStart = (e: React.TouchEvent) => {
-    setStartX(e.targetTouches[0].clientX);
-    setTouchStart(e.targetTouches[0].clientX);
+    const touch = e.targetTouches[0];
+    setTouchStart({ x: touch.clientX, y: touch.clientY });
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX);
+    if (!touchStart) return;
+    const touch = e.targetTouches[0];
+    const deltaY = touch.clientY - touchStart.y;
+    const scroller = document.getElementById('main-scroll');
+    
+    // Pull-to-refresh logic
+    if (scroller && scroller.scrollTop === 0 && deltaY > 0) {
+      // Apply resistance
+      const distance = Math.min(reloadThreshold + 20, deltaY * 0.4);
+      setPullDistance(distance);
+      // If we've pulled enough to show the indicator, prevent native scrolling
+      if (deltaY > 10) e.stopPropagation();
+    }
+    
+    setTouchEnd(touch.clientX);
   };
 
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
-
   const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    const distance = touchStart - touchEnd;
+    // 1. Handle pull-to-refresh first
+    if (pullDistance >= reloadThreshold) {
+      setIsRefreshing(true);
+      window.location.reload();
+      return; // Stop here to prevent swipe collision
+    }
+    setPullDistance(0);
+
+    // 2. Original Swipe Logic
+    if (!touchStart || !touchEnd) {
+      setTouchStart(null);
+      return;
+    };
+
+    const distance = touchStart.x - touchEnd;
     const isLeftSwipe = distance > swipeThreshold;
     const isRightSwipe = distance < -swipeThreshold;
 
     // 1. DASHBOARD GESTURES (When nothing is open)
     if (!showNotifications && !showCart) {
-      if (isRightSwipe && startX < edgeThreshold) {
+      if (isRightSwipe && touchStart.x < edgeThreshold) {
         setIsMobileMenuOpen(true);
       } else if (isLeftSwipe) {
         toggleNotifications(true);
@@ -211,6 +242,28 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
 
       <div className="flex flex-col flex-1 min-w-0 min-h-0 relative">
         {!isLayoutHidden && <TopNav onMenuClick={() => setIsMobileMenuOpen(true)} />}
+
+        {/* ── Pull to Refresh Indicator ── */}
+        <div 
+          className="absolute left-0 right-0 z-[105] flex justify-center pointer-events-none transition-all duration-200"
+          style={{ 
+            top: '4rem', // Height of TopNav (h-16)
+            marginTop: 'env(safe-area-inset-top)',
+            transform: `translateY(${pullDistance - 40}px)`,
+            opacity: Math.min(1, pullDistance / (reloadThreshold * 0.7)),
+          }}
+        >
+          <div className={`bg-surface-container-highest/80 backdrop-blur-xl border border-white/10 w-10 h-10 rounded-full shadow-2xl flex items-center justify-center text-primary ${pullDistance >= reloadThreshold ? 'scale-110' : 'scale-100'} transition-transform`}>
+            <RefreshCw 
+              size={18} 
+              className={`${isRefreshing ? 'animate-spin' : ''}`} 
+              style={{ 
+                transform: isRefreshing ? 'none' : `rotate(${pullDistance * 4}deg)`,
+                opacity: isRefreshing ? 0.5 : 1
+              }} 
+            />
+          </div>
+        </div>
 
 
         {/* ── Sliding View Container ── */}
