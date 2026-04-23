@@ -39,16 +39,16 @@ interface Transaction {
 const PAGE_SIZE = 10;
 
 export default function TransactionsPage() {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const { hasSystemBooted, setHasSystemBooted } = useSession();
+  const { hasSystemBooted, setHasSystemBooted, appCache, setAppCache } = useSession();
+  const [transactions, setTransactions] = useState<Transaction[]>(appCache.transactions || []);
   const [loading, setLoading] = useState(!hasSystemBooted);
-  const [page, setPage] = useState(0);
-  const [totalCount, setTotalCount] = useState(0);
+  const [page, setPage] = useState(appCache.txPage || 0);
+  const [totalCount, setTotalCount] = useState(appCache.txTotalCount || 0);
   const [searchQuery, setSearchQuery] = useState("");
   const [paymentFilter, setPaymentFilter] = useState<string | null>(null);
 
   // Global Enterprise Stats
-  const [globalStats, setGlobalStats] = useState({
+  const [globalStats, setGlobalStats] = useState(appCache.globalStats || {
     totalRevenue: 0,
     totalProfit: 0,
     totalTransactions: 0,
@@ -85,17 +85,19 @@ export default function TransactionsPage() {
         .filter(t => new Date(t.created_at).toDateString() === today)
         .reduce((acc, t) => acc + Number(t.total_amount || 0), 0);
 
-      setGlobalStats({
+      const stats = {
         totalRevenue: revenue,
         totalProfit: profit,
         totalTransactions: allTx.length,
         todaySales: todaySales
-      });
+      };
+      setGlobalStats(stats);
+      setAppCache(prev => ({ ...prev, globalStats: stats }));
     }
   };
 
   const fetchTransactions = async (silent = false) => {
-    if (!silent) setLoading(true);
+    if (!silent && !hasSystemBooted && transactions.length === 0) setLoading(true);
     const from = page * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
 
@@ -122,6 +124,12 @@ export default function TransactionsPage() {
     if (!error && data) {
       setTransactions(data);
       setTotalCount(count || 0);
+      setAppCache(prev => ({ 
+        ...prev, 
+        transactions: data,
+        txTotalCount: count || 0,
+        txPage: page
+      }));
     }
     setLoading(false);
     setHasSystemBooted(true);

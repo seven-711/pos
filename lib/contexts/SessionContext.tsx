@@ -14,6 +14,7 @@ export type Session = {
 export interface Category {
   id: string;
   name: string;
+  products?: any[];
 }
 
 export interface Product {
@@ -28,6 +29,7 @@ export interface Product {
   categories?: { name: string };
   bundle_qty?: number | null;
   bundle_price?: number | null;
+  created_at?: string;
 }
 
 interface SessionContextType {
@@ -43,6 +45,16 @@ interface SessionContextType {
   setProducts: (val: Product[]) => void;
   categories: Category[];
   setCategories: (val: Category[]) => void;
+  // Expenses Cache
+  expenses: any[];
+  setExpenses: (val: any[]) => void;
+  totalProfit: number;
+  setTotalProfit: (val: number) => void;
+  totalExpenses: number;
+  setTotalExpenses: (val: number) => void;
+  // Generic Page Cache
+  appCache: Record<string, any>;
+  setAppCache: React.Dispatch<React.SetStateAction<Record<string, any>>>;
 }
 
 
@@ -138,6 +150,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [isLayoutHidden, setIsLayoutHidden] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  
+  const [expenses, setExpenses] = useState<any[]>([]);
+  const [totalProfit, setTotalProfit] = useState(0);
+  const [totalExpenses, setTotalExpenses] = useState(0);
+  
+  const [appCache, setAppCache] = useState<Record<string, any>>({});
 
   return (
     <SessionContext.Provider value={{ 
@@ -151,7 +169,15 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       products,
       setProducts,
       categories,
-      setCategories
+      setCategories,
+      expenses,
+      setExpenses,
+      totalProfit,
+      setTotalProfit,
+      totalExpenses,
+      setTotalExpenses,
+      appCache,
+      setAppCache
     }}>
       {children}
     </SessionContext.Provider>

@@ -22,15 +22,13 @@ import {
 } from "lucide-react";
 
 export default function CategoriesPage() {
-  const [categories, setCategories] = useState<any[]>([]);
-  const { hasSystemBooted, setHasSystemBooted } = useSession();
-  const [loading, setLoading] = useState(!hasSystemBooted);
+  const { hasSystemBooted, setHasSystemBooted, categories, setCategories, appCache, setAppCache } = useSession();
+  const [loading, setLoading] = useState(!hasSystemBooted && categories.length === 0);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
-  // Stats state
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<{totalCategories: number, totalProducts: number, activeCategories: number}>(appCache.categoriesStats || {
     totalCategories: 0,
     totalProducts: 0,
     activeCategories: 0
@@ -56,7 +54,7 @@ export default function CategoriesPage() {
   }, []);
 
   const fetchData = async (silent = false) => {
-    if (!silent) setLoading(true);
+    if (!silent && !hasSystemBooted && categories.length === 0) setLoading(true);
     
     // Fetch Categories
     const { data: catData, error: catError } = await supabase
@@ -69,11 +67,13 @@ export default function CategoriesPage() {
       
       // Calculate Stats
       const totalProducts = catData.reduce((acc: number, cat: any) => acc + (cat.products?.length || 0), 0);
-      setStats({
+      const newStats = {
         totalCategories: catData.length,
         totalProducts: totalProducts,
         activeCategories: catData.filter((c: any) => c.products?.length > 0).length
-      });
+      };
+      setStats(newStats);
+      setAppCache(prev => ({ ...prev, categoriesStats: newStats }));
     }
     
     setLoading(false);
@@ -218,8 +218,8 @@ export default function CategoriesPage() {
                   </div>
                   
                   <div className="col-span-2 text-right hidden md:block">
-                    <span className={`px-2 py-1 text-[10px] font-bold rounded uppercase ${cat.products?.length > 0 ? 'bg-secondary/10 text-secondary' : 'bg-outline-variant/20 text-on-surface-variant'}`}>
-                      {cat.products?.length > 0 ? 'Active' : 'Empty'}
+                    <span className={`px-2 py-1 text-[10px] font-bold rounded uppercase ${(cat.products?.length || 0) > 0 ? 'bg-secondary/10 text-secondary' : 'bg-outline-variant/20 text-on-surface-variant'}`}>
+                      {(cat.products?.length || 0) > 0 ? 'Active' : 'Empty'}
                     </span>
                   </div>
                   

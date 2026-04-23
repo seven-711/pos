@@ -49,7 +49,7 @@ interface Expense {
 }
 
 export default function AnalyticsPage() {
-  const { hasSystemBooted, setHasSystemBooted } = useSession();
+  const { hasSystemBooted, setHasSystemBooted, appCache, setAppCache } = useSession();
   const [loading, setLoading] = useState(!hasSystemBooted);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -60,8 +60,8 @@ export default function AnalyticsPage() {
   const { setIsLayoutHidden } = useSession();
 
   // Analytics State
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [metrics, setMetrics] = useState({
+  const [selectedDate, setSelectedDate] = useState(appCache.analyticsDate || new Date().toLocaleDateString('en-CA'));
+  const [metrics, setMetrics] = useState(appCache.analyticsMetrics || {
     grossRevenue: 0,
     netProfit: 0,
     avgTransaction: 0,
@@ -69,15 +69,15 @@ export default function AnalyticsPage() {
     growthRate: 0 
   });
 
-  const [topProducts, setTopProducts] = useState<{name: string, qty: number}[]>([]);
-  const [categoryData, setCategoryData] = useState<{name: string, value: number, percent: number}[]>([]);
-  const [peakHours, setPeakHours] = useState<number[]>(new Array(24).fill(0));
-  const [hourlyTrend, setHourlyTrend] = useState<[string, number][]>([]);
+  const [topProducts, setTopProducts] = useState<{name: string, qty: number}[]>(appCache.analyticsTopProducts || []);
+  const [categoryData, setCategoryData] = useState<{name: string, value: number, percent: number}[]>(appCache.analyticsCategoryData || []);
+  const [peakHours, setPeakHours] = useState<number[]>(appCache.analyticsPeakHours || new Array(24).fill(0));
+  const [hourlyTrend, setHourlyTrend] = useState<[string, number][]>(appCache.analyticsHourlyTrend || []);
   const [rawData, setRawData] = useState<{
     tx: Transaction[],
     items: TransactionItem[],
     exp: Expense[]
-  }>({ tx: [], items: [], exp: [] });
+  }>(appCache.analyticsRawData || { tx: [], items: [], exp: [] });
 
   const [showPreview, setShowPreview] = useState(false);
   const [activeBarIdx, setActiveBarIdx] = useState<number | null>(null);
@@ -98,7 +98,7 @@ export default function AnalyticsPage() {
   }, [showPreview]);
 
   const fetchData = async (dateStr: string, silent = false) => {
-    if (!silent) setLoading(true);
+    if (!silent && !hasSystemBooted && rawData.tx.length === 0) setLoading(true);
 
     try {
       const startOfDay = `${dateStr}T00:00:00+08:00`;
@@ -211,6 +211,23 @@ export default function AnalyticsPage() {
         trendData.push([hourLabel, trendMap[i] || 0]);
     }
     setHourlyTrend(trendData);
+
+    setAppCache(prev => ({
+      ...prev,
+      analyticsDate: selectedDate,
+      analyticsMetrics: {
+        grossRevenue: gross,
+        netProfit: net,
+        avgTransaction: tx.length > 0 ? gross / tx.length : 0,
+        salesCount: tx.length,
+        growthRate: 15.2
+      },
+      analyticsTopProducts: sortedProds,
+      analyticsCategoryData: catArray,
+      analyticsPeakHours: hours,
+      analyticsHourlyTrend: trendData,
+      analyticsRawData: { tx, items, exp }
+    }));
   };
 
   const handleExport = () => {

@@ -4,13 +4,13 @@ import React, { useEffect, useState, useMemo } from "react";
 import Lottie from "lottie-react";
 import Image from "next/image";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const animaBotData  = require("../public/AnimaBot.json")   as any;
+const animaBotData = require("../public/AnimaBot.json") as any;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const angryBotData  = require("../public/angryrobot.json") as any;
+const angryBotData = require("../public/angryrobot.json") as any;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const happyBotData  = require("../public/happyrobot.json") as any;
+const happyBotData = require("../public/happyrobot.json") as any;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const sadBotData    = require("../public/sadrobot.json")   as any;
+const sadBotData = require("../public/sadrobot.json") as any;
 import { supabase } from "@/lib/supabase";
 import {
   Wallet,
@@ -99,14 +99,14 @@ type Transaction = {
 
 export default function Dashboard() {
   const [showCalendar, setShowCalendar] = useState(false);
-  const [dateOffset, setDateOffset]     = useState(0);
-  const [msgIndex, setMsgIndex]         = useState(0);
-  const { 
-    activeSession, 
-    refreshSession, 
-    isLayoutHidden, 
-    setIsLayoutHidden, 
-    hasSystemBooted, 
+  const [dateOffset, setDateOffset] = useState(0);
+  const [msgIndex, setMsgIndex] = useState(0);
+  const {
+    activeSession,
+    refreshSession,
+    isLayoutHidden,
+    setIsLayoutHidden,
+    hasSystemBooted,
     setHasSystemBooted,
     products: cachedProducts,
     setProducts,
@@ -158,6 +158,7 @@ export default function Dashboard() {
   const [netFlowGrowth, setNetFlowGrowth] = useState<number>(0);
   const [showReminder, setShowReminder] = useState(false);
 
+
   useEffect(() => {
     const timer = setTimeout(() => {
       if (loading) setIsTimeout(true);
@@ -187,10 +188,10 @@ export default function Dashboard() {
   // --- Caching Layer: Instant Rehydration ---
   useEffect(() => {
     if (!isMounted) return;
-    
+
     const cacheKey = `dashboard_cache_${summaryRange}_${summaryRange === 'custom' ? customDate : ''}`;
     const saved = localStorage.getItem(cacheKey);
-    
+
     if (saved) {
       try {
         const cache = JSON.parse(saved);
@@ -215,7 +216,7 @@ export default function Dashboard() {
         setPeakHoursData(cache.peakHoursData || []);
         setDailyVolumeLabels(cache.dailyVolumeLabels || []);
         setDailyVolumeData(cache.dailyVolumeData || []);
-        
+
         // If we have cached data, we can stop the initial blank loader sooner
         if (hasSystemBooted) {
           setLoading(false);
@@ -260,7 +261,7 @@ export default function Dashboard() {
 
       const now = new Date();
       let queryStart, queryEnd;
-      
+
       // Hoist maps for caching scope
       let hourlyMap: Record<string, number> = {};
       let peakMap: number[] = new Array(12).fill(0);
@@ -509,7 +510,7 @@ export default function Dashboard() {
       };
       const cacheKey = `dashboard_cache_${summaryRange}_${summaryRange === 'custom' ? customDate : ''}`;
       localStorage.setItem(cacheKey, JSON.stringify(cacheObj));
-      
+
       // Randomize the bot's message variation for this sync
       setMsgIndex(Math.floor(Math.random() * 5));
 
@@ -559,7 +560,7 @@ export default function Dashboard() {
       fill: false,
       tension: 0,
     }],
-    };
+  };
 
   const salesData = {
     labels: dailyVolumeLabels.length > 0 ? dailyVolumeLabels : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
@@ -604,7 +605,7 @@ export default function Dashboard() {
     },
     plugins: commonPlugins,
     scales: {
-      y: { 
+      y: {
         display: false,
         max: 2200,
         beginAtZero: true
@@ -635,6 +636,96 @@ export default function Dashboard() {
       }
     },
   };
+
+  // --- Shop Guardian Intelligence ---
+  const variations = {
+    neutral: [
+      "Everything is set up and ready! Just waiting for our first customer to walk through the door.",
+      "The shop is open and everything is in its place. Let's make today a great one!",
+      "Quiet start? No problem. Use this time to double-check your inventory and prepare.",
+      "System check complete. All systems go! Standing by for orders.",
+      "A clean shop is a happy shop. We're ready whenever you are!"
+    ],
+    healthy: [
+      "Business is booming! The inventory is moving fast and the customers are happy.",
+      "Great rhythm today! You're handling the flow like a total pro.",
+      "Look at those numbers! This shop is really hitting its stride now.",
+      "Consistent sales and steady growth — you've got the magic touch!",
+      "It's peak performance time! Keep the momentum going, you're on fire."
+    ],
+    hardwork: [
+      "Wow, it's busy! Stay focused and keep that energy up — you're doing amazing.",
+      "A bit of a rush? Don't worry, take it one customer at a time. I've got your back!",
+      "The floor is buzzing today! This is where all that hard work really pays off.",
+      "Deep breaths — we're handling the rush perfectly. Teamwork makes the dream work!",
+      "Busy is good! The community really loves what we're doing here today."
+    ],
+    risk: [
+      "Heads up! Some items are running low. We should probably restock soon to keep the sales flowing.",
+      "Stock alert! Don't let your best-sellers run out. Let's check the inventory levels.",
+      "Inventory warning! A few critical items are almost gone. Better safe than sorry!",
+      "We're getting low on supplies! Should we place a restock order before the next rush?",
+      "Running thin on some products! Let's refill those shelves before the customers notice."
+    ]
+  };
+
+  const robotConfig = useMemo(() => {
+    const isRisk = lowStock.length > 0;
+    const isHealthy = txCount > 5 && totalSales > 500;
+    const isHardWork = txCount > 15 || totalProfit > 1000;
+
+    let botData = animaBotData;
+    let glowColor = "rgba(59,130,246,0.3)";
+    let bubbleMsg = variations.neutral[msgIndex];
+    let bubbleBorder = "border-primary/40";
+    let bubbleText = "text-primary";
+
+    if (isRisk) {
+      botData = sadBotData;
+      glowColor = "rgba(239,68,68,0.4)";
+      bubbleMsg = variations.risk[msgIndex];
+      bubbleBorder = "border-error/40";
+      bubbleText = "text-error";
+    } else if (isHealthy) {
+      botData = happyBotData;
+      glowColor = "rgba(52,211,153,0.4)";
+      bubbleMsg = variations.healthy[msgIndex];
+      bubbleBorder = "border-emerald-400/40";
+      bubbleText = "text-emerald-400";
+    } else if (isHardWork) {
+      botData = angryBotData;
+      glowColor = "rgba(251,191,36,0.35)";
+      bubbleMsg = variations.hardwork[msgIndex];
+      bubbleBorder = "border-amber-400/40";
+      bubbleText = "text-amber-400";
+    }
+
+    return { botData, glowColor, bubbleMsg, bubbleBorder, bubbleText };
+  }, [txCount, lowStock.length, totalSales, totalProfit, msgIndex, animaBotData, sadBotData, happyBotData, angryBotData]);
+
+  const renderRobot = (visibilityClass: string, isPeeking = false) => (
+    <div className={`transition-all duration-700 ${isPeeking ? 'flex flex-col items-center pointer-events-none' : 'flex flex-col-reverse items-center sm:flex-row sm:items-end gap-2 sm:gap-4'} ${visibilityClass}`}>
+      {/* Speech Bubble */}
+      <div className={`relative bg-surface-container dark:bg-surface-container-high border ${robotConfig.bubbleBorder} shadow-xl transition-all duration-500 ${isPeeking ? 'rounded-xl px-2.5 py-1.5 mb-1 z-20 scale-90 origin-bottom' : 'rounded-xl sm:rounded-2xl rounded-bl-sm sm:rounded-bl-none sm:rounded-tl-sm px-4 py-3 w-full max-w-[calc(100vw-2.5rem)] sm:max-w-sm sm:mb-14'}`}>
+        {/* Tail */}
+        {isPeeking ? (
+          <div className={`absolute -bottom-[5px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-surface-container dark:border-t-surface-container-high`} />
+        ) : (
+          <>
+            <div className={`absolute sm:hidden -bottom-[7px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[7px] border-l-transparent border-r-[7px] border-r-transparent border-t-[7px] border-t-surface-container dark:border-t-surface-container-high`} />
+            <div className={`absolute hidden sm:block top-4 -left-[7px] w-0 h-0 border-t-[7px] border-t-transparent border-b-[7px] border-b-transparent border-r-[7px] border-r-surface-container dark:border-r-surface-container-high`} />
+          </>
+        )}
+        <p className={`${isPeeking ? 'text-[8px]' : 'text-[10px] sm:text-[11px]'} font-semibold leading-tight text-center ${robotConfig.bubbleText}`}>{robotConfig.bubbleMsg}</p>
+      </div>
+
+      {/* Bot */}
+      <div className={`relative flex-shrink-0 transition-all duration-500 ${isPeeking ? 'w-20 h-20 -mb-7 translate-y-3 group-hover/bot:translate-y-1' : 'w-36 h-36 sm:w-40 sm:h-40'}`}>
+        <div className="absolute -inset-4 rounded-full blur-3xl pointer-events-none transition-colors duration-700" style={{ background: robotConfig.glowColor }} />
+        <Lottie animationData={robotConfig.botData} loop={true} autoplay={true} style={{ width: "100%", height: "100%" }} />
+      </div>
+    </div>
+  );
 
   const fmt = (n: number) =>
     new Intl.NumberFormat('en-PH', {
@@ -703,8 +794,8 @@ export default function Dashboard() {
                 key={range.id}
                 onClick={() => setSummaryRange(range.id as any)}
                 className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${summaryRange === range.id
-                    ? "bg-primary text-white shadow-lg shadow-primary/20"
-                    : "text-secondary hover:bg-surface-highest"
+                  ? "bg-primary text-white shadow-lg shadow-primary/20"
+                  : "text-secondary hover:bg-surface-highest"
                   }`}
               >
                 {range.id === 'custom' && summaryRange === 'custom' ? (
@@ -722,7 +813,7 @@ export default function Dashboard() {
 
           {/* ─── Mobile-Only Collapsible Calendar ─── */}
           <div className="flex sm:hidden flex-col gap-2 max-w-[calc(100vw-0.5rem)] overflow-hidden">
-            <button 
+            <button
               onClick={() => setShowCalendar(!showCalendar)}
               className="flex items-center justify-between px-3 py-2 bg-surface-container rounded-lg border border-outline-variant/10 shadow-sm sm:hidden"
             >
@@ -740,7 +831,7 @@ export default function Dashboard() {
             <div className={`${showCalendar ? 'flex' : 'hidden'} sm:hidden flex-col gap-2 transition-all duration-500 overflow-hidden`}>
               <div className="flex items-center justify-between px-1 mb-1 sm:hidden">
                 <span className="text-[10px] font-black text-primary uppercase tracking-widest">{new Date(customDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
-                <button 
+                <button
                   onClick={() => setSummaryRange(summaryRange === 'today' ? 'this_month' : 'today')}
                   className="text-[8px] font-black text-secondary uppercase bg-surface-highest px-2 py-1 rounded-lg border border-outline-variant/10"
                 >
@@ -749,7 +840,7 @@ export default function Dashboard() {
               </div>
 
               <div className="flex w-full max-w-[calc(100vw-1.5rem)] items-center gap-1 pb-1">
-                <button 
+                <button
                   onClick={() => setDateOffset(prev => prev + 5)}
                   className="p-2 hover:bg-surface-highest rounded-full text-secondary transition-colors"
                 >
@@ -773,11 +864,10 @@ export default function Dashboard() {
                           setCustomDate(isoDate);
                           setSummaryRange('custom');
                         }}
-                        className={`flex-none flex flex-col items-center justify-center w-[56px] h-[60px] rounded-xl border transition-all duration-300 ${
-                          isSelected 
-                            ? "bg-primary text-white border-primary shadow-lg shadow-primary/25 scale-105 z-10" 
+                        className={`flex-none flex flex-col items-center justify-center w-[56px] h-[60px] rounded-xl border transition-all duration-300 ${isSelected
+                            ? "bg-primary text-white border-primary shadow-lg shadow-primary/25 scale-105 z-10"
                             : "bg-surface-container text-secondary border-outline-variant/10 hover:border-primary/30"
-                        }`}
+                          }`}
                       >
                         <span className={`text-[8px] font-black uppercase tracking-tighter ${isSelected ? 'text-white/70' : 'text-on-surface-variant/40'}`}>{dayName}</span>
                         <span className="text-base font-black tracking-tighter mt-1">{dayNum}</span>
@@ -787,7 +877,7 @@ export default function Dashboard() {
                   })}
                 </div>
 
-                <button 
+                <button
                   onClick={() => setDateOffset(prev => Math.max(0, prev - 5))}
                   className={`p-2 hover:bg-surface-highest rounded-full text-secondary transition-colors ${dateOffset === 0 ? 'opacity-20 pointer-events-none' : ''}`}
                 >
@@ -800,11 +890,11 @@ export default function Dashboard() {
 
         {/* ── Row 2: Robot + Speech Bubble ── */}
         {(() => {
-          const isIdle     = txCount === 0;
-          const isRisk     = lowStock.length > 8;
-          const marginPct  = totalSales > 0 ? (totalProfit / totalSales) * 100 : 0;
+          const isIdle = txCount === 0;
+          const isRisk = lowStock.length > 8;
+          const marginPct = totalSales > 0 ? (totalProfit / totalSales) * 100 : 0;
           const isHardWork = !isIdle && txCount >= 5 && marginPct < 15;
-          const isHealthy  = !isIdle && !isRisk && !isHardWork && totalProfit > 0;
+          const isHealthy = !isIdle && !isRisk && !isHardWork && totalProfit > 0;
 
           // Emotion Variations
           const variations = {
@@ -838,36 +928,36 @@ export default function Dashboard() {
             ]
           };
 
-          let botData      = animaBotData;
-          let glowColor    = "rgba(100,116,139,0.25)";
-          let bubbleMsg    = variations.neutral[msgIndex];
+          let botData = animaBotData;
+          let glowColor = "rgba(100,116,139,0.25)";
+          let bubbleMsg = variations.neutral[msgIndex];
           let bubbleBorder = "border-secondary/30";
-          let bubbleText   = "text-on-surface-variant/60";
+          let bubbleText = "text-on-surface-variant/60";
 
           if (isIdle && !isRisk) {
-              // Stay neutral
+            // Stay neutral
           } else if (isRisk) {
-            botData      = sadBotData;
-            glowColor    = "rgba(239,68,68,0.4)";
-            bubbleMsg    = variations.risk[msgIndex];
+            botData = sadBotData;
+            glowColor = "rgba(239,68,68,0.4)";
+            bubbleMsg = variations.risk[msgIndex];
             bubbleBorder = "border-error/40";
-            bubbleText   = "text-error";
+            bubbleText = "text-error";
           } else if (isHealthy) {
-            botData      = happyBotData;
-            glowColor    = "rgba(52,211,153,0.4)";
-            bubbleMsg    = variations.healthy[msgIndex];
+            botData = happyBotData;
+            glowColor = "rgba(52,211,153,0.4)";
+            bubbleMsg = variations.healthy[msgIndex];
             bubbleBorder = "border-emerald-400/40";
-            bubbleText   = "text-emerald-400";
+            bubbleText = "text-emerald-400";
           } else if (isHardWork) {
-            botData      = angryBotData;
-            glowColor    = "rgba(251,191,36,0.35)";
-            bubbleMsg    = variations.hardwork[msgIndex];
+            botData = angryBotData;
+            glowColor = "rgba(251,191,36,0.35)";
+            bubbleMsg = variations.hardwork[msgIndex];
             bubbleBorder = "border-amber-400/40";
-            bubbleText   = "text-amber-400";
+            bubbleText = "text-amber-400";
           }
 
           return (
-            <div className="flex flex-col-reverse items-center sm:flex-row sm:items-end gap-2 sm:gap-4 mt-2 -mb-12">
+            <div className="flex sm:hidden flex-col-reverse items-center sm:flex-row sm:items-end gap-2 sm:gap-4 mt-2 -mb-12">
               {/* Bot — centered on mobile, bigger, crops into cards below */}
               <div className="relative w-36 h-36 sm:w-40 sm:h-40 flex-shrink-0">
                 <div className="absolute -inset-4 rounded-full blur-3xl pointer-events-none transition-colors duration-700" style={{ background: glowColor }} />
@@ -880,7 +970,7 @@ export default function Dashboard() {
                 <div className={`absolute sm:hidden -bottom-[7px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[7px] border-l-transparent border-r-[7px] border-r-transparent border-t-[7px] border-t-surface-container dark:border-t-surface-container-high`} />
                 {/* Tail pointing left toward bot on desktop */}
                 <div className={`absolute hidden sm:block top-4 -left-[7px] w-0 h-0 border-t-[7px] border-t-transparent border-b-[7px] border-b-transparent border-r-[7px] border-r-surface-container dark:border-r-surface-container-high`} />
-                
+
                 <p className={`text-[10px] sm:text-[11px] font-semibold leading-relaxed ${bubbleText}`}>{bubbleMsg}</p>
               </div>
             </div>
@@ -954,7 +1044,7 @@ export default function Dashboard() {
                 <div className="relative w-16 h-16 flex items-center justify-center">
                   {/* Subtle inner background glow */}
                   <div className="absolute inset-2 rounded-full bg-cyan-400/5 blur-[8px] animate-pulse" />
-                  
+
                   <svg className="w-full h-full -rotate-90 relative z-10">
                     <circle cx="50%" cy="50%" r="28" className="stroke-white/5 fill-none" strokeWidth="5" />
                     <circle
@@ -967,7 +1057,7 @@ export default function Dashboard() {
                       style={{ filter: 'drop-shadow(0 0 10px rgba(34,211,238,0.8))' }}
                     />
                   </svg>
-                  
+
                   {/* Central Crystal Display */}
                   <div className="absolute inset-[8px] rounded-full bg-white/10 backdrop-blur-[2px] border border-white/10 flex flex-col items-center justify-center shadow-inner z-20">
                     <Trophy size={8} className="text-cyan-300 mb-0.5 animate-bounce" />
@@ -1002,11 +1092,25 @@ export default function Dashboard() {
             <TrendingUp size={60} className="sm:w-[100px] sm:h-[100px]" strokeWidth={1.5} />
           </div>
 
+          {profitGrowth !== 0 && (
+            <div className="absolute top-2 right-2 sm:hidden flex flex-col items-end gap-1 z-20">
+              <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[6px] font-black ${profitGrowth > 0 ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
+                {profitGrowth > 0 ? '\u2191' : '\u2193'} {Math.abs(profitGrowth).toFixed(0)}%
+              </div>
+              <div className="w-8 h-1 bg-white/20 rounded-full overflow-hidden">
+                <div 
+                  className={`h-full rounded-full transition-all duration-1000 ${profitGrowth > 0 ? 'bg-emerald-400' : 'bg-red-400'}`} 
+                  style={{ width: `${Math.min(100, Math.abs(profitGrowth))}%` }}
+                />
+              </div>
+            </div>
+          )}
+
           <div className="relative z-10">
             <div className="flex justify-start sm:justify-between items-center sm:items-start gap-1.5 sm:gap-0 mb-1 w-full">
               <span className="text-[8px] font-black uppercase tracking-[0.25em] text-white/50">Gross Profit</span>
               {profitGrowth !== 0 && (
-                <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[6px] font-black ${profitGrowth > 0 ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
+                <div className={`hidden sm:flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[6px] font-black ${profitGrowth > 0 ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
                   {profitGrowth > 0 ? '\u2191' : '\u2193'} {Math.abs(profitGrowth).toFixed(0)}%
                 </div>
               )}

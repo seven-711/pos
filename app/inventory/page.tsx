@@ -63,11 +63,9 @@ export default function InventoryPage() {
 }
 
 function InventoryContent() {
-  const [products, setProducts] = useState<Product[]>([]);
-
-  const [logs, setLogs] = useState<InventoryLog[]>([]);
-  const { hasSystemBooted, setHasSystemBooted } = useSession();
-  const [loading, setLoading] = useState(!hasSystemBooted);
+  const { hasSystemBooted, setHasSystemBooted, products, setProducts, appCache, setAppCache } = useSession();
+  const [logs, setLogs] = useState<InventoryLog[]>(appCache.inventoryLogs || []);
+  const [loading, setLoading] = useState(!hasSystemBooted && products.length === 0);
   const [searchQuery, setSearchQuery] = useState("");
   
   // Modals
@@ -123,7 +121,7 @@ function InventoryContent() {
   }, [loading, products, highlightParam]);
 
   const fetchData = async (silent = false) => {
-    if (!silent) setLoading(true);
+    if (!silent && !hasSystemBooted && products.length === 0) setLoading(true);
     
     try {
       // Fetch Products
@@ -144,7 +142,10 @@ function InventoryContent() {
       if (logErr) throw logErr;
 
       if (prodData) setProducts(prodData);
-      if (logData) setLogs(logData);
+      if (logData) {
+        setLogs(logData);
+        setAppCache(prev => ({ ...prev, inventoryLogs: logData }));
+      }
     } catch (err: any) {
       console.error("Inventory Sync Error:", err);
       showToast("Inventory synchronization failed.", "error");

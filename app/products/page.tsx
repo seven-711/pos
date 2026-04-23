@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
-import { useSession } from "@/lib/contexts/SessionContext";
+import { useSession, Product, Category } from "@/lib/contexts/SessionContext";
 import { getLocalTimestamp } from "@/lib/utils/time";
 import { showToast } from "@/lib/utils/toast";
 import { 
@@ -26,32 +26,10 @@ import {
 } from "lucide-react";
 import { MediaGallery } from "@/components/storage/MediaGallery";
 
-interface Category {
-  id: string;
-  name: string;
-}
-
-interface Product {
-  id: string;
-  name: string;
-  stock: number;
-  min_stock: number;
-  cost_price: number;
-  selling_price: number;
-  bundle_qty?: number | null;
-  bundle_price?: number | null;
-  category_id: string;
-  image_url?: string;
-  created_at: string;
-  categories?: { name: string };
-}
-
 export default function ProductsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const { hasSystemBooted, setHasSystemBooted } = useSession();
-  const [loading, setLoading] = useState(!hasSystemBooted);
+  const { hasSystemBooted, setHasSystemBooted, products, setProducts, categories, setCategories } = useSession();
+  const [loading, setLoading] = useState(!hasSystemBooted && products.length === 0);
   const [searchQuery, setSearchQuery] = useState("");
   
   // Form State
@@ -100,7 +78,7 @@ export default function ProductsPage() {
   }, [showAddModal, showMediaGallery]);
 
   const fetchData = async (silent = false) => {
-    if (!silent) setLoading(true);
+    if (!silent && !hasSystemBooted && products.length === 0) setLoading(true);
     try {
       // Fetch Products with joined Category Name
       const { data: prodData, error: prodErr } = await supabase
