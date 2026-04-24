@@ -42,13 +42,18 @@ export default function TransactionsPage() {
   const { hasSystemBooted, setHasSystemBooted, appCache, setAppCache } = useSession();
   const [transactions, setTransactions] = useState<Transaction[]>(appCache.transactions || []);
   const [loading, setLoading] = useState(!hasSystemBooted);
-  const [page, setPage] = useState(appCache.txPage || 0);
-  const [totalCount, setTotalCount] = useState(appCache.txTotalCount || 0);
+  const [page, setPage] = useState<number>(appCache.txPage || 0);
+  const [totalCount, setTotalCount] = useState<number>(appCache.txTotalCount || 0);
   const [searchQuery, setSearchQuery] = useState("");
   const [paymentFilter, setPaymentFilter] = useState<string | null>(null);
 
   // Global Enterprise Stats
-  const [globalStats, setGlobalStats] = useState(appCache.globalStats || {
+  const [globalStats, setGlobalStats] = useState<{
+    totalRevenue: number,
+    totalProfit: number,
+    totalTransactions: number,
+    todaySales: number
+  }>(appCache.globalStats || {
     totalRevenue: 0,
     totalProfit: 0,
     totalTransactions: 0,
