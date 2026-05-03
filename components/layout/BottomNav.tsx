@@ -4,9 +4,11 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Store, Package, BarChart2, Tag } from "lucide-react";
+import { useTheme } from "@/lib/contexts/ThemeContext";
 
 export function BottomNav({ hidden = false }: { hidden?: boolean }) {
   const pathname = usePathname();
+  const { theme } = useTheme();
 
   const coreLinks = [
     { href: "/", label: "Dash", icon: LayoutDashboard, isButton: false },
@@ -39,7 +41,11 @@ export function BottomNav({ hidden = false }: { hidden?: boolean }) {
           >
             <div className={`flex flex-col items-center justify-center gap-[3px] rounded-3xl transition-all duration-500 ${
               isActive 
-                ? "bg-[var(--color-primary)] text-white shadow-lg shadow-primary/30 py-2 w-[90%] scale-100" 
+                ? `text-white py-2 w-[90%] scale-100 ${
+                    theme === 'dark'
+                      ? 'bg-gradient-to-br from-[#1E3A8A] via-[#2563EB] to-[#1E40AF] shadow-[0_10px_20px_rgba(37,99,235,0.2)]'
+                      : 'bg-gradient-to-br from-[#0052D4] via-[#4364F7] to-[#6FB1FC] shadow-[0_10px_20px_rgba(0,82,212,0.2)]'
+                  }`
                 : "text-[var(--color-on-surface-variant)] py-1.5 w-auto scale-90 opacity-70 hover:opacity-100 hover:text-[var(--color-on-surface)]"
             }`}>
               <Icon size={isActive ? 18 : 22} className={`pointer-events-none transition-all ${isActive ? 'mb-0' : ''}`} />

@@ -71,7 +71,11 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
         onClick={onMenuClick}
         className="flex items-center gap-3 text-[var(--color-primary)] relative group cursor-pointer touch-manipulation active:scale-95 transition-transform md:hidden"
       >
-        <div className="w-10 h-10 rounded-xl bg-[var(--color-primary)] text-white flex items-center justify-center shadow-md shadow-primary/20 group-hover:bg-[var(--color-primary-container)] group-hover:text-[var(--color-primary)] transition-colors">
+        <div className={`w-10 h-10 rounded-xl text-white flex items-center justify-center shadow-md transition-colors ${
+          theme === 'dark'
+            ? 'bg-gradient-to-br from-[#1E3A8A] via-[#2563EB] to-[#1E40AF] shadow-[0_4px_10px_rgba(37,99,235,0.2)]'
+            : 'bg-gradient-to-br from-[#0052D4] via-[#4364F7] to-[#6FB1FC] shadow-[0_4px_10px_rgba(0,82,212,0.2)]'
+        }`}>
           <Menu size={20} strokeWidth={3} />
         </div>
         <span className="text-lg font-black font-heading select-none uppercase tracking-tighter hidden mini:block">
