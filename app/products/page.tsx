@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { useSession, Product, Category } from "@/lib/contexts/SessionContext";
 import { getLocalTimestamp } from "@/lib/utils/time";
 import { showToast } from "@/lib/utils/toast";
+import { useTheme } from "@/lib/contexts/ThemeContext";
 import { 
   Search, 
   Plus, 
@@ -22,13 +23,18 @@ import {
   Tag,
   CheckCircle2,
   AlertCircle,
-  Library
+  Library,
+  TrendingUp,
+  Wallet,
+  MoreHorizontal,
+  ArrowRight
 } from "lucide-react";
 import { MediaGallery } from "@/components/storage/MediaGallery";
 
 export default function ProductsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const { hasSystemBooted, setHasSystemBooted, products, setProducts, categories, setCategories } = useSession();
+  const { theme } = useTheme();
   const [loading, setLoading] = useState(!hasSystemBooted && products.length === 0);
   const [searchQuery, setSearchQuery] = useState("");
   
@@ -252,54 +258,215 @@ export default function ProductsPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto w-full relative">
+    <div className="max-w-7xl mx-auto w-full px-1">
       
-      {/* Dashboard Header / Search */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
-        <div className="space-y-1">
-          <h2 className="text-3xl font-extrabold tracking-tight text-primary font-heading">Products</h2>
-          <p className="text-on-surface-variant text-sm">Inventory & performance metrics</p>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-          <div className="relative flex-grow md:w-80">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-[50%] text-on-surface-variant" />
-            <input 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-surface-container-high border-none rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:bg-surface-container-lowest transition-all outline-none text-on-surface" 
-              placeholder="Search SKU, name, or category..." 
-              type="text" 
-            />
+      {/* Dashboard Header */}
+      <div className="flex flex-col gap-2 mb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <h1 className="hidden sm:block text-xl font-extrabold tracking-tight text-primary font-heading uppercase">Products</h1>
+          
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <div className="relative flex-grow sm:w-80">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-[50%] text-on-surface-variant/60" />
+              <input 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-2.5 bg-surface-container rounded-xl text-[11px] font-bold focus:ring-2 focus:ring-primary/20 focus:bg-surface-container-lowest transition-all outline-none text-on-surface border border-outline-variant/10 shadow-sm" 
+                placeholder="Search SKU, name, or category..." 
+                type="text" 
+              />
+            </div>
+            <button 
+              onClick={() => setShowAddModal(true)}
+              className={`text-white px-4 py-2.5 rounded-xl text-[11px] font-black tracking-widest uppercase flex items-center justify-center gap-1.5 shadow-lg active:scale-95 transition-all cursor-pointer hover:shadow-xl ${
+                theme === 'dark'
+                  ? 'bg-gradient-to-br from-[#1E3A8A] via-[#2563EB] to-[#1E40AF] shadow-[0_10px_20px_rgba(37,99,235,0.2)]'
+                  : 'bg-gradient-to-br from-[#0052D4] via-[#4364F7] to-[#6FB1FC] shadow-[0_10px_20px_rgba(0,82,212,0.2)]'
+              }`}
+            >
+              <Plus size={14} />
+              New Product
+            </button>
           </div>
-          <button 
-            onClick={() => setShowAddModal(true)}
-            className="bg-gradient-to-br from-primary to-primary-container text-white px-5 py-2.5 rounded-xl font-semibold flex items-center justify-center gap-2 shadow-lg shadow-primary/10 active:scale-95 transition-transform cursor-pointer"
-          >
-            <Plus size={16} />
-            New Product
-          </button>
         </div>
       </div>
 
-      {/* Metric Bento Grid (Subtle) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="p-4 rounded-xl bg-surface-container-low flex flex-col gap-1 border border-outline-variant/10">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Total SKU</span>
-          <span className="text-xl font-bold text-primary">{loading ? '-' : totalSKU}</span>
+      {/* Summary Cards Row */}
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+
+        {/* Card 1: Total SKU */}
+        <div className={`rounded-xl sm:rounded-3xl relative overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer border border-white/20 flex flex-col justify-between min-h-[140px] sm:min-h-[160px] ${theme === 'dark' 
+          ? 'bg-gradient-to-br from-[#1E3A8A] via-[#2563EB] to-[#1E40AF] text-white shadow-[0_20px_50px_rgba(37,99,235,0.2)]'
+          : 'bg-gradient-to-br from-[#0052D4] via-[#4364F7] to-[#6FB1FC] text-white shadow-[0_20px_50px_rgba(0,82,212,0.2)]'
+        }`}>
+          <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white opacity-[0.15] pointer-events-none" />
+          <div className="absolute -right-6 -bottom-6 opacity-10 group-hover:opacity-25 transition-all duration-700 group-hover:scale-110">
+            <Package className="w-24 h-24 sm:w-32 sm:h-32" strokeWidth={1} />
+          </div>
+
+          <div className="relative z-10 flex-1 p-3 sm:p-5 flex flex-col justify-between">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white flex items-center justify-center shadow-sm shrink-0">
+                  <Package className="text-blue-600" size={18} strokeWidth={2.5} />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[11px] sm:text-sm font-bold text-white leading-tight">Total SKU</span>
+                  <span className="text-[8px] sm:text-[10px] text-white/70 font-medium">Unique Product Types</span>
+                </div>
+              </div>
+              <button className="text-white/70 hover:text-white transition-colors">
+                <MoreHorizontal size={16} />
+              </button>
+            </div>
+            
+            <div className="flex items-center gap-2 sm:gap-3 mt-3 sm:mt-4 min-w-0">
+              <div className="text-2xl sm:text-3xl lg:text-4xl font-black font-heading tracking-tighter text-white drop-shadow-md leading-tight truncate">
+                {loading ? '-' : totalSKU}
+              </div>
+              <div className="flex items-center gap-0.5 sm:gap-1 bg-white px-1.5 py-0.5 sm:px-2 rounded-full text-[8px] sm:text-[10px] font-bold text-blue-600 shadow-sm">
+                <TrendingUp size={10} strokeWidth={3} />
+                <span>+1.5%</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="relative z-10 w-full bg-white/10 backdrop-blur-sm border-t border-white/10 px-3 sm:px-5 py-2 sm:py-3 flex items-center justify-between group-hover:bg-white/20 transition-colors">
+            <span className="text-[10px] sm:text-xs font-semibold text-white/90">View catalog summary</span>
+            <ArrowRight size={14} className="text-white/90" />
+          </div>
         </div>
-        <div className="p-4 rounded-xl bg-surface-container-low flex flex-col gap-1 border border-outline-variant/10">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Low Stock</span>
-          <span className="text-xl font-bold text-tertiary">{loading ? '-' : `${lowStockCount} Items`}</span>
+
+        {/* Card 2: Low Stock */}
+        <div className={`rounded-xl sm:rounded-3xl relative overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer border border-white/20 flex flex-col justify-between min-h-[140px] sm:min-h-[160px] ${theme === 'dark' 
+          ? 'bg-gradient-to-br from-[#7F1D1D] via-[#DC2626] to-[#991B1B] text-white shadow-[0_20px_50px_rgba(220,38,38,0.2)]'
+          : 'bg-gradient-to-br from-[#B91C1C] via-[#EF4444] to-[#B91C1C] text-white shadow-[0_20px_50px_rgba(239,68,68,0.2)]'
+        }`}>
+          <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white opacity-[0.15] pointer-events-none" />
+          <div className="absolute -right-6 -bottom-6 opacity-10 group-hover:opacity-25 transition-all duration-700 group-hover:scale-110">
+            <AlertCircle className="w-24 h-24 sm:w-32 sm:h-32" strokeWidth={1} />
+          </div>
+
+          <div className="relative z-10 flex-1 p-3 sm:p-5 flex flex-col justify-between">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white flex items-center justify-center shadow-sm shrink-0">
+                  <AlertCircle className="text-red-600" size={18} strokeWidth={2.5} />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[11px] sm:text-sm font-bold text-white leading-tight">Low Stock</span>
+                  <span className="text-[8px] sm:text-[10px] text-white/70 font-medium">Critical Inventory Alerts</span>
+                </div>
+              </div>
+              <button className="text-white/70 hover:text-white transition-colors">
+                <MoreHorizontal size={16} />
+              </button>
+            </div>
+            
+            <div className="flex items-center gap-2 sm:gap-3 mt-3 sm:mt-4 min-w-0">
+              <div className="text-2xl sm:text-3xl lg:text-4xl font-black font-heading tracking-tighter text-white drop-shadow-md leading-tight truncate">
+                {loading ? '-' : lowStockCount}
+              </div>
+              <div className="flex items-center gap-0.5 sm:gap-1 bg-white px-1.5 py-0.5 sm:px-2 rounded-full text-[8px] sm:text-[10px] font-bold text-red-600 shadow-sm">
+                <TrendingUp size={10} strokeWidth={3} className="rotate-180" />
+                <span>Urgent</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="relative z-10 w-full bg-white/10 backdrop-blur-sm border-t border-white/10 px-3 sm:px-5 py-2 sm:py-3 flex items-center justify-between group-hover:bg-white/20 transition-colors">
+            <span className="text-[10px] sm:text-xs font-semibold text-white/90">Restock priorities</span>
+            <ArrowRight size={14} className="text-white/90" />
+          </div>
         </div>
-        <div className="p-4 rounded-xl bg-surface-container-low flex flex-col gap-1 border border-outline-variant/10">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Avg. ROI</span>
-          <span className="text-xl font-bold text-secondary">{loading ? '-' : `${avgRoi.toFixed(1)}%`}</span>
+
+        {/* Card 3: Avg. ROI */}
+        <div className={`rounded-xl sm:rounded-3xl relative overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer border border-white/20 flex flex-col justify-between min-h-[140px] sm:min-h-[160px] ${theme === 'dark' 
+          ? 'bg-gradient-to-br from-[#064E3B] via-[#059669] to-[#047857] text-white shadow-[0_20px_50px_rgba(5,150,105,0.2)]'
+          : 'bg-gradient-to-br from-[#046156] via-[#058B7A] to-[#046156] text-white shadow-[0_20px_50px_rgba(4,97,86,0.2)]'
+        }`}>
+          <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white opacity-[0.15] pointer-events-none" />
+          <div className="absolute -right-6 -bottom-6 opacity-10 group-hover:opacity-25 transition-all duration-700 group-hover:scale-110">
+            <TrendingUp className="w-24 h-24 sm:w-32 sm:h-32" strokeWidth={1} />
+          </div>
+
+          <div className="relative z-10 flex-1 p-3 sm:p-5 flex flex-col justify-between">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white flex items-center justify-center shadow-sm shrink-0">
+                  <TrendingUp className="text-emerald-700" size={18} strokeWidth={2.5} />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[11px] sm:text-sm font-bold text-white leading-tight">Avg. ROI</span>
+                  <span className="text-[8px] sm:text-[10px] text-white/70 font-medium">Profit Margin Analytics</span>
+                </div>
+              </div>
+              <button className="text-white/70 hover:text-white transition-colors">
+                <MoreHorizontal size={16} />
+              </button>
+            </div>
+            
+            <div className="flex items-center gap-2 sm:gap-3 mt-3 sm:mt-4 min-w-0">
+              <div className="text-2xl sm:text-3xl lg:text-4xl font-black font-heading tracking-tighter text-white drop-shadow-md leading-tight truncate">
+                {loading ? '-' : `${avgRoi.toFixed(1)}%`}
+              </div>
+              <div className="flex items-center gap-0.5 sm:gap-1 bg-white px-1.5 py-0.5 sm:px-2 rounded-full text-[8px] sm:text-[10px] font-bold text-emerald-700 shadow-sm">
+                <TrendingUp size={10} strokeWidth={3} />
+                <span>+5.2%</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="relative z-10 w-full bg-white/10 backdrop-blur-sm border-t border-white/10 px-3 sm:px-5 py-2 sm:py-3 flex items-center justify-between group-hover:bg-white/20 transition-colors">
+            <span className="text-[10px] sm:text-xs font-semibold text-white/90">Analyze performance</span>
+            <ArrowRight size={14} className="text-white/90" />
+          </div>
         </div>
-        <div className="p-4 rounded-xl bg-surface-container-low flex flex-col gap-1 border border-outline-variant/10">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Inventory Value</span>
-          <span className="text-xl font-bold text-primary">{loading ? '-' : `₱${inventoryValue.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`}</span>
+
+        {/* Card 4: Inventory Value */}
+        <div className={`rounded-xl sm:rounded-3xl relative overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] cursor-pointer border border-white/20 flex flex-col justify-between min-h-[140px] sm:min-h-[160px] ${theme === 'dark' 
+          ? 'bg-gradient-to-br from-[#FF9500] via-[#FF8C00] to-[#E67E00] text-white shadow-[0_20px_50px_rgba(255,149,0,0.3)]'
+          : 'bg-gradient-to-br from-[#F59E0B] via-[#FBBF24] to-[#D97706] text-white shadow-[0_20px_50px_rgba(245,158,11,0.2)]'
+        }`}>
+          <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white opacity-[0.15] pointer-events-none" />
+          <div className="absolute -right-6 -bottom-6 opacity-10 group-hover:opacity-25 transition-all duration-700 group-hover:scale-110">
+            <Wallet className="w-24 h-24 sm:w-32 sm:h-32" strokeWidth={1} />
+          </div>
+
+          <div className="relative z-10 flex-1 p-3 sm:p-5 flex flex-col justify-between">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white flex items-center justify-center shadow-sm shrink-0">
+                  <Wallet className="text-orange-500" size={18} strokeWidth={2.5} />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[11px] sm:text-sm font-bold text-white leading-tight">Inventory Value</span>
+                  <span className="text-[8px] sm:text-[10px] text-white/70 font-medium">Locked Capital Estimate</span>
+                </div>
+              </div>
+              <button className="text-white/70 hover:text-white transition-colors">
+                <MoreHorizontal size={16} />
+              </button>
+            </div>
+            
+            <div className="flex items-center gap-2 sm:gap-3 mt-3 sm:mt-4 min-w-0">
+              <div className="text-xl sm:text-2xl lg:text-3xl font-black font-heading tracking-tighter text-white drop-shadow-md leading-tight truncate">
+                {loading ? '-' : `₱${inventoryValue.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`}
+              </div>
+              <div className="flex items-center gap-0.5 sm:gap-1 bg-white px-1.5 py-0.5 sm:px-2 rounded-full text-[8px] sm:text-[10px] font-bold text-orange-500 shadow-sm">
+                <TrendingUp size={10} strokeWidth={3} />
+                <span>+4.7%</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="relative z-10 w-full bg-white/10 backdrop-blur-sm border-t border-white/10 px-3 sm:px-5 py-2 sm:py-3 flex items-center justify-between group-hover:bg-white/20 transition-colors">
+            <span className="text-[10px] sm:text-xs font-semibold text-white/90">View capital summary</span>
+            <ArrowRight size={14} className="text-white/90" />
+          </div>
         </div>
-      </div>
+
+      </section>
 
       {/* Product Table Canvas */}
       <div className="bg-surface-container-low rounded-2xl overflow-hidden overflow-x-auto custom-scrollbar shadow-sm border border-outline-variant/10">
